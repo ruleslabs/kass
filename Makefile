@@ -1,14 +1,20 @@
-STARKNET_DIR	= starknet
-
 .PHONY : all clean
 
-all:
-	@make --no-print-directory -C $(STARKNET_DIR)
+all: clean build
 
 clean: clean-starknet
 
+build: build-starknet build-ethereum
+
+# STARKNET
+
 build-starknet:
-	@make build --no-print-directory -C $(STARKNET_DIR)
+	scarb build
 
 clean-starknet:
-	@make clean --no-print-directory -C $(STARKNET_DIR)
+	scarb clean
+
+# ETHEREUM
+
+build-ethereum:
+	forge build

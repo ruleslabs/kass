@@ -1,2 +1,6 @@
 # Scarb
 target
+
+# Foundry
+**/cache
+**/out
