@@ -2,5 +2,8 @@
 name = "kass"
 version = "0.1.0"
 
+[crate_roots]
+kass = "src/starknet"
+
 [dependencies]
 quaireaux = { git = "https://github.com/keep-starknet-strange/quaireaux.git" }

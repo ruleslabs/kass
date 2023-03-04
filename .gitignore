@@ -4,3 +4,6 @@ target
 # Foundry
 **/cache
 **/out
+
+# Yarn
+node_modules

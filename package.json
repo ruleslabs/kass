@@ -1,0 +1,14 @@
+{
+  "name": "kass",
+  "version": "0.1.0",
+  "description": "Starknet Ethereum ERC1155 Bridge",
+  "author": "0xChqrles",
+  "license": "MIT",
+  "devDependencies": {
+    "solhint": "^3.4.0"
+  },
+  "scripts": {
+    "lint": "yarn lint:sol && yarn prettier:check",
+    "lint:sol": "forge fmt --check && yarn solhint \"{script,src,test}/**/*.sol\""
+  }
+}
