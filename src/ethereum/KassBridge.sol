@@ -51,6 +51,8 @@ contract KassBridge is Ownable, KassDeployer, KassMessagingPayloads {
     }
 
     function withdraw(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, address l1Recipient) public {
+        require(amount > 0, "Cannot withdraw null amount");
+
         // compute L1 instance request payload
         uint256[] memory payload = tokenDepositFromL2MessagePayload(l2TokenAddress, tokenId, amount, l1Recipient);
 
@@ -62,5 +64,19 @@ contract KassBridge is Ownable, KassDeployer, KassMessagingPayloads {
 
         // mint tokens
         l1TokenInstance.mint(l1Recipient, tokenId, amount);
+    }
+
+    function deposit(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, uint256 l2Recipient) public {
+        require(amount > 0, "Cannot deposit null amount");
+
+        // get l1 token instance
+        KassERC1155 l1TokenInstance = KassERC1155(computeL1TokenAddress(l2TokenAddress));
+
+        // burn tokens
+        l1TokenInstance.burn(msg.sender, tokenId, amount);
+
+        // compute L2 deposit payload and sent it
+        uint256[] memory payload = tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient);
+        _starknetMessaging.sendMessageToL2(_l2KassAddress, DEPOSIT_HANDLER_SELECTOR, payload);
     }
 }

@@ -9,8 +9,9 @@ import "../../src/ethereum/KassUtils.sol";
 import "../../src/ethereum/ERC1155/KassERC1155.sol";
 import "../../src/ethereum/mocks/StarknetMessagingMock.sol";
 import "../../src/ethereum/KassMessagingPayloads.sol";
+import "../../src/ethereum/StarknetConstants.sol";
 
-abstract contract KassTestBase is Test, KassMessagingPayloads {
+abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads {
     KassBridge internal _kassBridge;
     address internal _starknetMessagingAddress;
 
@@ -20,6 +21,8 @@ abstract contract KassTestBase is Test, KassMessagingPayloads {
     address internal constant STARKNET_MESSAGNING_ADDRESS = address(uint160(uint256(keccak256("starknet messaging"))));
     uint256 internal constant L2_KASS_ADDRESS = uint256(keccak256("L2 Kass"));
     uint256 internal constant L2_TOKEN_ADDRESS = uint256(keccak256("L2 token"));
+
+    uint256 public constant CAIRO_FIELD_PRIME = 0x800000000000011000000000000000000000000000000000000000000000001;
 
     constructor () {
         // L2 token uri
@@ -68,25 +71,21 @@ abstract contract KassTestBase is Test, KassMessagingPayloads {
         );
     }
 
-    // be careful with this helpers, it will clear all mocked calls.
-    function createL1Instance() internal returns (KassERC1155 kassERC1155) {
-
-
-        // create and return L1 instance
-        kassERC1155 = KassERC1155(_kassBridge.createL1Instance(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
-
-        // clear mocked calls
-        vm.clearMockedCalls();
-    }
-
-    // be careful with this helpers, it will clear all mocked calls.
-    function withdrawFromL2(uint256 tokenId, uint256 amount, address l1Recipient) internal {
-
-
-        // create and return L1 instance
-        _kassBridge.withdraw(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
-
-        // clear mocked calls
-        vm.clearMockedCalls();
+    function expectDepositFromL2(
+        uint256 l2TokenAddress,
+        uint256 tokenId,
+        uint256 amount,
+        uint256 l2Recipient
+    ) internal {
+        // expect L1 message send
+        vm.expectCall(
+            _starknetMessagingAddress,
+            abi.encodeWithSelector(
+                IStarknetMessaging.sendMessageToL2.selector,
+                L2_KASS_ADDRESS,
+                DEPOSIT_HANDLER_SELECTOR,
+                tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient)
+            )
+        );
     }
 }

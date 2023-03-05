@@ -45,4 +45,9 @@ contract KassERC1155 is ERC1155 {
     function mint(address to, uint256 id, uint256 amount) public onlyDeployer {
         _mint(to, id, amount, "");
     }
+
+    // burn
+    function burn(address from, uint256 id, uint256 amount) public onlyDeployer {
+        _burn(from, id, amount);
+    }
 }
