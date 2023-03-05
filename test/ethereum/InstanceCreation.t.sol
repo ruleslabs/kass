@@ -16,7 +16,7 @@ contract KassBridgeInstanceCreationTest is KassTestBase {
         requestL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI);
     }
 
-    function testL1TokenInstanceComputedAddress() public {
+    function test_L1TokenInstanceComputedAddress() public {
         // pre compute address
         address computedL1TokenAddress = _kassBridge.computeL1TokenAddress(L2_TOKEN_ADDRESS);
 
@@ -26,19 +26,19 @@ contract KassBridgeInstanceCreationTest is KassTestBase {
         assertEq(computedL1TokenAddress, l1TokenAddress);
     }
 
-    function testL1TokenInstanceUri() public {
+    function test_L1TokenInstanceUri() public {
         // create L1 instance
         KassERC1155 l1TokenInstance = KassERC1155(_kassBridge.createL1Instance(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
 
         assertEq(l1TokenInstance.uri(0), KassUtils.concat(L2_TOKEN_URI));
     }
 
-    function testCannotCreateL1TokenInstanceWithDifferentL2TokenAddressFromL2Request() public {
+    function test_CannotCreateL1TokenInstanceWithDifferentL2TokenAddressFromL2Request() public {
         vm.expectRevert();
         _kassBridge.createL1Instance(L2_TOKEN_ADDRESS - 1, L2_TOKEN_URI);
     }
 
-    function testCannotCreateL1TokenInstanceWithDifferentUriFromL2Request() public {
+    function test_CannotCreateL1TokenInstanceWithDifferentUriFromL2Request() public {
         string[] memory uri = new string[](L2_TOKEN_URI.length);
 
         // reverse `L2_TOKEN_URI`

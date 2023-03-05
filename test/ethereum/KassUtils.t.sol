@@ -12,7 +12,7 @@ contract KassUtilsTest is Test {
     }
 
     // CONCAT
-    function testConcatMulitpleStrings() public {
+    function test_ConcatMulitpleStrings() public {
         string memory res;
         string[] memory arr;
 
@@ -26,7 +26,7 @@ contract KassUtilsTest is Test {
         assertEq(res, "Hello world !");
     }
 
-    function testConcatSingleString() public {
+    function test_ConcatSingleString() public {
         string memory res;
         string[] memory arr;
 
@@ -37,7 +37,7 @@ contract KassUtilsTest is Test {
         assertEq(res, "42");
     }
 
-    function testConcatNothing() public {
+    function test_ConcatNothing() public {
         string memory res;
         string[] memory arr;
 
@@ -48,21 +48,21 @@ contract KassUtilsTest is Test {
     }
 
     // STR TO UINT256
-    function testBasicStrToUint256() public {
+    function test_BasicStrToUint256() public {
         uint256 res;
 
         res = KassUtils.strToUint256("Hello world !");
         assertEq(res, uint256(0x48656C6C6F20776F726C642021));
     }
 
-    function testEmptyStrToUint256() public {
+    function test_EmptyStrToUint256() public {
         uint256 res;
 
         res = KassUtils.strToUint256("");
         assertEq(res, uint256(0x0));
     }
 
-    function testTooLongStrToUint256() public {
+    function test_TooLongStrToUint256() public {
         vm.expectRevert(bytes("String cannot be longer than 32"));
         KassUtils.strToUint256("123456789012345678901234567890123");
     }
