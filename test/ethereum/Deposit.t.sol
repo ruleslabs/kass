@@ -23,96 +23,100 @@ contract WithdrawTest is KassTestBase {
 
     function depositAndWithdrawToL1(uint256 tokenId, uint256 amount, address l1Recipient) private {
         // deposit tokens
-        depositFromL2(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
         _kassBridge.withdraw(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
     }
 
     function test_DepositToL2_1() public {
+        address sender = address(this);
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amountToDepositOnL1 = uint256(keccak256("huge amount"));
-        uint256 amountToDepositOnL2 = uint256(keccak256("huge amount")) - 0x42;
+        uint256 amountTodepositOnL1 = uint256(keccak256("huge amount")) - 0x42;
 
         // deposit from L2
-        depositAndWithdrawToL1(tokenId, amountToDepositOnL1, address(this));
-        assertEq(_l1TokenInstance.balanceOf(address(this), tokenId), amountToDepositOnL1);
+        depositAndWithdrawToL1(tokenId, amountToDepositOnL1, sender);
+        assertEq(_l1TokenInstance.balanceOf(sender, tokenId), amountToDepositOnL1);
 
         // deposit on L2
-        expectDepositFromL2(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL2, l2Recipient);
-        _kassBridge.deposit(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL2, l2Recipient);
+        expectdepositOnL1(sender, L2_TOKEN_ADDRESS, tokenId, amountTodepositOnL1, l2Recipient);
+        _kassBridge.deposit(L2_TOKEN_ADDRESS, tokenId, amountTodepositOnL1, l2Recipient);
 
         // check if balance was updated
-        assertEq(_l1TokenInstance.balanceOf(address(this), tokenId), amountToDepositOnL1 - amountToDepositOnL2);
+        assertEq(_l1TokenInstance.balanceOf(sender, tokenId), amountToDepositOnL1 - amountTodepositOnL1);
     }
 
     function test_DepositToL2_2() public {
+        address sender = address(this);
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amountToDepositOnL1 = 0x100;
-        uint256 amountToDepositOnL2 = 0x42;
+        uint256 amountTodepositOnL1 = 0x42;
 
         // deposit from L2
-        depositAndWithdrawToL1(tokenId, amountToDepositOnL1, address(this));
-        assertEq(_l1TokenInstance.balanceOf(address(this), tokenId), amountToDepositOnL1);
+        depositAndWithdrawToL1(tokenId, amountToDepositOnL1, sender);
+        assertEq(_l1TokenInstance.balanceOf(sender, tokenId), amountToDepositOnL1);
 
         // deposit on L2
-        expectDepositFromL2(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL2, l2Recipient);
-        _kassBridge.deposit(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL2, l2Recipient);
+        expectdepositOnL1(sender, L2_TOKEN_ADDRESS, tokenId, amountTodepositOnL1, l2Recipient);
+        _kassBridge.deposit(L2_TOKEN_ADDRESS, tokenId, amountTodepositOnL1, l2Recipient);
 
         // check if balance was updated
-        assertEq(_l1TokenInstance.balanceOf(address(this), tokenId), amountToDepositOnL1 - amountToDepositOnL2);
+        assertEq(_l1TokenInstance.balanceOf(sender, tokenId), amountToDepositOnL1 - amountTodepositOnL1);
     }
 
     function test_MultipleDepositToL2() public {
+        address sender = address(this);
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amountToDepositOnL1 = 0x100;
 
         // solhint-disable-next-line var-name-mixedcase
-        uint256 amountToDepositOnL2_1 = 0x42;
+        uint256 amountTodepositOnL1_1 = 0x42;
         // solhint-disable-next-line var-name-mixedcase
-        uint256 amountToDepositOnL2_2 = 0x18;
+        uint256 amountTodepositOnL1_2 = 0x18;
 
         // deposit from L2
-        depositAndWithdrawToL1(tokenId, amountToDepositOnL1, address(this));
-        assertEq(_l1TokenInstance.balanceOf(address(this), tokenId), amountToDepositOnL1);
+        depositAndWithdrawToL1(tokenId, amountToDepositOnL1, sender);
+        assertEq(_l1TokenInstance.balanceOf(sender, tokenId), amountToDepositOnL1);
 
         // deposit on L2
-        expectDepositFromL2(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL2_1, l2Recipient);
-        _kassBridge.deposit(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL2_1, l2Recipient);
+        expectdepositOnL1(sender, L2_TOKEN_ADDRESS, tokenId, amountTodepositOnL1_1, l2Recipient);
+        _kassBridge.deposit(L2_TOKEN_ADDRESS, tokenId, amountTodepositOnL1_1, l2Recipient);
 
-        expectDepositFromL2(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL2_2, l2Recipient);
-        _kassBridge.deposit(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL2_2, l2Recipient);
+        expectdepositOnL1(sender, L2_TOKEN_ADDRESS, tokenId, amountTodepositOnL1_2, l2Recipient);
+        _kassBridge.deposit(L2_TOKEN_ADDRESS, tokenId, amountTodepositOnL1_2, l2Recipient);
 
         // check if balance was updated
         assertEq(
-            _l1TokenInstance.balanceOf(address(this), tokenId),
-            amountToDepositOnL1 - amountToDepositOnL2_1 - amountToDepositOnL2_2
+            _l1TokenInstance.balanceOf(sender, tokenId),
+            amountToDepositOnL1 - amountTodepositOnL1_1 - amountTodepositOnL1_2
         );
     }
 
     function test_CannotDepositToL2MoreThanBalance() public {
+        address sender = address(this);
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amountToDepositOnL1 = 0x100;
-        uint256 amountToDepositOnL2 = 0x101;
+        uint256 amountTodepositOnL1 = 0x101;
 
         // deposit from L2
-        depositAndWithdrawToL1(tokenId, amountToDepositOnL1, address(this));
-        assertEq(_l1TokenInstance.balanceOf(address(this), tokenId), amountToDepositOnL1);
+        depositAndWithdrawToL1(tokenId, amountToDepositOnL1, sender);
+        assertEq(_l1TokenInstance.balanceOf(sender, tokenId), amountToDepositOnL1);
 
         // deposit on L2
         vm.expectRevert("ERC1155: burn amount exceeds balance");
-        _kassBridge.deposit(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL2, l2Recipient);
+        _kassBridge.deposit(L2_TOKEN_ADDRESS, tokenId, amountTodepositOnL1, l2Recipient);
     }
 
     function test_CannotDepositToL2Zero() public {
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
-        uint256 amountToDepositOnL2 = 0x0;
+        uint256 amountTodepositOnL1 = 0x0;
 
         // deposit on L2
         vm.expectRevert("Cannot deposit null amount");
-        _kassBridge.deposit(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL2, l2Recipient);
+        _kassBridge.deposit(L2_TOKEN_ADDRESS, tokenId, amountTodepositOnL1, l2Recipient);
     }
 }

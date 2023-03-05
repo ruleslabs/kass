@@ -16,6 +16,27 @@ contract KassBridge is Ownable, KassDeployer, KassMessagingPayloads {
 
     uint256 private _l2KassAddress;
 
+    // EVENTS
+
+    // L1 token address can be computed offchain from L2 token address
+    // it does not need to be indexed
+    event LogL1InstanceCreated(uint256 indexed l2TokenAddress, address l1TokenAddress);
+    event LogDeposit(
+        address indexed sender,
+        uint256 indexed l2TokenAddress,
+        address l1TokenAddress,
+        uint256 tokenId,
+        uint256 amount,
+        uint256 indexed l2Recipient
+    );
+    event LogWithdrawal(
+        uint256 indexed l2TokenAddress,
+        address l1TokenAddress,
+        uint256 tokenId,
+        uint256 amount,
+        address indexed l1Recipient
+    );
+
     // CONSTRUCTOR
 
     constructor(address starknetMessaging_) Ownable() KassDeployer() {
@@ -36,7 +57,7 @@ contract KassBridge is Ownable, KassDeployer, KassMessagingPayloads {
 
     // BUSINESS LOGIC
 
-    function createL1Instance(uint256 l2TokenAddress, string[] calldata uri) public returns (address) {
+    function createL1Instance(uint256 l2TokenAddress, string[] calldata uri) public returns (address l1TokenAddress) {
         // compute L1 instance request payload
         uint256[] memory payload = instanceCreationMessagePayload(l2TokenAddress, uri);
 
@@ -44,39 +65,46 @@ contract KassBridge is Ownable, KassDeployer, KassMessagingPayloads {
         _starknetMessaging.consumeMessageFromL2(_l2KassAddress, payload);
 
         // deploy Kass ERC1155 and set URI
-        address l1TokenAddress = cloneKassERC1155(bytes32(l2TokenAddress));
+        l1TokenAddress = cloneKassERC1155(bytes32(l2TokenAddress));
         KassERC1155(l1TokenAddress).init(KassUtils.concat(uri));
 
-        return l1TokenAddress;
+        // emit event
+        emit LogL1InstanceCreated(l2TokenAddress, l1TokenAddress);
     }
 
     function withdraw(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, address l1Recipient) public {
         require(amount > 0, "Cannot withdraw null amount");
 
         // compute L1 instance request payload
-        uint256[] memory payload = tokenDepositFromL2MessagePayload(l2TokenAddress, tokenId, amount, l1Recipient);
+        uint256[] memory payload = tokendepositOnL1MessagePayload(l2TokenAddress, tokenId, amount, l1Recipient);
 
         // consume L1 withdraw request message
         _starknetMessaging.consumeMessageFromL2(_l2KassAddress, payload);
 
         // get l1 token instance
-        KassERC1155 l1TokenInstance = KassERC1155(computeL1TokenAddress(l2TokenAddress));
+        address l1TokenAddress = computeL1TokenAddress(l2TokenAddress);
 
         // mint tokens
-        l1TokenInstance.mint(l1Recipient, tokenId, amount);
+        KassERC1155(l1TokenAddress).mint(l1Recipient, tokenId, amount);
+
+        // emit event
+        emit LogWithdrawal(l2TokenAddress, l1TokenAddress, tokenId, amount, l1Recipient);
     }
 
     function deposit(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, uint256 l2Recipient) public {
         require(amount > 0, "Cannot deposit null amount");
 
         // get l1 token instance
-        KassERC1155 l1TokenInstance = KassERC1155(computeL1TokenAddress(l2TokenAddress));
+        address l1TokenAddress = computeL1TokenAddress(l2TokenAddress);
 
         // burn tokens
-        l1TokenInstance.burn(msg.sender, tokenId, amount);
+        KassERC1155(l1TokenAddress).burn(msg.sender, tokenId, amount);
 
         // compute L2 deposit payload and sent it
-        uint256[] memory payload = tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient);
+        uint256[] memory payload = tokendepositOnL1MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient);
         _starknetMessaging.sendMessageToL2(_l2KassAddress, DEPOSIT_HANDLER_SELECTOR, payload);
+
+        // emit event
+        emit LogDeposit(msg.sender, l2TokenAddress, l1TokenAddress, tokenId, amount, l2Recipient);
     }
 }

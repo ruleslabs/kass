@@ -24,6 +24,23 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
     uint256 public constant CAIRO_FIELD_PRIME = 0x800000000000011000000000000000000000000000000000000000000000001;
 
+    event LogL1InstanceCreated(uint256 indexed l2TokenAddress, address l1TokenAddress);
+    event LogDeposit(
+        address indexed sender,
+        uint256 indexed l2TokenAddress,
+        address l1TokenAddress,
+        uint256 tokenId,
+        uint256 amount,
+        uint256 indexed l2Recipient
+    );
+    event LogWithdrawal(
+        uint256 indexed l2TokenAddress,
+        address l1TokenAddress,
+        uint256 tokenId,
+        uint256 amount,
+        address indexed l1Recipient
+    );
+
     constructor () {
         // L2 token uri
         L2_TOKEN_URI = new string[](3);
@@ -58,20 +75,39 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         );
     }
 
-    function depositFromL2(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, address l1Recipient) internal {
+    function depositOnL1(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, address l1Recipient) internal {
         // prepare L1 instance deposit message from L2
         vm.mockCall(
             _starknetMessagingAddress,
             abi.encodeWithSelector(
                 IStarknetMessaging.consumeMessageFromL2.selector,
                 L2_KASS_ADDRESS,
-                tokenDepositFromL2MessagePayload(l2TokenAddress, tokenId, amount, l1Recipient)
+                tokendepositOnL1MessagePayload(l2TokenAddress, tokenId, amount, l1Recipient)
             ),
             abi.encode()
         );
     }
 
-    function expectDepositFromL2(
+    // Expects
+
+    function expectL1InstanceCreation(uint256 l2TokenAddress) internal {
+        // expect event
+        address l1TokenAddress = _kassBridge.computeL1TokenAddress(l2TokenAddress);
+
+        vm.expectEmit(true, true, true, true, address(_kassBridge));
+        emit LogL1InstanceCreated(l2TokenAddress, l1TokenAddress);
+    }
+
+    function expectWithdrawOnL1(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, address l1Recipient) internal {
+        // expect event
+        address l1TokenAddress = _kassBridge.computeL1TokenAddress(l2TokenAddress);
+
+        vm.expectEmit(true, true, true, true, address(_kassBridge));
+        emit LogWithdrawal(l2TokenAddress, l1TokenAddress, tokenId, amount, l1Recipient);
+    }
+
+    function expectdepositOnL1(
+        address sender,
         uint256 l2TokenAddress,
         uint256 tokenId,
         uint256 amount,
@@ -84,8 +120,14 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
                 IStarknetMessaging.sendMessageToL2.selector,
                 L2_KASS_ADDRESS,
                 DEPOSIT_HANDLER_SELECTOR,
-                tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient)
+                tokendepositOnL1MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient)
             )
         );
+
+        // expect event
+        address l1TokenAddress = _kassBridge.computeL1TokenAddress(l2TokenAddress);
+
+        vm.expectEmit(true, true, true, true, address(_kassBridge));
+        emit LogDeposit(sender, l2TokenAddress, l1TokenAddress, tokenId, amount, l2Recipient);
     }
 }

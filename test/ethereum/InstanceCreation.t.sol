@@ -21,6 +21,7 @@ contract KassBridgeInstanceCreationTest is KassTestBase {
         address computedL1TokenAddress = _kassBridge.computeL1TokenAddress(L2_TOKEN_ADDRESS);
 
         // create L1 instance
+        expectL1InstanceCreation(L2_TOKEN_ADDRESS);
         address l1TokenAddress = _kassBridge.createL1Instance(L2_TOKEN_ADDRESS, L2_TOKEN_URI);
 
         assertEq(computedL1TokenAddress, l1TokenAddress);
@@ -28,6 +29,7 @@ contract KassBridgeInstanceCreationTest is KassTestBase {
 
     function test_L1TokenInstanceUri() public {
         // create L1 instance
+        expectL1InstanceCreation(L2_TOKEN_ADDRESS);
         KassERC1155 l1TokenInstance = KassERC1155(_kassBridge.createL1Instance(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
 
         assertEq(l1TokenInstance.uri(0), KassUtils.concat(L2_TOKEN_URI));

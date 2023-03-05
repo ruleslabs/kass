@@ -26,7 +26,8 @@ contract WithdrawTest is KassTestBase {
         assertEq(_l1TokenInstance.balanceOf(l1Recipient, tokenId), 0);
 
         // deposit from L2 and withdraw to L1
-        depositFromL2(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        expectWithdrawOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
         _kassBridge.withdraw(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
 
         // assert balance was updated
@@ -42,7 +43,8 @@ contract WithdrawTest is KassTestBase {
         assertEq(_l1TokenInstance.balanceOf(l1Recipient, tokenId), 0);
 
         // deposit from L2 and withdraw to L1
-        depositFromL2(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        expectWithdrawOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
         _kassBridge.withdraw(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
 
         // assert balance was updated
@@ -55,13 +57,14 @@ contract WithdrawTest is KassTestBase {
         uint256 amount = 0x3 << UINT256_PART_SIZE_BITS;
 
         // deposit from L2
-        depositFromL2(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
 
         // assert balance is empty
         assertEq(_l1TokenInstance.balanceOf(l1Recipient, tokenId), 0);
 
         // deposit from L2 and withdraw to L1
-        depositFromL2(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        expectWithdrawOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
         _kassBridge.withdraw(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
 
         // assert balance was updated
@@ -74,7 +77,7 @@ contract WithdrawTest is KassTestBase {
         uint256 amount = 0x10;
 
         // deposit from L2
-        depositFromL2(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
 
         vm.expectRevert();
         _kassBridge.withdraw(L2_TOKEN_ADDRESS, tokenId - 1, amount, l1Recipient);
@@ -86,7 +89,7 @@ contract WithdrawTest is KassTestBase {
         uint256 amount = 0x10;
 
         // deposit from L2
-        depositFromL2(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
 
         vm.expectRevert();
         _kassBridge.withdraw(L2_TOKEN_ADDRESS, tokenId, amount + 1, l1Recipient);
@@ -99,7 +102,7 @@ contract WithdrawTest is KassTestBase {
         uint256 amount = 0x10;
 
         // deposit from L2
-        depositFromL2(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
 
         vm.expectRevert();
         _kassBridge.withdraw(L2_TOKEN_ADDRESS, tokenId, amount, fakeL1Recipient);
@@ -111,9 +114,10 @@ contract WithdrawTest is KassTestBase {
         uint256 amount = 0x10;
 
         // deposit from L2
-        depositFromL2(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
 
         // withdraw
+        expectWithdrawOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
         _kassBridge.withdraw(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
 
         vm.clearMockedCalls();
@@ -127,7 +131,7 @@ contract WithdrawTest is KassTestBase {
         uint256 amount = 0x0;
 
         // deposit from L2
-        depositFromL2(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
 
         // withdraw
         vm.expectRevert("Cannot withdraw null amount");
