@@ -52,6 +52,7 @@ contract KassBridgeTest is Test {
 
     // HELPERS
 
+    // be careful with this helpers, it will clear all mocked calls.
     function createL1Instance() private returns (KassERC1155 kassERC1155) {
         // prepare L1 instance creation message from L2
         vm.mockCall(
@@ -82,11 +83,7 @@ contract KassBridgeTest is Test {
 
     function testL1TokenInstanceComputedAddress() public {
         // pre compute address
-        address computedL1TokenAddress = KassUtils.computeAddress(
-            address(kassBridge),
-            type(KassERC1155).creationCode,
-            bytes32(L2_TOKEN_ADDRESS)
-        );
+        address computedL1TokenAddress = kassBridge.computeL1TokenAddress(L2_TOKEN_ADDRESS);
 
         // create L1 instance
         KassERC1155 l1TokenInstance = createL1Instance();

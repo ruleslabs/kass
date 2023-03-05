@@ -26,11 +26,4 @@ library KassUtils {
 
         return output;
     }
-
-    function computeAddress(address deployer, bytes calldata bytecode, bytes32 salt) public pure returns (address) {
-        bytes32 hash = keccak256(
-            abi.encodePacked(bytes1(0xff), address(deployer), salt, keccak256(bytecode))
-        );
-        return address(uint160(uint256(hash)));
-    }
 }
