@@ -23,7 +23,7 @@ abstract contract KassMessagingPayloads is StarknetConstants {
         }
     }
 
-    function tokendepositOnL1MessagePayload(
+    function tokenDepositOnL1MessagePayload(
         uint256 l2TokenAddress,
         uint256 tokenId,
         uint256 amount,
@@ -44,7 +44,7 @@ abstract contract KassMessagingPayloads is StarknetConstants {
         payload[6] = uint128(amount & (UINT256_PART_SIZE - 1)); // high
     }
 
-    function tokendepositOnL1MessagePayload(
+    function tokenDepositOnL2MessagePayload(
         uint256 l2TokenAddress,
         uint256 tokenId,
         uint256 amount,

@@ -40,6 +40,22 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         uint256 amount,
         address indexed l1Recipient
     );
+    event LogDepositCancelRequest(
+        address indexed sender,
+        uint256 indexed l2TokenAddress,
+        uint256 tokenId,
+        uint256 amount,
+        uint256 indexed l2Recipient,
+        uint256 nonce
+    );
+    event LogDepositCancel(
+        address indexed sender,
+        uint256 indexed l2TokenAddress,
+        uint256 tokenId,
+        uint256 amount,
+        uint256 indexed l2Recipient,
+        uint256 nonce
+    );
 
     constructor () {
         // L2 token uri
@@ -82,7 +98,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
             abi.encodeWithSelector(
                 IStarknetMessaging.consumeMessageFromL2.selector,
                 L2_KASS_ADDRESS,
-                tokendepositOnL1MessagePayload(l2TokenAddress, tokenId, amount, l1Recipient)
+                tokenDepositOnL1MessagePayload(l2TokenAddress, tokenId, amount, l1Recipient)
             ),
             abi.encode()
         );
@@ -106,7 +122,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         emit LogWithdrawal(l2TokenAddress, l1TokenAddress, tokenId, amount, l1Recipient);
     }
 
-    function expectdepositOnL1(
+    function expectDepositOnL2(
         address sender,
         uint256 l2TokenAddress,
         uint256 tokenId,
@@ -120,7 +136,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
                 IStarknetMessaging.sendMessageToL2.selector,
                 L2_KASS_ADDRESS,
                 DEPOSIT_HANDLER_SELECTOR,
-                tokendepositOnL1MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient)
+                tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient)
             )
         );
 
@@ -129,5 +145,57 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
         vm.expectEmit(true, true, true, true, address(_kassBridge));
         emit LogDeposit(sender, l2TokenAddress, l1TokenAddress, tokenId, amount, l2Recipient);
+    }
+
+    // cannot test nonce logic since it's handled by the starknet messaging contract.
+    function expectDepositCancelRequest(
+        address sender,
+        uint256 l2TokenAddress,
+        uint256 tokenId,
+        uint256 amount,
+        uint256 l2Recipient,
+        uint256 nonce
+    ) internal {
+        // expect L1 message send
+        vm.expectCall(
+            _starknetMessagingAddress,
+            abi.encodeWithSelector(
+                IStarknetMessaging.startL1ToL2MessageCancellation.selector,
+                L2_KASS_ADDRESS,
+                DEPOSIT_HANDLER_SELECTOR,
+                tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient),
+                nonce
+            )
+        );
+
+        // expect event
+        vm.expectEmit(true, true, true, true, address(_kassBridge));
+        emit LogDepositCancelRequest(sender, l2TokenAddress, tokenId, amount, l2Recipient, nonce);
+    }
+
+    // cannot test nonce logic since it's handled by the starknet messaging contract.
+    function expectDepositCancel(
+        address sender,
+        uint256 l2TokenAddress,
+        uint256 tokenId,
+        uint256 amount,
+        uint256 l2Recipient,
+        uint256 nonce
+    ) internal {
+        // expect L1 message send
+        vm.expectCall(
+            _starknetMessagingAddress,
+            abi.encodeWithSelector(
+                IStarknetMessaging.cancelL1ToL2Message.selector,
+                L2_KASS_ADDRESS,
+                DEPOSIT_HANDLER_SELECTOR,
+                tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient),
+                nonce
+            )
+        );
+
+        // expect event
+        vm.expectEmit(true, true, true, true, address(_kassBridge));
+        emit LogDepositCancel(sender, l2TokenAddress, tokenId, amount, l2Recipient, nonce);
     }
 }
