@@ -2,26 +2,25 @@
 
 pragma solidity ^0.8.19;
 
-import "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./interfaces/IStarknetMessaging.sol";
 import "./KassUtils.sol";
 import "./ERC1155/KassERC1155.sol";
+import "./KassStorage.sol";
 
-abstract contract KassDeployer {
-    address public _baseToken;
-
+abstract contract TokenDeployer is KassStorage {
     // CONSTRUCTOR
 
-    constructor() {
+    function setDeployerBaseToken() internal {
         // This is the contract that will be cloned to all others
-        _baseToken = address(new KassERC1155{ salt: keccak256("V0.1") }());
+        _baseToken(address(new KassERC1155{ salt: keccak256("V0.1") }()));
     }
 
     // GETTERS
 
     function computeL1TokenAddress(uint256 l2TokenAddress) public view returns (address addr) {
-        bytes20 baseAddressBytes = bytes20(_baseToken);
+        bytes20 baseAddressBytes = bytes20(_baseToken());
         bytes20 deployerBytes = bytes20(address(this));
 
         assembly {
@@ -50,7 +49,7 @@ abstract contract KassDeployer {
      * @param salt Salt for CREATE2
      */
     function cloneKassERC1155(bytes32 salt) internal returns (address payable result) {
-        bytes20 targetBytes = bytes20(_baseToken);
+        bytes20 targetBytes = bytes20(_baseToken());
         assembly {
             let clone := mload(0x40)
             mstore(clone, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)

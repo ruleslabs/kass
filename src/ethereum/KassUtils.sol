@@ -5,7 +5,7 @@ pragma solidity ^0.8.19;
 library KassUtils {
     function strToUint256(string memory text) public pure returns (uint256 res) {
         bytes32 stringInBytes32 = bytes32(bytes(text));
-        uint256 strLen = bytes(text).length; // TODO: cannot be above 32
+        uint256 strLen = bytes(text).length;
         require(strLen <= 32, "String cannot be longer than 32");
 
         uint256 shift = 256 - 8 * strLen;

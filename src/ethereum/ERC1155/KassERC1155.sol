@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.19;
 
-import "openzeppelin-contracts/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
 // modified version of the oz ERC1155 without constructor for a consistent bytecode
 contract KassERC1155 is ERC1155 {

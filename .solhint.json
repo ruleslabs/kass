@@ -9,6 +9,7 @@
     "named-parameters-mapping": "warn",
     "no-console": "off",
     "not-rely-on-time": "off",
-    "no-inline-assembly": "off"
+    "no-inline-assembly": "off",
+    "no-global-import": "off"
   }
 }

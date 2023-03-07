@@ -4,7 +4,8 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 
-import "../../src/ethereum/KassBridge.sol";
+import "../../src/ethereum/Kass.sol";
+import "../../src/ethereum/upgrade/KassProxy.sol";
 import "../../src/ethereum/KassUtils.sol";
 import "../../src/ethereum/ERC1155/KassERC1155.sol";
 import "../../src/ethereum/mocks/StarknetMessagingMock.sol";
@@ -12,7 +13,7 @@ import "../../src/ethereum/KassMessagingPayloads.sol";
 import "../../src/ethereum/StarknetConstants.sol";
 
 abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads {
-    KassBridge internal _kassBridge;
+    Kass internal _kass;
     address internal _starknetMessagingAddress;
 
     // solhint-disable-next-line var-name-mixedcase
@@ -69,11 +70,19 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
     function setUp() public virtual {
         // setup starknet messaging mock
-        _starknetMessagingAddress = address(new StarknetMessagingMock());
+        IStarknetMessaging starknetMessaging = new StarknetMessagingMock();
+        _starknetMessagingAddress = address(starknetMessaging);
+
+        address implementationAddress = address(new Kass());
 
         // setup bridge
-        _kassBridge = new KassBridge(_starknetMessagingAddress);
-        _kassBridge.setL2KassAddress(L2_KASS_ADDRESS);
+        address payable kassAddress = payable(
+            new KassProxy(
+                implementationAddress,
+                abi.encodeWithSelector(Kass.initialize.selector, abi.encode(L2_KASS_ADDRESS, starknetMessaging))
+            )
+        );
+        _kass = Kass(kassAddress);
     }
 
     // MESSAGES
@@ -87,7 +96,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
                 L2_KASS_ADDRESS,
                 instanceCreationMessagePayload(l2TokenAddress, uri)
             ),
-            abi.encode()
+            abi.encode(bytes32(0x0))
         );
     }
 
@@ -100,7 +109,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
                 L2_KASS_ADDRESS,
                 tokenDepositOnL1MessagePayload(l2TokenAddress, tokenId, amount, l1Recipient)
             ),
-            abi.encode()
+            abi.encode(bytes32(0x0))
         );
     }
 
@@ -108,17 +117,17 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
     function expectL1InstanceCreation(uint256 l2TokenAddress) internal {
         // expect event
-        address l1TokenAddress = _kassBridge.computeL1TokenAddress(l2TokenAddress);
+        address l1TokenAddress = _kass.computeL1TokenAddress(l2TokenAddress);
 
-        vm.expectEmit(true, true, true, true, address(_kassBridge));
+        vm.expectEmit(true, true, true, true, address(_kass));
         emit LogL1InstanceCreated(l2TokenAddress, l1TokenAddress);
     }
 
     function expectWithdrawOnL1(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, address l1Recipient) internal {
         // expect event
-        address l1TokenAddress = _kassBridge.computeL1TokenAddress(l2TokenAddress);
+        address l1TokenAddress = _kass.computeL1TokenAddress(l2TokenAddress);
 
-        vm.expectEmit(true, true, true, true, address(_kassBridge));
+        vm.expectEmit(true, true, true, true, address(_kass));
         emit LogWithdrawal(l2TokenAddress, l1TokenAddress, tokenId, amount, l1Recipient);
     }
 
@@ -127,7 +136,8 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         uint256 l2TokenAddress,
         uint256 tokenId,
         uint256 amount,
-        uint256 l2Recipient
+        uint256 l2Recipient,
+        uint256 nonce
     ) internal {
         // expect L1 message send
         vm.expectCall(
@@ -140,10 +150,22 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
             )
         );
 
-        // expect event
-        address l1TokenAddress = _kassBridge.computeL1TokenAddress(l2TokenAddress);
+        // mock message sending return value
+        vm.mockCall(
+            _starknetMessagingAddress,
+            abi.encodeWithSelector(
+                IStarknetMessaging.sendMessageToL2.selector,
+                L2_KASS_ADDRESS,
+                DEPOSIT_HANDLER_SELECTOR,
+                tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient)
+            ),
+            abi.encode(bytes32(0), uint256(nonce))
+        );
 
-        vm.expectEmit(true, true, true, true, address(_kassBridge));
+        // expect event
+        address l1TokenAddress = _kass.computeL1TokenAddress(l2TokenAddress);
+
+        vm.expectEmit(true, true, true, true, address(_kass));
         emit LogDeposit(sender, l2TokenAddress, l1TokenAddress, tokenId, amount, l2Recipient);
     }
 
@@ -169,7 +191,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         );
 
         // expect event
-        vm.expectEmit(true, true, true, true, address(_kassBridge));
+        vm.expectEmit(true, true, true, true, address(_kass));
         emit LogDepositCancelRequest(sender, l2TokenAddress, tokenId, amount, l2Recipient, nonce);
     }
 
@@ -195,7 +217,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         );
 
         // expect event
-        vm.expectEmit(true, true, true, true, address(_kassBridge));
+        vm.expectEmit(true, true, true, true, address(_kass));
         emit LogDepositCancel(sender, l2TokenAddress, tokenId, amount, l2Recipient, nonce);
     }
 }

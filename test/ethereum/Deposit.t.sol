@@ -14,7 +14,7 @@ contract WithdrawTest is KassTestBase {
 
         // request and create L1 instance
         requestL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI);
-        _l1TokenInstance = KassERC1155(_kassBridge.createL1Instance(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
+        _l1TokenInstance = KassERC1155(_kass.createL1Instance(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
     }
 
     function onERC1155Received(address, address, uint256, uint256, bytes memory) public virtual returns (bytes4) {
@@ -24,7 +24,7 @@ contract WithdrawTest is KassTestBase {
     function depositAndWithdrawToL1(uint256 tokenId, uint256 amount, address l1Recipient) private {
         // deposit tokens
         depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
-        _kassBridge.withdraw(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        _kass.withdraw(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
     }
 
     function basicDepositTest(
@@ -40,8 +40,8 @@ contract WithdrawTest is KassTestBase {
         assertEq(_l1TokenInstance.balanceOf(sender, tokenId), amountToDepositOnL1);
 
         // deposit on L2
-        expectDepositOnL2(sender, l2TokenAddress, tokenId, amountToDepositOnL2, l2Recipient);
-        _kassBridge.deposit(l2TokenAddress, tokenId, amountToDepositOnL2, l2Recipient);
+        expectDepositOnL2(sender, l2TokenAddress, tokenId, amountToDepositOnL2, l2Recipient, 0x0);
+        _kass.deposit(l2TokenAddress, tokenId, amountToDepositOnL2, l2Recipient);
 
         // check if balance was updated
         assertEq(_l1TokenInstance.balanceOf(sender, tokenId), amountToDepositOnL1 - amountToDepositOnL2);
@@ -83,11 +83,11 @@ contract WithdrawTest is KassTestBase {
         assertEq(_l1TokenInstance.balanceOf(sender, tokenId), amountToDepositOnL1);
 
         // deposit on L2
-        expectDepositOnL2(sender, L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL1_1, l2Recipient);
-        _kassBridge.deposit(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL1_1, l2Recipient);
+        expectDepositOnL2(sender, L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL1_1, l2Recipient, 0x0);
+        _kass.deposit(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL1_1, l2Recipient);
 
-        expectDepositOnL2(sender, L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL1_2, l2Recipient);
-        _kassBridge.deposit(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL1_2, l2Recipient);
+        expectDepositOnL2(sender, L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL1_2, l2Recipient, 0x0);
+        _kass.deposit(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL1_2, l2Recipient);
 
         // check if balance was updated
         assertEq(
@@ -109,7 +109,7 @@ contract WithdrawTest is KassTestBase {
 
         // deposit on L2
         vm.expectRevert("ERC1155: burn amount exceeds balance");
-        _kassBridge.deposit(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL2, l2Recipient);
+        _kass.deposit(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL2, l2Recipient);
     }
 
     function test_CannotDepositToL2Zero() public {
@@ -119,6 +119,6 @@ contract WithdrawTest is KassTestBase {
 
         // deposit on L2
         vm.expectRevert("Cannot deposit null amount");
-        _kassBridge.deposit(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL1, l2Recipient);
+        _kass.deposit(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL1, l2Recipient);
     }
 }

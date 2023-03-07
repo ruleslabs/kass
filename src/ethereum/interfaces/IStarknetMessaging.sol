@@ -12,7 +12,7 @@ interface IStarknetMessaging {
         uint256 toAddress,
         uint256 selector,
         uint256[] calldata payload
-    ) external;
+    ) external returns (bytes32, uint256);
 
     /**
      * Consumes a message that was sent from an L2 contract.
@@ -22,7 +22,7 @@ interface IStarknetMessaging {
     function consumeMessageFromL2(
         uint256 fromAddress,
         uint256[] calldata payload
-    ) external;
+    ) external returns (bytes32);
 
     /**
      * Starts the cancellation of an L1 to L2 message.
