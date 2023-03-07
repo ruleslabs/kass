@@ -1,3 +1,5 @@
+-include .env
+
 .PHONY : all clean
 
 all: clean build
@@ -29,3 +31,12 @@ clean-ethereum:
 	@echo "\033[31mCleaning Ethereum...\033[0m"
 	@forge clean
 	@echo
+
+deploy-ethereum-goerli:
+	@forge script script/Kass.s.sol:DeployKass \
+		--rpc-url ${GOERLI_RPC_URL} \
+		--private-key ${PRIVATE_KEY} \
+		--broadcast \
+		--verify \
+		--etherscan-api-key ${ETHERSCAN_API_KEY} \
+		-vvvv

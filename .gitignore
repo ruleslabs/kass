@@ -4,6 +4,10 @@ target
 # Foundry
 **/cache
 **/out
+broadcast
 
 # Yarn
 node_modules
+
+# Env
+.env
