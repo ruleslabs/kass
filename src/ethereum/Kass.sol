@@ -57,15 +57,15 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, ERC
     modifier initializer() {
         address implementation = _getImplementation();
 
-        require(!isInitialized(implementation), "already initialized");
+        require(!isInitialized(), "already initialized");
 
-        setInitialized(implementation);
+        setInitialized();
 
         _;
     }
 
     modifier onlyDepositor(uint256 nonce) {
-        address depositor_ = _depositors()[nonce];
+        address depositor_ = _state.depositors[nonce];
 
         require(depositor_ != address(0x0), "Deposit not found");
         require(depositor_ == msg.sender, "Caller is not the depositor");
@@ -80,10 +80,10 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, ERC
             data,
             (uint256, IStarknetMessaging)
         );
-        _l2KassAddress(l2KassAddress_);
-        _starknetMessaging(starknetMessaging_);
+        _state.l2KassAddress = l2KassAddress_;
+        _state.starknetMessaging = starknetMessaging_;
 
-        setDeployerBaseToken();
+        setDeployerImplementationToken();
 
         _transferOwnership(msg.sender);
     }
@@ -91,21 +91,21 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, ERC
     // GETTERS
 
     function l2KassAddress() public view returns (uint256) {
-        return _l2KassAddress();
+        return _state.l2KassAddress;
     }
 
-    function isInitialized(address implementation) public view returns (bool) {
-        return _initializedImplementations()[implementation];
+    function isInitialized() public view returns (bool) {
+        return _state.initialized;
     }
 
     // SETTERS
 
     function setL2KassAddress(uint256 l2KassAddress_) public onlyOwner {
-        _l2KassAddress(l2KassAddress_);
+        _state.l2KassAddress = l2KassAddress_;
     }
 
-    function setInitialized(address implementation) private {
-        _initializedImplementations(implementation, true);
+    function setInitialized() private {
+        _state.initialized = true;
     }
 
     // BUSINESS LOGIC
@@ -115,7 +115,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, ERC
         uint256[] memory payload = instanceCreationMessagePayload(l2TokenAddress, uri);
 
         // consume L1 instance request message
-        _starknetMessaging().consumeMessageFromL2(l2KassAddress(), payload);
+        _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);
 
         // deploy Kass ERC1155 and set URI
         l1TokenAddress = cloneKassERC1155(bytes32(l2TokenAddress));
@@ -132,7 +132,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, ERC
         uint256[] memory payload = tokenDepositOnL1MessagePayload(l2TokenAddress, tokenId, amount, l1Recipient);
 
         // consume L1 withdraw request message
-        _starknetMessaging().consumeMessageFromL2(_l2KassAddress(), payload);
+        _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);
 
         // get l1 token instance
         address l1TokenAddress = computeL1TokenAddress(l2TokenAddress);
@@ -155,10 +155,14 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, ERC
 
         // compute L2 deposit payload and sent it
         uint256[] memory payload = tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient);
-        (, uint256 nonce) = _starknetMessaging().sendMessageToL2(_l2KassAddress(), DEPOSIT_HANDLER_SELECTOR, payload);
+        (, uint256 nonce) = _state.starknetMessaging.sendMessageToL2(
+            _state.l2KassAddress,
+            DEPOSIT_HANDLER_SELECTOR,
+            payload
+        );
 
         // save depositor
-        _depositors(nonce, msg.sender);
+        _state.depositors[nonce] = msg.sender;
 
         // emit event
         emit LogDeposit(msg.sender, l2TokenAddress, l1TokenAddress, tokenId, amount, l2Recipient);
@@ -180,8 +184,8 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, ERC
         uint256 l2Recipient,
         uint256 nonce
     ) public onlyDepositor(nonce) {
-        _starknetMessaging().startL1ToL2MessageCancellation(
-            _l2KassAddress(),
+        _state.starknetMessaging.startL1ToL2MessageCancellation(
+            _state.l2KassAddress,
             DEPOSIT_HANDLER_SELECTOR,
             tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient),
             nonce
@@ -197,8 +201,8 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, ERC
         uint256 l2Recipient,
         uint256 nonce
     ) public onlyDepositor(nonce) {
-        _starknetMessaging().cancelL1ToL2Message(
-            _l2KassAddress(),
+        _state.starknetMessaging.cancelL1ToL2Message(
+            _state.l2KassAddress,
             DEPOSIT_HANDLER_SELECTOR,
             tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient),
             nonce
