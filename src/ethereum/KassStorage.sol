@@ -18,10 +18,10 @@ contract KassStorage {
         address tokenImplementationAddress;
 
         // (implementation address => initialization status) mapping
-        mapping(address => bool) initializedImplementations;
+        mapping(address implementation => bool initialized) initializedImplementations;
 
         // (nonce => depositors) mapping
-        mapping(uint256 => address) depositors;
+        mapping(uint256 nonce => address depositor) depositors;
     }
 
     State internal _state;

@@ -16,7 +16,11 @@ contract DeployKass is Script {
     function run() public {
         HelperConfig helperConfig = new HelperConfig();
 
-        (address starknetMessagingAddress, uint256 l2KassAddress) = helperConfig.activeNetworkConfig();
+        (
+            address starknetMessagingAddress,
+            uint256 l2KassAddress,
+            address proxyAddress
+        ) = helperConfig.activeNetworkConfig();
 
         vm.startBroadcast();
 
@@ -24,10 +28,17 @@ contract DeployKass is Script {
         address implementationAddress = address(new Kass());
 
         // deploy proxy
-        new ERC1967Proxy(
-            implementationAddress,
-            abi.encodeWithSelector(Kass.initialize.selector, abi.encode(l2KassAddress, starknetMessagingAddress))
-        );
+        if (proxyAddress == address(0x0))
+            new ERC1967Proxy(
+                implementationAddress,
+                abi.encodeWithSelector(Kass.initialize.selector, abi.encode(l2KassAddress, starknetMessagingAddress))
+            );
+        else {
+            Kass(payable(proxyAddress)).upgradeToAndCall(
+                implementationAddress,
+                abi.encodeWithSelector(Kass.initialize.selector, abi.encode(l2KassAddress, starknetMessagingAddress))
+            );
+        }
 
         vm.stopBroadcast();
     }
