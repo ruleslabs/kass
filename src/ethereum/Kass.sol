@@ -3,7 +3,7 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Upgrade.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import "./ERC1155/KassERC1155.sol";
 import "./interfaces/IStarknetMessaging.sol";
@@ -13,7 +13,7 @@ import "./StarknetConstants.sol";
 import "./KassMessagingPayloads.sol";
 import "./KassStorage.sol";
 
-contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, ERC1967Upgrade {
+contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUPSUpgradeable {
 
     // EVENTS
 
@@ -57,9 +57,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, ERC
     modifier initializer() {
         address implementation = _getImplementation();
 
-        require(!isInitialized(), "already initialized");
+        require(!isInitialized(implementation), "Already initialized");
 
-        setInitialized();
+        setInitialized(implementation);
 
         _;
     }
@@ -88,14 +88,19 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, ERC
         _transferOwnership(msg.sender);
     }
 
+    // UPGRADE
+
+    // solhint-disable-next-line no-empty-blocks
+    function _authorizeUpgrade(address) internal override onlyOwner { }
+
     // GETTERS
 
     function l2KassAddress() public view returns (uint256) {
         return _state.l2KassAddress;
     }
 
-    function isInitialized() public view returns (bool) {
-        return _state.initialized;
+    function isInitialized(address implementation) private view returns (bool) {
+        return _state.initializedImplementations[implementation];
     }
 
     // SETTERS
@@ -104,8 +109,8 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, ERC
         _state.l2KassAddress = l2KassAddress_;
     }
 
-    function setInitialized() private {
-        _state.initialized = true;
+    function setInitialized(address implementation) private {
+        _state.initializedImplementations[implementation] = true;
     }
 
     // BUSINESS LOGIC

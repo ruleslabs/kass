@@ -13,8 +13,10 @@ abstract contract TokenDeployer is KassStorage {
     // CONSTRUCTOR
 
     function setDeployerImplementationToken() internal {
-        // This is the contract that will be cloned to all others
-        _state.tokenImplementationAddress = address(new KassERC1155{ salt: keccak256("V0.1") }());
+        if (_state.tokenImplementationAddress == address(0x0)) {
+            // This is the contract that will be cloned to all others
+            _state.tokenImplementationAddress = address(new KassERC1155{ salt: keccak256("V0.1") }());
+        }
     }
 
     // GETTERS

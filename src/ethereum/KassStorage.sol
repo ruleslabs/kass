@@ -17,10 +17,10 @@ contract KassStorage {
         // Address of the Kass ERC1155 token implementation
         address tokenImplementationAddress;
 
-        // initialization status of the implementation
-        bool initialized;
+        // (implementation address => initialization status) mapping
+        mapping(address => bool) initializedImplementations;
 
-        // nonce / depositors mapping
+        // (nonce => depositors) mapping
         mapping(uint256 => address) depositors;
     }
 

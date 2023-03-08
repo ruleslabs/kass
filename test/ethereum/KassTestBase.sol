@@ -3,9 +3,9 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "../../src/ethereum/Kass.sol";
-import "../../src/ethereum/upgrade/KassProxy.sol";
 import "../../src/ethereum/KassUtils.sol";
 import "../../src/ethereum/ERC1155/KassERC1155.sol";
 import "../../src/ethereum/mocks/StarknetMessagingMock.sol";
@@ -77,7 +77,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
         // setup bridge
         address payable kassAddress = payable(
-            new KassProxy(
+            new ERC1967Proxy(
                 implementationAddress,
                 abi.encodeWithSelector(Kass.initialize.selector, abi.encode(L2_KASS_ADDRESS, starknetMessaging))
             )

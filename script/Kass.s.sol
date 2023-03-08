@@ -3,11 +3,11 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "./HelperConfig.s.sol";
 
 import "../src/ethereum/Kass.sol";
-import "../src/ethereum/upgrade/KassProxy.sol";
 
 contract DeployKass is Script {
     // solhint-disable-next-line no-empty-blocks
@@ -24,7 +24,7 @@ contract DeployKass is Script {
         address implementationAddress = address(new Kass());
 
         // deploy proxy
-        new KassProxy(
+        new ERC1967Proxy(
             implementationAddress,
             abi.encodeWithSelector(Kass.initialize.selector, abi.encode(l2KassAddress, starknetMessagingAddress))
         );
