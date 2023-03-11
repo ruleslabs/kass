@@ -1,2 +1,2 @@
 [crate_roots]
-kass = "src"
+kass = "src/starknet"
