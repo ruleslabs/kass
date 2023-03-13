@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 
 import "../../src/ethereum/KassUtils.sol";
 import "../../src/ethereum/ERC1155/KassERC1155.sol";
-import "./KassTestBase.sol";
+import "./TestBase.sol";
 
 contract WithdrawTest is KassTestBase {
     KassERC1155 public _l1TokenInstance;
