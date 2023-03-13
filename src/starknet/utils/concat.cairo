@@ -2,19 +2,18 @@ use array::ArrayTrait;
 use array::SpanTrait;
 use gas::get_gas;
 
-trait ArrayConcatTrait<T> {
+trait ArrayTConcatTrait<T> {
     fn concat(self: Array<T>, arr_2: @Array<T>) -> Array<T>;
 }
 
-impl FeltArrayConcatImpl of ArrayConcatTrait::<felt> {
-    #[inline(always)]
-    fn concat(mut self: Array<felt>, arr_2: @Array<felt>) -> Array<felt> {
-        concat_loop(arr_2.span(), ref self);
+impl ArrayTConcatImpl<T, impl TCopy: Copy::<T>> of ArrayTConcatTrait::<T> {
+    fn concat(mut self: Array<T>, arr_2: @Array<T>) -> Array<T> {
+        concat_loop::<T, TCopy>(ref self, arr_2.span());
         self
     }
 }
 
-fn concat_loop(mut src: Span<felt>, ref dest: Array<felt>) {
+fn concat_loop<T, impl TCopy: Copy::<T>>(ref arr_1: Array<T>, mut arr_2: Span<T>) {
     match get_gas() {
         Option::Some(_) => {},
         Option::None(_) => {
@@ -23,10 +22,10 @@ fn concat_loop(mut src: Span<felt>, ref dest: Array<felt>) {
             panic(data);
         },
     }
-    match src.pop_front() {
+    match arr_2.pop_front() {
         Option::Some(v) => {
-            dest.append(*v);
-            concat_loop(src, ref dest);
+            arr_1.append(*v);
+            concat_loop::<T, TCopy>(ref arr_1, arr_2);
         },
         Option::None(_) => (),
     }

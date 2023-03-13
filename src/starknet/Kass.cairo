@@ -3,17 +3,16 @@ mod Kass {
 
     // USES
 
-    use starknet::get_caller_address;
-    use starknet::get_contract_address;
     use starknet::ContractAddressIntoFelt;
     use array::ArrayTrait;
     use integer::FeltIntoU256;
     use integer::U128IntoFelt;
     use traits::Into;
 
-    use kass::utils::concat::ArrayConcatTrait;
+    use kass::utils::concat::ArrayTConcatTrait;
     use kass::interfaces::IERC1155::IERC1155Dispatcher;
     use kass::interfaces::IERC1155::IERC1155DispatcherTrait;
+    use kass::libraries::Ownable;
 
     // CONSTANTS
 
@@ -24,15 +23,63 @@ mod Kass {
     // STORAGE
 
     struct Storage {
-        _l1KassAddress: felt
+        // L1 Address of the Kass contract
+        _l1KassAddress: felt,
+
+        // Implementation address
+        _implementation: ContractAddress,
+
+        // (implementation address => initialization status) mapping
+        _initializedImplementations: LegacyMap<ContractAddress, bool>,
     }
 
-    // EXTERNALS
+    // MODIFIERS
+
+    fn _initializer() {
+        let implementation = _getImplementation();
+
+        assert(!_isInitialized(implementation), 'Already initialized');
+
+        _setInitialized(implementation);
+    }
+
+    // INIT
 
     #[external]
     fn initialize(l1KassAddress_: felt) {
+        // modifiers
+        _initializer();
+
+        // body
+        _l1KassAddress::write(l1KassAddress_);
+
+        let caller = starknet::get_caller_address();
+        Ownable::transferOwnership(caller);
+    }
+
+    // GETTERS
+
+    #[view]
+    fn l1KassAddress() -> felt {
+        _l1KassAddress::read()
+    }
+
+    #[view]
+    fn owner() {
+        Ownable::getOwner();
+    }
+
+    // SETTERS
+
+    fn setL1KassAddress(l1KassAddress_: felt) {
+        // modifiers
+        Ownable::_onlyOwner();
+
+        // body
         _l1KassAddress::write(l1KassAddress_);
     }
+
+    // BUSINESS LOGIC
 
     #[external]
     fn requestL1Instance(l2TokenAddress: ContractAddress) {
@@ -52,8 +99,8 @@ mod Kass {
 
     #[external]
     fn deposit(l2TokenAddress: ContractAddress, tokenId: u256, amount: u256, l1Recipient: felt) {
-        let caller = get_caller_address();
-        let contractAddress = get_contract_address();
+        let caller = starknet::get_caller_address();
+        let contractAddress = starknet::get_contract_address();
 
         // transfer tokens
         IERC1155Dispatcher { contract_address: l2TokenAddress }.safeTransferFrom(
@@ -88,7 +135,7 @@ mod Kass {
         value: u256,
         data: Array<felt>
     ) -> u32 {
-        let contractAddress = get_contract_address();
+        let contractAddress = starknet::get_contract_address();
 
         // validate transfer only if it's executed in the context of a deposit
         if (contractAddress.into() == operator.into()) {
@@ -103,7 +150,7 @@ mod Kass {
     // withdraw l1 handler
     #[l1_handler]
     fn withdraw(l2Recipient: ContractAddress, l2TokenAddress: ContractAddress, tokenId: u256, amount: u256) {
-        let contractAddress = get_contract_address();
+        let contractAddress = starknet::get_contract_address();
 
         // transfer tokens
         IERC1155Dispatcher { contract_address: l2TokenAddress }.safeTransferFrom(
@@ -113,5 +160,19 @@ mod Kass {
             amount,
             ArrayTrait::<felt>::new()
         );
+    }
+
+    // INTERNALS
+
+    fn _getImplementation() -> ContractAddress {
+        _implementation::read()
+    }
+
+    fn _isInitialized(implementation: ContractAddress) -> bool {
+        _initializedImplementations::read(implementation)
+    }
+
+    fn _setInitialized(implementation: ContractAddress) {
+        _initializedImplementations::write(implementation, true);
     }
 }
