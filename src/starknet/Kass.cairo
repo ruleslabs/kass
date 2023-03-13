@@ -12,7 +12,9 @@ mod Kass {
     use kass::utils::concat::ArrayTConcatTrait;
     use kass::interfaces::IERC1155::IERC1155Dispatcher;
     use kass::interfaces::IERC1155::IERC1155DispatcherTrait;
+
     use kass::libraries::Ownable;
+    use kass::libraries::Upgradeable;
 
     // CONSTANTS
 
@@ -26,9 +28,6 @@ mod Kass {
         // L1 Address of the Kass contract
         _l1KassAddress: felt,
 
-        // Implementation address
-        _implementation: ContractAddress,
-
         // (implementation address => initialization status) mapping
         _initializedImplementations: LegacyMap<ContractAddress, bool>,
     }
@@ -36,7 +35,7 @@ mod Kass {
     // MODIFIERS
 
     fn _initializer() {
-        let implementation = _getImplementation();
+        let implementation = Upgradeable::getImplementation();
 
         assert(!_isInitialized(implementation), 'Already initialized');
 
@@ -44,6 +43,11 @@ mod Kass {
     }
 
     // INIT
+
+    #[constructor]
+    fn constructor() {
+        Upgradeable::constructor();
+    }
 
     #[external]
     fn initialize(l1KassAddress_: felt) {
@@ -55,6 +59,17 @@ mod Kass {
 
         let caller = starknet::get_caller_address();
         Ownable::transferOwnership(caller);
+    }
+
+    // UPGRADE
+
+    #[external]
+    fn upgradeToAndCall(newImplementation: ContractAddress, call: Upgradeable::Call) {
+        // modifiers
+        Ownable::_onlyOwner();
+
+        // body
+        Upgradeable::upgradeToAndCall(newImplementation, call);
     }
 
     // GETTERS
@@ -163,10 +178,6 @@ mod Kass {
     }
 
     // INTERNALS
-
-    fn _getImplementation() -> ContractAddress {
-        _implementation::read()
-    }
 
     fn _isInitialized(implementation: ContractAddress) -> bool {
         _initializedImplementations::read(implementation)

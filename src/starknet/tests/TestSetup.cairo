@@ -1,9 +1,16 @@
+use array::ArrayTrait;
+
 use kass::Kass;
+use kass::libraries::Upgradeable;
+
 use kass::tests::L1_KASS_ADDRESS;
+use kass::tests::INITIALIZE_SELECTOR;
+
 
 #[test]
 #[available_gas(2000000)]
 fn test_Initialize() {
+    Kass::constructor();
     Kass::initialize(L1_KASS_ADDRESS);
 
     assert(Kass::l1KassAddress() == L1_KASS_ADDRESS, 'Bad L1 kass addr after init');
@@ -13,6 +20,7 @@ fn test_Initialize() {
 #[available_gas(2000000)]
 #[should_panic(expected = ('Already initialized', ))]
 fn test_CannotInitializeTwice() {
+    Kass::constructor();
     Kass::initialize(L1_KASS_ADDRESS);
     Kass::initialize(0xdead);
 }
@@ -20,6 +28,7 @@ fn test_CannotInitializeTwice() {
 #[test]
 #[available_gas(2000000)]
 fn test_SetL1KassAddress() {
+    Kass::constructor();
     Kass::initialize(L1_KASS_ADDRESS);
 
     Kass::setL1KassAddress(0xdead);
@@ -36,6 +45,7 @@ fn test_CannotSetL1KassAddressIfNotOwner() {
 
     // calls as owner
     starknet::testing::set_caller_address(owner);
+    Kass::constructor();
     Kass::initialize(L1_KASS_ADDRESS);
     Kass::setL1KassAddress(0x4242);
 
@@ -46,10 +56,15 @@ fn test_CannotSetL1KassAddressIfNotOwner() {
 
 #[test]
 #[available_gas(2000000)]
-fn test_UpgradeImplementation() {
-    // TODO declare Kass lib
-    // let
-    // Kass::upgradeToAndCall(newImplementation, )
+#[should_panic(expected = ('Not called through delegatecall', ))]
+fn test_CannotUpgradeFromImplementation() {
+    Kass::constructor();
+    Kass::initialize(L1_KASS_ADDRESS);
+
+    Kass::upgradeToAndCall(
+        starknet::contract_address_const::<0xdead>(),
+        Upgradeable::Call { selector: INITIALIZE_SELECTOR, calldata: ArrayTrait::<felt>::new() }
+    );
 }
 
 // #[test]
