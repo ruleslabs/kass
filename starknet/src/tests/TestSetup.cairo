@@ -68,8 +68,8 @@ fn test_CannotUpgradeFromImplementation() {
     Kass::initialize(L1_KASS_ADDRESS);
 
     Kass::upgradeToAndCall(
-        starknet::contract_address_const::<0xdead>(),
-        Upgradeable::Call { selector: INITIALIZE_SELECTOR, calldata: ArrayTrait::<felt>::new() }
+        starknet::class_hash_const::<0xdead>(),
+        Upgradeable::Call { selector: INITIALIZE_SELECTOR, calldata: ArrayTrait::<felt252>::new() }
     );
 }
 

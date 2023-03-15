@@ -1,4 +1,4 @@
-const REQUEST_L1_INSTANCE: felt = 0;
-const TRANSFER_FROM_STARKNET: felt = 1;
+const REQUEST_L1_INSTANCE: felt252 = 0;
+const TRANSFER_FROM_STARKNET: felt252 = 1;
 
 const IERC1155_ACCEPTED_ID: u32 = 0xf23a6e61_u32;

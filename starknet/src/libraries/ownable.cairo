@@ -2,11 +2,8 @@ mod Ownable {
 
     // USES
 
-    use starknet::ContractAddressIntoFelt;
-    use starknet::FeltTryIntoContractAddress;
+    use starknet::ContractAddressIntoFelt252;
     use traits::Into;
-    use traits::TryInto;
-    use option::OptionTrait;
 
     // MODIFIERS
 
@@ -19,17 +16,17 @@ mod Ownable {
 
     // GETTERS
 
-    fn getOwner() -> ContractAddress {
+    fn getOwner() -> starknet::ContractAddress {
         _owner::read()
     }
 
     // SETTERS
 
     fn renounceOwnership() {
-        _owner::write(0x0.try_into().unwrap());
+        _owner::write(starknet::contract_address_const::<0>());
     }
 
-    fn transferOwnership(owner: ContractAddress) {
+    fn transferOwnership(owner: starknet::ContractAddress) {
         _owner::write(owner);
     }
 
@@ -38,12 +35,12 @@ mod Ownable {
     mod _owner {
         use starknet::SyscallResultTrait;
 
-        fn read() -> ContractAddress {
-            starknet::StorageAccess::<ContractAddress>::read(0, address()).unwrap_syscall()
+        fn read() -> starknet::ContractAddress {
+            starknet::StorageAccess::<starknet::ContractAddress>::read(0, address()).unwrap_syscall()
         }
 
-        fn write(value: ContractAddress) {
-            starknet::StorageAccess::<ContractAddress>::write(0, address(), value).unwrap_syscall()
+        fn write(value: starknet::ContractAddress) {
+            starknet::StorageAccess::<starknet::ContractAddress>::write(0, address(), value).unwrap_syscall()
         }
 
         fn address() -> starknet::StorageBaseAddress {
