@@ -1,13 +1,17 @@
 # Starknet
-target
+/target
 
 # Foundry
-**/cache
-**/out
-broadcast
+/ethereum/cache
+/ethereum/out
+/ethereum/broadcast
+/ethereum/lib
 
 # Yarn
-node_modules
+/ethereum/node_modules
 
 # Env
 .env
+
+# VS Code
+.vscode/

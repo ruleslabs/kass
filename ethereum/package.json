@@ -1,5 +1,5 @@
 {
-  "name": "kass",
+  "name": "@kass/ethereum",
   "version": "0.1.0",
   "description": "Starknet Ethereum ERC1155 Bridge",
   "author": "0xChqrles",

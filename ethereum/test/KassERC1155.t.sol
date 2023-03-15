@@ -4,8 +4,8 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 
-import "../../src/ethereum/ERC1155/KassERC1155.sol";
-import "../../src/ethereum/KassUtils.sol";
+import "../src/ERC1155/KassERC1155.sol";
+import "../src/KassUtils.sol";
 
 contract KassERC1155Test is Test {
     KassERC1155 public _kassERC1155 = new KassERC1155();

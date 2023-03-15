@@ -3,7 +3,7 @@
 pragma solidity ^0.8.19;
 
 import "./TestBase.sol";
-import "../../src/ethereum/Kass.sol";
+import "../src/Kass.sol";
 
 contract KassSetupTest is KassTestBase {
 

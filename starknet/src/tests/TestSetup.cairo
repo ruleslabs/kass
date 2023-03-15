@@ -54,6 +54,12 @@ fn test_CannotSetL1KassAddressIfNotOwner() {
     Kass::setL1KassAddress(0xdead);
 }
 
+// #[test]
+// #[available_gas(2000000)]
+// fn testUpgradeImplementation() {
+
+// }
+
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected = ('Not called through delegatecall', ))]

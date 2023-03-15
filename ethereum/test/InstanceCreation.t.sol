@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.19;
 
-import "../../src/ethereum/KassUtils.sol";
-import "../../src/ethereum/ERC1155/KassERC1155.sol";
+import "../src/KassUtils.sol";
+import "../src/ERC1155/KassERC1155.sol";
 import "./TestBase.sol";
 
 contract KassInstanceCreationTest is KassTestBase {

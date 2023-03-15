@@ -5,12 +5,12 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-import "../../src/ethereum/Kass.sol";
-import "../../src/ethereum/KassUtils.sol";
-import "../../src/ethereum/ERC1155/KassERC1155.sol";
-import "../../src/ethereum/mocks/StarknetMessagingMock.sol";
-import "../../src/ethereum/KassMessagingPayloads.sol";
-import "../../src/ethereum/StarknetConstants.sol";
+import "../src/Kass.sol";
+import "../src/KassUtils.sol";
+import "../src/ERC1155/KassERC1155.sol";
+import "../src/mocks/StarknetMessagingMock.sol";
+import "../src/KassMessagingPayloads.sol";
+import "../src/StarknetConstants.sol";
 
 abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads {
     Kass internal _kass;

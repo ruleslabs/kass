@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "./HelperConfig.s.sol";
 
-import "../src/ethereum/Kass.sol";
+import "../src/Kass.sol";
 
 contract DeployKass is Script {
     // solhint-disable-next-line no-empty-blocks
