@@ -14,8 +14,8 @@ mod Kass {
     use kass::interfaces::IERC1155::IERC1155Dispatcher;
     use kass::interfaces::IERC1155::IERC1155DispatcherTrait;
 
-    use kass::libraries::Ownable;
     use kass::libraries::Upgradeable;
+    use kass::libraries::Ownable;
 
     // CONSTANTS
 

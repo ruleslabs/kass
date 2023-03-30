@@ -43,7 +43,7 @@ fn test_CannotSetL1KassAddressIfNotOwner() {
     let owner = starknet::contract_address_const::<1>();
     let rando1 = starknet::contract_address_const::<2>();
 
-    // calls as owner
+    // deploy as owner
     starknet::testing::set_caller_address(owner);
     Kass::constructor();
     Kass::initialize(L1_KASS_ADDRESS);
@@ -62,11 +62,18 @@ fn test_CannotSetL1KassAddressIfNotOwner() {
 
 #[test]
 #[available_gas(2000000)]
-#[should_panic(expected = ('Not called through delegatecall', ))]
-fn test_CannotUpgradeFromImplementation() {
+#[should_panic(expected = ('Caller is not the owner', ))]
+fn test_CannotUpgradeImplementationIfNotOwner() {
+    let owner = starknet::contract_address_const::<1>();
+    let rando1 = starknet::contract_address_const::<2>();
+
+    // calls as owner
+    starknet::testing::set_caller_address(owner);
     Kass::constructor();
     Kass::initialize(L1_KASS_ADDRESS);
 
+    // upgrade as random
+    starknet::testing::set_caller_address(rando1);
     Kass::upgradeToAndCall(
         starknet::class_hash_const::<0xdead>(),
         Upgradeable::Call { selector: INITIALIZE_SELECTOR, calldata: ArrayTrait::<felt252>::new() }

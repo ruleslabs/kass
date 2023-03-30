@@ -10,11 +10,7 @@ all: fclean build
 build: ${SOURCE_FILES}
 	@echo "\033[1mBuilding Starknet...\033[0m"
 
-	@mkdir -p target/release
-
-	@echo Compiling...
-	@starknet-compile . target/release/Kass.json --allowed-libfuncs-list-name experimental_v0.1.0
-	@echo Compiler run successful
+	@scarb build
 
 	@echo
 
@@ -23,7 +19,7 @@ build: ${SOURCE_FILES}
 test:
 	@echo "\033[32m\033[1mTesting Starknet...\033[0m"
 
-	@cairo-test --starknet --path .
+	@cairo-test . --starknet
 
 	@echo
 
@@ -32,7 +28,7 @@ test:
 clean:
 	@echo "\033[31m\033[1mCleaning Starknet...\033[0m"
 
-	rm -rf target
+	@scarb clean
 
 	@echo
 

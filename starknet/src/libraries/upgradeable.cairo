@@ -24,7 +24,9 @@ mod Upgradeable {
         let Call{ selector, calldata } = call;
 
         starknet::syscalls::library_call_syscall(
-            class_hash: newClassHash, function_selector: selector, :calldata
+            class_hash: newClassHash,
+            function_selector: selector,
+            calldata: array::ArrayTrait::span(@calldata)
         ).unwrap_syscall();
     }
 
