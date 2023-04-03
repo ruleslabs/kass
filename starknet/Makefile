@@ -28,6 +28,7 @@ test:
 clean:
 	@echo "\033[31m\033[1mCleaning Starknet...\033[0m"
 
+	@mkdir -p target
 	@scarb clean
 
 	@echo

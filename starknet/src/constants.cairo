@@ -1,3 +1,6 @@
+const CONTRACT_IDENTITY: felt252 = 'KASS';
+const CONTRACT_VERSION: felt252 = 1;
+
 const REQUEST_L1_INSTANCE: felt252 = 0;
 const TRANSFER_FROM_STARKNET: felt252 = 1;
 

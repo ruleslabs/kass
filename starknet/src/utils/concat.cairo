@@ -2,30 +2,25 @@ use array::ArrayTrait;
 use array::SpanTrait;
 
 trait ArrayTConcatTrait<T> {
-    fn concat(self: Array<T>, arr_2: @Array<T>) -> Array<T>;
+    fn concat(ref self: Array::<T>, ref arr: Array::<T>);
 }
 
-impl ArrayTConcatImpl<T, impl TCopy: Copy::<T>, impl TDrop: Drop::<T>> of ArrayTConcatTrait::<T> {
-    fn concat(mut self: Array<T>, arr_2: @Array<T>) -> Array<T> {
-        concat_loop::<T, TCopy>(ref self, arr_2.span());
-        self
-    }
-}
-
-fn concat_loop<T, impl TCopy: Copy::<T>, impl TDrop: Drop::<T>>(ref arr_1: Array<T>, mut arr_2: Span<T>) {
-    match gas::withdraw_gas() {
-        Option::Some(_) => {},
-        Option::None(_) => {
-            let mut data = array::array_new();
-            array::array_append(ref data, 'OOG');
-            panic(data);
-        },
-    }
-    match arr_2.pop_front() {
-        Option::Some(v) => {
-            arr_1.append(*v);
-            concat_loop::<T, TCopy>(ref arr_1, arr_2);
-        },
-        Option::None(_) => (),
+impl ArrayTConcatImpl<T, impl TDrop: Drop::<T>> of ArrayTConcatTrait::<T> {
+    fn concat(ref self: Array::<T>, ref arr: Array::<T>) {
+        match gas::withdraw_gas() {
+            Option::Some(_) => {},
+            Option::None(_) => {
+                let mut data = array::array_new();
+                array::array_append(ref data, 'OOG');
+                panic(data);
+            },
+        }
+        match arr.pop_front() {
+            Option::Some(v) => {
+                self.append(v);
+                self.concat(ref arr);
+            },
+            Option::None(_) => (),
+        }
     }
 }

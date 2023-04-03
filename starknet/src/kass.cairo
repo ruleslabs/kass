@@ -8,9 +8,15 @@ mod Kass {
     use integer::Felt252IntoU256;
     use integer::U128IntoFelt252;
     use traits::Into;
+    use zeroable::Zeroable;
 
     use kass::utils::ArrayTConcatTrait;
     use kass::utils::LegacyHashClassHash;
+    use kass::utils::EthAddress;
+    use kass::utils::EthAddressTrait;
+    use kass::utils::eth_address::EthAddressZeroable;
+    use kass::utils::eth_address::EthAddressIntoFelt252;
+
     use kass::interfaces::IERC1155::IERC1155Dispatcher;
     use kass::interfaces::IERC1155::IERC1155DispatcherTrait;
 
@@ -18,6 +24,9 @@ mod Kass {
     use kass::libraries::Ownable;
 
     // CONSTANTS
+
+    use kass::constants::CONTRACT_IDENTITY;
+    use kass::constants::CONTRACT_VERSION;
 
     use kass::constants::REQUEST_L1_INSTANCE;
     use kass::constants::TRANSFER_FROM_STARKNET;
@@ -27,7 +36,7 @@ mod Kass {
 
     struct Storage {
         // L1 Address of the Kass contract
-        _l1KassAddress: felt252,
+        _l1KassAddress: EthAddress,
 
         // (implementation address => initialization status) mapping
         _initializedClassHashes: LegacyMap<starknet::ClassHash, bool>,
@@ -43,13 +52,25 @@ mod Kass {
         _setInitialized(classHash);
     }
 
+    // HEADER
+
+    #[view]
+    fn get_version() -> felt252 {
+        CONTRACT_VERSION
+    }
+
+    #[view]
+    fn get_identity() -> felt252 {
+        CONTRACT_IDENTITY
+    }
+
     // INIT
 
     #[constructor]
     fn constructor() { }
 
     #[external]
-    fn initialize(l1KassAddress_: felt252) {
+    fn initialize(l1KassAddress_: EthAddress) {
         // modifiers
         _initializer();
 
@@ -74,7 +95,7 @@ mod Kass {
     // GETTERS
 
     #[view]
-    fn l1KassAddress() -> felt252 {
+    fn l1KassAddress() -> EthAddress {
         _l1KassAddress::read()
     }
 
@@ -85,11 +106,13 @@ mod Kass {
 
     // SETTERS
 
-    fn setL1KassAddress(l1KassAddress_: felt252) {
+    fn setL1KassAddress(l1KassAddress_: EthAddress) {
         // modifiers
         Ownable::_onlyOwner();
 
         // body
+        assert(l1KassAddress_.is_non_zero(), 'ZERO_L1_KASS_ADDRESS');
+
         _l1KassAddress::write(l1KassAddress_);
     }
 
@@ -98,21 +121,25 @@ mod Kass {
     #[external]
     fn requestL1Instance(l2TokenAddress: starknet::ContractAddress) {
         // get contract uri
-        let uri = IERC1155Dispatcher { contract_address: l2TokenAddress }.uri(0.into());
+        let mut uri = IERC1155Dispatcher { contract_address: l2TokenAddress }.uri(0.into());
 
         // load payload
-        let mut payload = ArrayTrait::<felt252>::new();
+        let mut message_payload: Array<felt252> = ArrayTrait::new();
 
-        payload.append(REQUEST_L1_INSTANCE);
-        payload.append(l2TokenAddress.into());
+        message_payload.append(REQUEST_L1_INSTANCE);
+        message_payload.append(l2TokenAddress.into());
 
-        payload.concat(@uri);
+        message_payload.concat(ref uri);
 
-        // TODO send message syscall
+        // send instance request to L1
+        starknet::syscalls::send_message_to_l1_syscall(
+            to_address: l1KassAddress().into(),
+            payload: message_payload.span()
+        );
     }
 
     #[external]
-    fn deposit(l2TokenAddress: starknet::ContractAddress, tokenId: u256, amount: u256, l1Recipient: felt252) {
+    fn deposit(l2TokenAddress: starknet::ContractAddress, tokenId: u256, amount: u256, l1Recipient: EthAddress) {
         let caller = starknet::get_caller_address();
         let contractAddress = starknet::get_contract_address();
 
@@ -126,19 +153,23 @@ mod Kass {
         );
 
         // load payload
-        let mut payload = ArrayTrait::<felt252>::new();
+        let mut message_payload: Array<felt252> = ArrayTrait::new();
 
-        payload.append(TRANSFER_FROM_STARKNET);
-        payload.append(l1Recipient);
-        payload.append(l2TokenAddress.into());
+        message_payload.append(TRANSFER_FROM_STARKNET);
+        message_payload.append(l1Recipient.into());
+        message_payload.append(l2TokenAddress.into());
 
-        payload.append(tokenId.low.into());
-        payload.append(tokenId.high.into());
+        message_payload.append(tokenId.low.into());
+        message_payload.append(tokenId.high.into());
 
-        payload.append(amount.low.into());
-        payload.append(amount.high.into());
+        message_payload.append(amount.low.into());
+        message_payload.append(amount.high.into());
 
-        // TODO send message syscall
+        // send deposit request to L1
+        starknet::syscalls::send_message_to_l1_syscall(
+            to_address: l1KassAddress().into(),
+            payload: message_payload.span()
+        );
     }
 
     #[external]
@@ -163,7 +194,15 @@ mod Kass {
 
     // withdraw l1 handler
     #[l1_handler]
-    fn withdraw(l2Recipient: starknet::ContractAddress, l2TokenAddress: starknet::ContractAddress, tokenId: u256, amount: u256) {
+    fn withdraw(
+        from_address: felt252,
+        l2Recipient: starknet::ContractAddress,
+        l2TokenAddress: starknet::ContractAddress,
+        tokenId: u256,
+        amount: u256
+    ) {
+        assert(from_address == l1KassAddress().into(), 'EXPECTED_FROM_L1_KASS_ONLY');
+
         let contractAddress = starknet::get_contract_address();
 
         // transfer tokens
