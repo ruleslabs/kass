@@ -3,8 +3,8 @@
 pragma solidity ^0.8.19;
 
 import "../src/KassUtils.sol";
-import "../src/ERC1155/KassERC1155.sol";
-import "./TestBase.sol";
+import "../src/factory/KassERC1155.sol";
+import "./KassTestBase.sol";
 
 contract KassInstanceCreationTest is KassTestBase {
     KassERC1155 public _l1TokenInstance;

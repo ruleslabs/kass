@@ -4,37 +4,26 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 
-import "../src/ERC1155/KassERC1155.sol";
+import "../src/factory/KassERC1155.sol";
 import "../src/KassUtils.sol";
 
 contract KassERC1155Test is Test {
     KassERC1155 public _kassERC1155 = new KassERC1155();
 
     function setUp() public {
-        _kassERC1155.init("foo");
+        _kassERC1155.initialize(abi.encode("foo"));
     }
 
-    function test_CannotInitTwice() public {
+    function test_CannotInitializeTwice() public {
         // create L1 instance
-        vm.expectRevert("Can only init once");
-        _kassERC1155.init("bar");
+        vm.expectRevert("Already initialized");
+        _kassERC1155.initialize(abi.encode("bar"));
         assertEq(_kassERC1155.uri(0), "foo");
     }
 
-    function test_CannotUpdateUriIfNotDeployer() public {
+    function test_CannotMintIfNotOwner() public {
         vm.prank(address(0x1));
-        vm.expectRevert("Caller is not the deployer");
-        _kassERC1155.setURI("foo");
-    }
-
-    function test_UpdateUri() public {
-        _kassERC1155.setURI("bar");
-        assertEq(_kassERC1155.uri(0), "bar");
-    }
-
-    function test_CannotMintIfNotDeployer() public {
-        vm.prank(address(0x1));
-        vm.expectRevert("Caller is not the deployer");
+        vm.expectRevert("Ownable: caller is not the owner");
         _kassERC1155.mint(address(0x1), 0x1, 0x1);
     }
 }

@@ -5,7 +5,7 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-import "./ERC1155/KassERC1155.sol";
+import "./factory/KassERC1155.sol";
 import "./interfaces/IStarknetMessaging.sol";
 import "./KassUtils.sol";
 import "./TokenDeployer.sol";
@@ -75,7 +75,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
 
     // INIT
 
-    function initialize(bytes calldata data) public virtual initializer {
+    function initialize(bytes calldata data) public initializer {
         (uint256 l2KassAddress_, IStarknetMessaging starknetMessaging_) = abi.decode(
             data,
             (uint256, IStarknetMessaging)
@@ -83,7 +83,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         _state.l2KassAddress = l2KassAddress_;
         _state.starknetMessaging = starknetMessaging_;
 
-        setDeployerImplementationToken();
+        setDeployerImplementations();
 
         _transferOwnership(msg.sender);
     }
@@ -122,9 +122,8 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         // consume L1 instance request message
         _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);
 
-        // deploy Kass ERC1155 and set URI
-        l1TokenAddress = cloneKassERC1155(bytes32(l2TokenAddress));
-        KassERC1155(l1TokenAddress).init(KassUtils.concat(uri));
+        // deploy Kass ERC1155 with URI
+        l1TokenAddress = cloneKassERC1155(bytes32(l2TokenAddress), KassUtils.concat(uri));
 
         // emit event
         emit LogL1InstanceCreated(l2TokenAddress, l1TokenAddress);

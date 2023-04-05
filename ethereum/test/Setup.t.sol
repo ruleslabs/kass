@@ -2,10 +2,10 @@
 
 pragma solidity ^0.8.19;
 
-import "./TestBase.sol";
+import "./KassTestBase.sol";
 import "../src/Kass.sol";
 
-contract KassSetupTest is KassTestBase {
+contract SetupTest is KassTestBase {
 
     function test_UpdateL2KassAddress() public {
         _kass.setL2KassAddress(0xdead);

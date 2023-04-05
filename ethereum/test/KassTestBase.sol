@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "../src/Kass.sol";
 import "../src/KassUtils.sol";
-import "../src/ERC1155/KassERC1155.sol";
 import "../src/mocks/StarknetMessagingMock.sol";
 import "../src/KassMessagingPayloads.sol";
 import "../src/StarknetConstants.sol";
