@@ -11,4 +11,5 @@ abstract contract StarknetConstants {
 
     uint256 internal constant REQUEST_L1_INSTANCE = 0;
     uint256 internal constant TRANSFER_FROM_STARKNET = 1;
+    uint256 internal constant CLAIM_OWNERSHIP = 2;
 }

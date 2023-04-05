@@ -16,14 +16,14 @@ contract KassERC1155Test is Test {
 
     function test_CannotInitializeTwice() public {
         // create L1 instance
-        vm.expectRevert("Already initialized");
+        vm.expectRevert("Kass1155: Already initialized");
         _kassERC1155.initialize(abi.encode("bar"));
         assertEq(_kassERC1155.uri(0), "foo");
     }
 
-    function test_CannotMintIfNotOwner() public {
+    function test_CannotMintIfNotDeployer() public {
         vm.prank(address(0x1));
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("Kass1155: Not deployer");
         _kassERC1155.mint(address(0x1), 0x1, 0x1);
     }
 }

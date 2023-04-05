@@ -20,6 +20,11 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
     // L1 token address can be computed offchain from L2 token address
     // it does not need to be indexed
     event LogL1InstanceCreated(uint256 indexed l2TokenAddress, address l1TokenAddress);
+    event LogOwnershipClaimed(
+        uint256 indexed l2TokenAddress,
+        address l1TokenAddress,
+        address l1Owner
+    );
     event LogDeposit(
         address indexed sender,
         uint256 indexed l2TokenAddress,
@@ -68,7 +73,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         address depositor_ = _state.depositors[nonce];
 
         require(depositor_ != address(0x0), "Deposit not found");
-        require(depositor_ == msg.sender, "Caller is not the depositor");
+        require(depositor_ == _msgSender(), "Caller is not the depositor");
 
         _;
     }
@@ -85,7 +90,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
 
         setDeployerImplementations();
 
-        _transferOwnership(msg.sender);
+        _transferOwnership(_msgSender());
     }
 
     // UPGRADE
@@ -129,6 +134,23 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         emit LogL1InstanceCreated(l2TokenAddress, l1TokenAddress);
     }
 
+    function claimOwnership(uint256 l2TokenAddress) public {
+        // compute ownership claim payload
+        uint256[] memory payload = ownershipClaimMessagePayload(l2TokenAddress, _msgSender());
+
+        // consume ownership claim message
+        _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);
+
+        // get l1 token instance
+        address l1TokenAddress = computeL1TokenAddress(l2TokenAddress);
+
+        // transfer ownership
+        KassERC1155(l1TokenAddress).transferOwnership(_msgSender());
+
+        // emit event
+        emit LogOwnershipClaimed(l2TokenAddress, l1TokenAddress, _msgSender());
+    }
+
     function withdraw(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, address l1Recipient) public {
         require(amount > 0, "Cannot withdraw null amount");
 
@@ -155,7 +177,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         address l1TokenAddress = computeL1TokenAddress(l2TokenAddress);
 
         // burn tokens
-        KassERC1155(l1TokenAddress).burn(msg.sender, tokenId, amount);
+        KassERC1155(l1TokenAddress).burn(_msgSender(), tokenId, amount);
 
         // compute L2 deposit payload and sent it
         uint256[] memory payload = tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient);
@@ -166,10 +188,10 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         );
 
         // save depositor
-        _state.depositors[nonce] = msg.sender;
+        _state.depositors[nonce] = _msgSender();
 
         // emit event
-        emit LogDeposit(msg.sender, l2TokenAddress, l1TokenAddress, tokenId, amount, l2Recipient);
+        emit LogDeposit(_msgSender(), l2TokenAddress, l1TokenAddress, tokenId, amount, l2Recipient);
     }
 
     /**
@@ -195,7 +217,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
             nonce
         );
 
-        emit LogDepositCancelRequest(msg.sender, l2TokenAddress, tokenId, amount, l2Recipient, nonce);
+        emit LogDepositCancelRequest(_msgSender(), l2TokenAddress, tokenId, amount, l2Recipient, nonce);
     }
 
     function cancelDeposit(
@@ -215,9 +237,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         address l1TokenAddress = computeL1TokenAddress(l2TokenAddress);
 
         // mint tokens
-        KassERC1155(l1TokenAddress).mint(msg.sender, tokenId, amount);
+        KassERC1155(l1TokenAddress).mint(_msgSender(), tokenId, amount);
 
-        emit LogDepositCancel(msg.sender, l2TokenAddress, tokenId, amount, l2Recipient, nonce);
+        emit LogDepositCancel(_msgSender(), l2TokenAddress, tokenId, amount, l2Recipient, nonce);
     }
 
     fallback() external payable { revert("unsupported"); }

@@ -4,12 +4,15 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 // modified version of the oz ERC1155 without constructor for a consistent bytecode
-contract KassERC1155 is ERC1155, Ownable, UUPSUpgradeable {
+contract KassERC1155 is Context, ERC1155, Ownable, UUPSUpgradeable {
 
     bool private _initialized = false;
+
+    address private _deployer;
 
     // solhint-disable-next-line no-empty-blocks
     constructor() ERC1155("") { }
@@ -19,8 +22,14 @@ contract KassERC1155 is ERC1155, Ownable, UUPSUpgradeable {
     modifier initializer() {
         address implementation = _getImplementation();
 
-        require(!_initialized, "Already initialized");
+        require(!_initialized, "Kass1155: Already initialized");
         _initialized = true;
+
+        _;
+    }
+
+    modifier onlyDeployer() {
+        require(_deployer == _msgSender(), "Kass1155: Not deployer");
 
         _;
     }
@@ -32,7 +41,8 @@ contract KassERC1155 is ERC1155, Ownable, UUPSUpgradeable {
 
         _setURI(uri_);
 
-        _transferOwnership(msg.sender);
+        _setDeployer();
+        _transferOwnership(_msgSender());
     }
 
     // UPGRADE
@@ -43,12 +53,18 @@ contract KassERC1155 is ERC1155, Ownable, UUPSUpgradeable {
     // MINT & BURN
 
     // mint
-    function mint(address to, uint256 id, uint256 amount) public onlyOwner {
+    function mint(address to, uint256 id, uint256 amount) public onlyDeployer {
         _mint(to, id, amount, "");
     }
 
     // burn
-    function burn(address from, uint256 id, uint256 amount) public onlyOwner {
+    function burn(address from, uint256 id, uint256 amount) public onlyDeployer {
         _burn(from, id, amount);
+    }
+
+    // INTERNALS
+
+    function _setDeployer() private {
+        _deployer = _msgSender();
     }
 }
