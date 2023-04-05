@@ -6,13 +6,22 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Upgrade.sol";
 import "@openzeppelin/contracts/proxy/Proxy.sol";
 
 contract KassERC1967Proxy is Proxy, ERC1967Upgrade {
+
+    // MODIFIERS
+
+    modifier initializer() {
+        require(_implementation() == address(0x0), "Already initialized");
+
+        _;
+    }
+
     /**
      * @dev Initializes the upgradeable proxy with an initial implementation specified by `_logic`.
      *
      * If `_data` is nonempty, it's used as data in a delegate call to `_logic`. This will typically be an encoded
      * function call, and allows initializing the storage of the proxy like a Solidity constructor.
      */
-    function initializeKassERC1967Proxy(address implementation, bytes memory data) public payable {
+    function initializeKassERC1967Proxy(address implementation, bytes memory data) public payable initializer {
         _upgradeToAndCall(implementation, data, true);
     }
 
