@@ -6,7 +6,9 @@ import "../src/KassUtils.sol";
 import "../src/factory/KassERC1155.sol";
 import "./KassTestBase.sol";
 
-contract KassInstanceCreationTestSetup is KassTestBase {
+// solhint-disable contract-name-camelcase
+
+contract TestSetup_1155_KassInstanceCreation is KassTestBase {
     KassERC1155 public _l1TokenInstance;
 
     function setUp() public override {
@@ -17,9 +19,9 @@ contract KassInstanceCreationTestSetup is KassTestBase {
     }
 }
 
-contract KassInstanceCreationTest is KassInstanceCreationTestSetup {
+contract Test_1155_KassInstanceCreation is TestSetup_1155_KassInstanceCreation {
 
-    function test_L1TokenInstanceComputedAddress() public {
+    function test_1155_L1TokenInstanceComputedAddress() public {
         // pre compute address
         address computedL1TokenAddress = _kass.computeL1TokenAddress(L2_TOKEN_ADDRESS);
 
@@ -30,7 +32,7 @@ contract KassInstanceCreationTest is KassInstanceCreationTestSetup {
         assertEq(computedL1TokenAddress, l1TokenAddress);
     }
 
-    function test_L1TokenInstanceUri() public {
+    function test_1155_L1TokenInstanceUri() public {
         // create L1 instance
         expectL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI);
         KassERC1155 l1TokenInstance = KassERC1155(_kass.createL1Instance1155(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
@@ -38,12 +40,12 @@ contract KassInstanceCreationTest is KassInstanceCreationTestSetup {
         assertEq(l1TokenInstance.uri(0), KassUtils.concat(L2_TOKEN_URI));
     }
 
-    function test_CannotCreateL1TokenInstanceWithDifferentL2TokenAddressFromL2Request() public {
+    function test_1155_CannotCreateL1TokenInstanceWithDifferentL2TokenAddressFromL2Request() public {
         vm.expectRevert();
         _kass.createL1Instance1155(L2_TOKEN_ADDRESS - 1, L2_TOKEN_URI);
     }
 
-    function test_CannotCreateL1TokenInstanceWithDifferentUriFromL2Request() public {
+    function test_1155_CannotCreateL1TokenInstanceWithDifferentUriFromL2Request() public {
         string[] memory uri = new string[](L2_TOKEN_URI.length);
 
         // reverse `L2_TOKEN_URI`

@@ -134,7 +134,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
 
         // deploy Kass ERC1155 with URI
         if (tokenStandard == TokenStandard.ERC721) {
-            l1TokenAddress = cloneKassERC721(bytes32(l2TokenAddress), abi.encode(KassUtils.concat(data)));
+            l1TokenAddress = cloneKassERC721(bytes32(l2TokenAddress), abi.encode(data[0], data[1]));
         } else if (tokenStandard == TokenStandard.ERC1155) {
             l1TokenAddress = cloneKassERC1155(bytes32(l2TokenAddress), abi.encode(KassUtils.concat(data)));
         } else {

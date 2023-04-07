@@ -17,6 +17,10 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
     // solhint-disable-next-line var-name-mixedcase
     string[] internal L2_TOKEN_URI;
+    string[] internal L2_TOKEN_NAME_AND_SYMBOL;
+
+    string internal constant L2_TOKEN_NAME = "L2 Kass Token";
+    string internal constant L2_TOKEN_SYMBOL = "L2KT";
 
     address internal constant STARKNET_MESSAGNING_ADDRESS = address(uint160(uint256(keccak256("starknet messaging"))));
     uint256 internal constant L2_KASS_ADDRESS = uint256(keccak256("L2 Kass"));
@@ -68,6 +72,11 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         L2_TOKEN_URI[0] = "https://api.rule";
         L2_TOKEN_URI[1] = "s.art/metadata/{";
         L2_TOKEN_URI[2] = "id}.json";
+
+        // L2 token name & symbol
+        L2_TOKEN_NAME_AND_SYMBOL = new string[](2);
+        L2_TOKEN_NAME_AND_SYMBOL[0] = L2_TOKEN_NAME;
+        L2_TOKEN_NAME_AND_SYMBOL[1] = L2_TOKEN_SYMBOL;
     }
 
     // SETUP
@@ -91,14 +100,14 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
     // MESSAGES
 
-    function requestL1InstanceCreation(uint256 l2TokenAddress, string[] memory uri) internal {
+    function requestL1InstanceCreation(uint256 l2TokenAddress, string[] memory data) internal {
         // prepare L1 instance creation message from L2
         vm.mockCall(
             _starknetMessagingAddress,
             abi.encodeWithSelector(
                 IStarknetMessaging.consumeMessageFromL2.selector,
                 L2_KASS_ADDRESS,
-                instanceCreationMessagePayload(l2TokenAddress, uri)
+                instanceCreationMessagePayload(l2TokenAddress, data)
             ),
             abi.encode(bytes32(0x0))
         );
@@ -132,11 +141,11 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
     // EXPECTS
 
-    function expectL1InstanceCreation(uint256 l2TokenAddress, string[] memory uri) internal {
+    function expectL1InstanceCreation(uint256 l2TokenAddress, string[] memory data) internal {
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.consumeMessageFromL2.selector,
             L2_KASS_ADDRESS,
-            instanceCreationMessagePayload(l2TokenAddress, uri)
+            instanceCreationMessagePayload(l2TokenAddress, data)
         );
 
         // expect L1 message send
