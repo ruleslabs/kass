@@ -15,12 +15,13 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
     Kass internal _kass;
     address internal _starknetMessagingAddress;
 
-    // solhint-disable-next-line var-name-mixedcase
-    string[] internal L2_TOKEN_URI;
-    string[] internal L2_TOKEN_NAME_AND_SYMBOL;
-
     string internal constant L2_TOKEN_NAME = "L2 Kass Token";
     string internal constant L2_TOKEN_SYMBOL = "L2KT";
+
+    // solhint-disable-next-line var-name-mixedcase
+    string[] internal L2_TOKEN_URI;
+    // solhint-disable-next-line var-name-mixedcase
+    string[] internal L2_TOKEN_NAME_AND_SYMBOL;
 
     address internal constant STARKNET_MESSAGNING_ADDRESS = address(uint160(uint256(keccak256("starknet messaging"))));
     uint256 internal constant L2_KASS_ADDRESS = uint256(keccak256("L2 Kass"));
