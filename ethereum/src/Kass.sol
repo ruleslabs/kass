@@ -263,8 +263,8 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         emit LogDeposit(_msgSender(), l2TokenAddress, l1TokenAddress, tokenId, amount, l2Recipient);
     }
 
-    function deposit721(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, uint256 l2Recipient) public {
-        _deposit(l2TokenAddress, tokenId, amount, l2Recipient, TokenStandard.ERC721);
+    function deposit721(uint256 l2TokenAddress, uint256 tokenId, uint256 l2Recipient) public {
+        _deposit(l2TokenAddress, tokenId, 0x1, l2Recipient, TokenStandard.ERC721);
     }
 
     function deposit1155(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, uint256 l2Recipient) public {
@@ -333,11 +333,10 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
     function cancelDeposit721(
         uint256 l2TokenAddress,
         uint256 tokenId,
-        uint256 amount,
         uint256 l2Recipient,
         uint256 nonce
     ) public onlyDepositor(nonce) {
-        _cancelDeposit(l2TokenAddress, tokenId, amount, l2Recipient, nonce, TokenStandard.ERC721);
+        _cancelDeposit(l2TokenAddress, tokenId, 0x1, l2Recipient, nonce, TokenStandard.ERC721);
     }
 
     function cancelDeposit1155(
