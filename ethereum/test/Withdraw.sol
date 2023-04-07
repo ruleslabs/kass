@@ -6,7 +6,7 @@ import "../src/KassUtils.sol";
 import "../src/factory/KassERC1155.sol";
 import "./KassTestBase.sol";
 
-contract WithdrawTest is KassTestBase {
+contract WithdrawTestSetup is KassTestBase {
     KassERC1155 public _l1TokenInstance;
 
     function setUp() public override {
@@ -14,7 +14,7 @@ contract WithdrawTest is KassTestBase {
 
         // request and create L1 instance
         requestL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI);
-        _l1TokenInstance = KassERC1155(_kass.createL1Instance(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
+        _l1TokenInstance = KassERC1155(_kass.createL1Instance1155(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
     }
 
     function basicWithdrawTest(
@@ -22,18 +22,21 @@ contract WithdrawTest is KassTestBase {
         uint256 tokenId,
         uint256 amount,
         address l1Recipient
-    ) private {
+    ) internal {
         // assert balance is empty
         assertEq(_l1TokenInstance.balanceOf(l1Recipient, tokenId), 0);
 
         // deposit from L2 and withdraw to L1
         depositOnL1(l2TokenAddress, tokenId, amount, l1Recipient);
         expectWithdrawOnL1(l2TokenAddress, tokenId, amount, l1Recipient);
-        _kass.withdraw(l2TokenAddress, tokenId, amount, l1Recipient);
+        _kass.withdraw1155(l2TokenAddress, tokenId, amount, l1Recipient);
 
         // assert balance was updated
         assertEq(_l1TokenInstance.balanceOf(l1Recipient, tokenId), amount);
     }
+}
+
+contract WithdrawTest is WithdrawTestSetup {
 
     function test_BasicWithdrawFromL2_1() public {
         address l1Recipient = address(uint160(uint256(keccak256("rando 1"))));
@@ -68,7 +71,7 @@ contract WithdrawTest is KassTestBase {
         depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
 
         vm.expectRevert();
-        _kass.withdraw(L2_TOKEN_ADDRESS, tokenId - 1, amount, l1Recipient);
+        _kass.withdraw1155(L2_TOKEN_ADDRESS, tokenId - 1, amount, l1Recipient);
     }
 
     function test_CannotWithdrawFromL2WithDifferentAmountFromL2Request() public {
@@ -80,7 +83,7 @@ contract WithdrawTest is KassTestBase {
         depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
 
         vm.expectRevert();
-        _kass.withdraw(L2_TOKEN_ADDRESS, tokenId, amount + 1, l1Recipient);
+        _kass.withdraw1155(L2_TOKEN_ADDRESS, tokenId, amount + 1, l1Recipient);
     }
 
     function test_CannotWithdrawFromL2WithDifferentL1RecipientFromL2Request() public {
@@ -93,7 +96,7 @@ contract WithdrawTest is KassTestBase {
         depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
 
         vm.expectRevert();
-        _kass.withdraw(L2_TOKEN_ADDRESS, tokenId, amount, fakeL1Recipient);
+        _kass.withdraw1155(L2_TOKEN_ADDRESS, tokenId, amount, fakeL1Recipient);
     }
 
     function test_CannotWithdrawFromL2Twice() public {
@@ -106,11 +109,11 @@ contract WithdrawTest is KassTestBase {
 
         // withdraw
         expectWithdrawOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
-        _kass.withdraw(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        _kass.withdraw1155(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
 
         vm.clearMockedCalls();
         vm.expectRevert();
-        _kass.withdraw(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        _kass.withdraw1155(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
     }
 
     function test_CannotWithdrawZeroFromL2() public {
@@ -123,6 +126,6 @@ contract WithdrawTest is KassTestBase {
 
         // withdraw
         vm.expectRevert("Cannot withdraw null amount");
-        _kass.withdraw(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        _kass.withdraw1155(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
     }
 }

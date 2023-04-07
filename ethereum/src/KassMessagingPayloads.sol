@@ -8,9 +8,9 @@ import "./KassUtils.sol";
 abstract contract KassMessagingPayloads is StarknetConstants {
     function instanceCreationMessagePayload(
         uint256 l2TokenAddress,
-        string[] memory uri
+        string[] memory data
     ) internal pure returns (uint256[] memory payload) {
-        payload = new uint256[](uri.length + 2);
+        payload = new uint256[](data.length + 2);
 
         payload[0] = REQUEST_L1_INSTANCE;
 
@@ -18,8 +18,8 @@ abstract contract KassMessagingPayloads is StarknetConstants {
         payload[1] = l2TokenAddress;
 
         // store token URI
-        for (uint8 i = 0; i < uri.length; ++i) {
-            payload[i + 2] = KassUtils.strToUint256(uri[i]);
+        for (uint8 i = 0; i < data.length; ++i) {
+            payload[i + 2] = KassUtils.strToUint256(data[i]);
         }
     }
 

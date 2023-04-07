@@ -6,7 +6,7 @@ import "../src/KassUtils.sol";
 import "../src/factory/KassERC1155.sol";
 import "./KassTestBase.sol";
 
-contract KassClaimOwnershipTest is KassTestBase {
+contract KassClaimOwnershipTestSetup is KassTestBase {
     KassERC1155 public _l1TokenInstance;
 
     function setUp() public override {
@@ -14,10 +14,13 @@ contract KassClaimOwnershipTest is KassTestBase {
 
         // request and create L1 instance
         requestL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI);
-        _l1TokenInstance = KassERC1155(_kass.createL1Instance(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
+        _l1TokenInstance = KassERC1155(_kass.createL1Instance1155(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
     }
+}
 
-    function test_claimOwnershipOnL1() public {
+contract KassClaimOwnershipTest is KassClaimOwnershipTestSetup {
+
+    function test_claimOwnership1155OnL1() public {
         address l1Owner = address(this);
 
         // deposit on L2

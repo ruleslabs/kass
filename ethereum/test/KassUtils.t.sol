@@ -7,9 +7,6 @@ import "forge-std/Test.sol";
 import "../src/KassUtils.sol";
 
 contract KassUtilsTest is Test {
-    function setUp() public {
-        // solhint-disable-previous-line no-empty-blocks
-    }
 
     // CONCAT
     function test_ConcatMulitpleStrings() public {

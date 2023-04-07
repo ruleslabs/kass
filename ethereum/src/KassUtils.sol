@@ -2,6 +2,11 @@
 
 pragma solidity ^0.8.19;
 
+enum TokenStandard {
+    ERC721,
+    ERC1155
+}
+
 library KassUtils {
     function strToUint256(string memory text) public pure returns (uint256 res) {
         bytes32 stringInBytes32 = bytes32(bytes(text));

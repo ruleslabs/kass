@@ -9,7 +9,7 @@ import "../src/factory/KassERC1967Proxy.sol";
 import "../src/KassUtils.sol";
 import "../src/mocks/UpgradedContractMock.sol";
 
-contract KassERC1155Test is Test {
+contract KassERC1155TestSetup is Test {
     KassERC1155 public _kassERC1155 = new KassERC1155();
     KassERC1967Proxy public _kassERC1967Proxy = new KassERC1967Proxy();
     UpgradedContractMock public _upgradedContractMock = new UpgradedContractMock();
@@ -21,6 +21,9 @@ contract KassERC1155Test is Test {
             abi.encodeWithSelector(KassERC1155.initialize.selector, abi.encode(""))
         );
     }
+}
+
+contract KassERC1155Test is KassERC1155TestSetup {
 
     function test_Upgrade() public {
         KassERC1155(address(_kassERC1967Proxy)).upgradeTo(address(_upgradedContractMock));

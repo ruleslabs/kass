@@ -5,6 +5,7 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
+import "./factory/KassERC721.sol";
 import "./factory/KassERC1155.sol";
 import "./interfaces/IStarknetMessaging.sol";
 import "./KassUtils.sol";
@@ -118,21 +119,50 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         _state.initializedImplementations[implementation] = true;
     }
 
-    // BUSINESS LOGIC
+    // INSTANCE CREATION
 
-    function createL1Instance(uint256 l2TokenAddress, string[] calldata uri) public returns (address l1TokenAddress) {
+    function _createL1Instance(
+        uint256 l2TokenAddress,
+        string[] memory data,
+        TokenStandard tokenStandard
+    ) private returns (address l1TokenAddress) {
         // compute L1 instance request payload
-        uint256[] memory payload = instanceCreationMessagePayload(l2TokenAddress, uri);
+        uint256[] memory payload = instanceCreationMessagePayload(l2TokenAddress, data);
 
         // consume L1 instance request message
         _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);
 
         // deploy Kass ERC1155 with URI
-        l1TokenAddress = cloneKassERC1155(bytes32(l2TokenAddress), KassUtils.concat(uri));
+        if (tokenStandard == TokenStandard.ERC721) {
+            l1TokenAddress = cloneKassERC721(bytes32(l2TokenAddress), abi.encode(KassUtils.concat(data)));
+        } else if (tokenStandard == TokenStandard.ERC1155) {
+            l1TokenAddress = cloneKassERC1155(bytes32(l2TokenAddress), abi.encode(KassUtils.concat(data)));
+        } else {
+            revert("Kass: Unkown token standard");
+        }
 
         // emit event
         emit LogL1InstanceCreated(l2TokenAddress, l1TokenAddress);
     }
+
+    function createL1Instance721(
+        uint256 l2TokenAddress,
+        string calldata name,
+        string calldata symbol
+    ) public returns (address) {
+        string[] memory data = new string[](2);
+
+        data[0] = name;
+        data[1] = symbol;
+
+        return _createL1Instance(l2TokenAddress, data, TokenStandard.ERC721);
+    }
+
+    function createL1Instance1155(uint256 l2TokenAddress, string[] calldata uri) public returns (address) {
+        return _createL1Instance(l2TokenAddress, uri, TokenStandard.ERC1155);
+    }
+
+    // OWNERSHIP CLAIM
 
     function claimOwnership(uint256 l2TokenAddress) public {
         // compute ownership claim payload
@@ -145,13 +175,21 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         address l1TokenAddress = computeL1TokenAddress(l2TokenAddress);
 
         // transfer ownership
-        KassERC1155(l1TokenAddress).transferOwnership(_msgSender());
+        Ownable(l1TokenAddress).transferOwnership(_msgSender());
 
         // emit event
         emit LogOwnershipClaimed(l2TokenAddress, l1TokenAddress, _msgSender());
     }
 
-    function withdraw(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, address l1Recipient) public {
+    // WITHDRAW
+
+    function _withdraw(
+        uint256 l2TokenAddress,
+        uint256 tokenId,
+        uint256 amount,
+        address l1Recipient,
+        TokenStandard tokenStandard
+    ) internal {
         require(amount > 0, "Cannot withdraw null amount");
 
         // compute L1 instance request payload
@@ -164,20 +202,51 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         address l1TokenAddress = computeL1TokenAddress(l2TokenAddress);
 
         // mint tokens
-        KassERC1155(l1TokenAddress).mint(l1Recipient, tokenId, amount);
+        if (tokenStandard == TokenStandard.ERC721) {
+            KassERC721(l1TokenAddress).mint(l1Recipient, tokenId);
+        } else if (tokenStandard == TokenStandard.ERC1155) {
+            KassERC1155(l1TokenAddress).mint(l1Recipient, tokenId, amount);
+        } else {
+            revert("Kass: Unkown token standard");
+        }
 
         // emit event
         emit LogWithdrawal(l2TokenAddress, l1TokenAddress, tokenId, amount, l1Recipient);
     }
 
-    function deposit(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, uint256 l2Recipient) public {
+    function withdraw721(uint256 l2TokenAddress, uint256 tokenId, address l1Recipient) public {
+        _withdraw(l2TokenAddress, tokenId, 0x1, l1Recipient, TokenStandard.ERC721);
+    }
+
+    function withdraw1155(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, address l1Recipient) public {
+        _withdraw(l2TokenAddress, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
+    }
+
+    // DEPOSIT
+
+    function _deposit(
+        uint256 l2TokenAddress,
+        uint256 tokenId,
+        uint256 amount,
+        uint256 l2Recipient,
+        TokenStandard tokenStandard
+    ) private {
         require(amount > 0, "Cannot deposit null amount");
 
         // get l1 token instance
         address l1TokenAddress = computeL1TokenAddress(l2TokenAddress);
 
         // burn tokens
-        KassERC1155(l1TokenAddress).burn(_msgSender(), tokenId, amount);
+        if (tokenStandard == TokenStandard.ERC721) {
+            // check if sender is owner before burning
+            require(KassERC721(l1TokenAddress).ownerOf(tokenId) == _msgSender(), "You do not own this token");
+
+            KassERC721(l1TokenAddress).burn(tokenId);
+        } else if (tokenStandard == TokenStandard.ERC1155) {
+            KassERC1155(l1TokenAddress).burn(_msgSender(), tokenId, amount);
+        } else {
+            revert("Kass: Unkown token standard");
+        }
 
         // compute L2 deposit payload and sent it
         uint256[] memory payload = tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient);
@@ -193,6 +262,16 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         // emit event
         emit LogDeposit(_msgSender(), l2TokenAddress, l1TokenAddress, tokenId, amount, l2Recipient);
     }
+
+    function deposit721(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, uint256 l2Recipient) public {
+        _deposit(l2TokenAddress, tokenId, amount, l2Recipient, TokenStandard.ERC721);
+    }
+
+    function deposit1155(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, uint256 l2Recipient) public {
+        _deposit(l2TokenAddress, tokenId, amount, l2Recipient, TokenStandard.ERC1155);
+    }
+
+    // REQUEST DEPOSIT CANCEL
 
     /**
      * If previous deposit on L2 fails to be handled by the L2 Kass bridge, tokens could be lost.
@@ -220,13 +299,16 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         emit LogDepositCancelRequest(_msgSender(), l2TokenAddress, tokenId, amount, l2Recipient, nonce);
     }
 
-    function cancelDeposit(
+    // REQUEST DEPOSIT CANCEL
+
+    function _cancelDeposit(
         uint256 l2TokenAddress,
         uint256 tokenId,
         uint256 amount,
         uint256 l2Recipient,
-        uint256 nonce
-    ) public onlyDepositor(nonce) {
+        uint256 nonce,
+        TokenStandard tokenStandard
+    ) private {
         _state.starknetMessaging.cancelL1ToL2Message(
             _state.l2KassAddress,
             DEPOSIT_HANDLER_SELECTOR,
@@ -237,9 +319,35 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         address l1TokenAddress = computeL1TokenAddress(l2TokenAddress);
 
         // mint tokens
-        KassERC1155(l1TokenAddress).mint(_msgSender(), tokenId, amount);
+        if (tokenStandard == TokenStandard.ERC721) {
+            KassERC721(l1TokenAddress).mint(_msgSender(), tokenId);
+        } else if (tokenStandard == TokenStandard.ERC1155) {
+            KassERC1155(l1TokenAddress).mint(_msgSender(), tokenId, amount);
+        } else {
+            revert("Kass: Unkown token standard");
+        }
 
         emit LogDepositCancel(_msgSender(), l2TokenAddress, tokenId, amount, l2Recipient, nonce);
+    }
+
+    function cancelDeposit721(
+        uint256 l2TokenAddress,
+        uint256 tokenId,
+        uint256 amount,
+        uint256 l2Recipient,
+        uint256 nonce
+    ) public onlyDepositor(nonce) {
+        _cancelDeposit(l2TokenAddress, tokenId, amount, l2Recipient, nonce, TokenStandard.ERC721);
+    }
+
+    function cancelDeposit1155(
+        uint256 l2TokenAddress,
+        uint256 tokenId,
+        uint256 amount,
+        uint256 l2Recipient,
+        uint256 nonce
+    ) public onlyDepositor(nonce) {
+        _cancelDeposit(l2TokenAddress, tokenId, amount, l2Recipient, nonce, TokenStandard.ERC1155);
     }
 
     fallback() external payable { revert("unsupported"); }

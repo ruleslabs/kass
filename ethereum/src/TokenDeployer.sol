@@ -7,10 +7,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./interfaces/IStarknetMessaging.sol";
 import "./KassUtils.sol";
+import "./factory/KassERC721.sol";
 import "./factory/KassERC1155.sol";
 import "./factory/KassERC1967Proxy.sol";
 import "./KassStorage.sol";
-
 
 abstract contract TokenDeployer is KassStorage {
     // CONSTRUCTOR
@@ -19,6 +19,12 @@ abstract contract TokenDeployer is KassStorage {
         if (_state.proxyImplementationAddress == address(0x0)) {
             _state.proxyImplementationAddress = address(
                 new KassERC1967Proxy{ salt: keccak256("KassERC1967Proxy") }()
+            );
+        }
+
+        if (_state.erc721ImplementationAddress == address(0x0)) {
+            _state.erc721ImplementationAddress = address(
+                new KassERC721{ salt: keccak256("KassERC721") }()
             );
         }
 
@@ -60,7 +66,7 @@ abstract contract TokenDeployer is KassStorage {
      * to support Create2.
      * @param salt Salt for CREATE2
      */
-    function cloneKassERC1155(bytes32 salt, string memory uri) internal returns (address payable result) {
+    function cloneProxy(bytes32 salt) private returns (address payable result) {
         bytes20 targetBytes = bytes20(_state.proxyImplementationAddress);
         assembly {
             let clone := mload(0x40)
@@ -69,10 +75,23 @@ abstract contract TokenDeployer is KassStorage {
             mstore(add(clone, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
             result := create2(0, clone, 0x37, salt)
         }
+    }
+
+    function cloneKassERC1155(bytes32 salt, bytes memory data) internal returns (address payable result) {
+        result = cloneProxy(salt);
 
         KassERC1967Proxy(result).initializeKassERC1967Proxy(
             _state.erc1155ImplementationAddress,
-            abi.encodeWithSelector(KassERC1155.initialize.selector, abi.encode(uri))
+            abi.encodeWithSelector(KassERC1155.initialize.selector, data)
+        );
+    }
+
+    function cloneKassERC721(bytes32 salt, bytes memory data) internal returns (address payable result) {
+        result = cloneProxy(salt);
+
+        KassERC1967Proxy(result).initializeKassERC1967Proxy(
+            _state.erc721ImplementationAddress,
+            abi.encodeWithSelector(KassERC1155.initialize.selector, data)
         );
     }
 }
