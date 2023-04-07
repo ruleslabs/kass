@@ -282,13 +282,13 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
      * The nonce should be extracted from the LogMessageToL2 event that was emitted by the
      * StarknetMessaging contract upon deposit.
      */
-     function requestDepositCancel(
+     function _requestDepositCancel(
         uint256 l2TokenAddress,
         uint256 tokenId,
         uint256 amount,
         uint256 l2Recipient,
         uint256 nonce
-    ) public onlyDepositor(nonce) {
+    ) private {
         _state.starknetMessaging.startL1ToL2MessageCancellation(
             _state.l2KassAddress,
             DEPOSIT_HANDLER_SELECTOR,
@@ -299,7 +299,26 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         emit LogDepositCancelRequest(_msgSender(), l2TokenAddress, tokenId, amount, l2Recipient, nonce);
     }
 
-    // REQUEST DEPOSIT CANCEL
+    function requestDepositCancel721(
+        uint256 l2TokenAddress,
+        uint256 tokenId,
+        uint256 l2Recipient,
+        uint256 nonce
+    ) public onlyDepositor(nonce) {
+        _requestDepositCancel(l2TokenAddress, tokenId, 0x1, l2Recipient, nonce);
+    }
+
+    function requestDepositCancel1155(
+        uint256 l2TokenAddress,
+        uint256 tokenId,
+        uint256 amount,
+        uint256 l2Recipient,
+        uint256 nonce
+    ) public onlyDepositor(nonce) {
+        _requestDepositCancel(l2TokenAddress, tokenId, amount, l2Recipient, nonce);
+    }
+
+    // CANCEL DEPOSIT
 
     function _cancelDeposit(
         uint256 l2TokenAddress,

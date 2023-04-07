@@ -22,7 +22,7 @@ contract TestSetup_1155_Deposit is KassTestBase, ERC1155Holder {
     }
 
     function _1155_mintTokens(address to, uint256 tokenId, uint256 amount) internal {
-        // deposit tokens
+        // mint tokens
         vm.prank(address(_kass));
         _l1TokenInstance.mint(to, tokenId, amount);
     }
