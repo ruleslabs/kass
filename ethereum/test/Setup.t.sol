@@ -5,7 +5,9 @@ pragma solidity ^0.8.19;
 import "./KassTestBase.sol";
 import "../src/Kass.sol";
 
-contract SetupTest is KassTestBase {
+// solhint-disable contract-name-camelcase
+
+contract Test_Setup is KassTestBase {
 
     function test_UpdateL2KassAddress() public {
         _kass.setL2KassAddress(0xdead);

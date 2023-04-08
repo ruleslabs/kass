@@ -15,7 +15,7 @@ contract TestSetup_721_KassInstanceCreation is KassTestBase {
         super.setUp();
 
         // request L1 instance
-        requestL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL);
+        requestL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL, TokenStandard.ERC721);
     }
 }
 
@@ -26,7 +26,7 @@ contract Test_721_KassInstanceCreation is TestSetup_721_KassInstanceCreation {
         address computedL1TokenAddress = _kass.computeL1TokenAddress(L2_TOKEN_ADDRESS);
 
         // create L1 instance
-        expectL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL);
+        expectL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL, TokenStandard.ERC721);
         address l1TokenAddress = _kass.createL1Instance721(L2_TOKEN_ADDRESS, L2_TOKEN_NAME, L2_TOKEN_SYMBOL);
 
         assertEq(computedL1TokenAddress, l1TokenAddress);
@@ -34,7 +34,7 @@ contract Test_721_KassInstanceCreation is TestSetup_721_KassInstanceCreation {
 
     function test_721_L1TokenInstanceNameAndSymbol() public {
         // create L1 instance
-        expectL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL);
+        expectL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL, TokenStandard.ERC721);
         KassERC721 l1TokenInstance = KassERC721(
             _kass.createL1Instance721(L2_TOKEN_ADDRESS, L2_TOKEN_NAME, L2_TOKEN_SYMBOL)
         );

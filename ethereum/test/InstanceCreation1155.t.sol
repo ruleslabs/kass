@@ -15,7 +15,7 @@ contract TestSetup_1155_KassInstanceCreation is KassTestBase {
         super.setUp();
 
         // request L1 instance
-        requestL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI);
+        requestL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI, TokenStandard.ERC1155);
     }
 }
 
@@ -26,7 +26,7 @@ contract Test_1155_KassInstanceCreation is TestSetup_1155_KassInstanceCreation {
         address computedL1TokenAddress = _kass.computeL1TokenAddress(L2_TOKEN_ADDRESS);
 
         // create L1 instance
-        expectL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI);
+        expectL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI, TokenStandard.ERC1155);
         address l1TokenAddress = _kass.createL1Instance1155(L2_TOKEN_ADDRESS, L2_TOKEN_URI);
 
         assertEq(computedL1TokenAddress, l1TokenAddress);
@@ -34,7 +34,7 @@ contract Test_1155_KassInstanceCreation is TestSetup_1155_KassInstanceCreation {
 
     function test_1155_L1TokenInstanceUri() public {
         // create L1 instance
-        expectL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI);
+        expectL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI, TokenStandard.ERC1155);
         KassERC1155 l1TokenInstance = KassERC1155(_kass.createL1Instance1155(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
 
         assertEq(l1TokenInstance.uri(0), KassUtils.concat(L2_TOKEN_URI));

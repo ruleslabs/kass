@@ -101,14 +101,18 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
     // MESSAGES
 
-    function requestL1InstanceCreation(uint256 l2TokenAddress, string[] memory data) internal {
+    function requestL1InstanceCreation(
+        uint256 l2TokenAddress,
+        string[] memory data,
+        TokenStandard tokenStandard
+    ) internal {
         // prepare L1 instance creation message from L2
         vm.mockCall(
             _starknetMessagingAddress,
             abi.encodeWithSelector(
                 IStarknetMessaging.consumeMessageFromL2.selector,
                 L2_KASS_ADDRESS,
-                instanceCreationMessagePayload(l2TokenAddress, data)
+                instanceCreationMessagePayload(l2TokenAddress, data, tokenStandard)
             ),
             abi.encode(bytes32(0x0))
         );
@@ -142,11 +146,15 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
     // EXPECTS
 
-    function expectL1InstanceCreation(uint256 l2TokenAddress, string[] memory data) internal {
+    function expectL1InstanceCreation(
+        uint256 l2TokenAddress,
+        string[] memory data,
+        TokenStandard tokenStandard
+    ) internal {
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.consumeMessageFromL2.selector,
             L2_KASS_ADDRESS,
-            instanceCreationMessagePayload(l2TokenAddress, data)
+            instanceCreationMessagePayload(l2TokenAddress, data, tokenStandard)
         );
 
         // expect L1 message send

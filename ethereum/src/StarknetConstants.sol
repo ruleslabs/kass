@@ -9,7 +9,8 @@ abstract contract StarknetConstants {
     uint256 internal constant UINT256_PART_SIZE_BITS = 128;
     uint256 internal constant UINT256_PART_SIZE = 2 ** UINT256_PART_SIZE_BITS;
 
-    uint256 internal constant REQUEST_L1_INSTANCE = 0;
+    uint256 internal constant REQUEST_L1_721_INSTANCE = 721;
+    uint256 internal constant REQUEST_L1_1155_INSTANCE = 1155;
     uint256 internal constant TRANSFER_FROM_STARKNET = 1;
     uint256 internal constant CLAIM_OWNERSHIP = 2;
 }

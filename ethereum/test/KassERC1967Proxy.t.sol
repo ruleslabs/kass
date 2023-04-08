@@ -7,7 +7,9 @@ import "forge-std/Test.sol";
 import "../src/factory/KassERC1967Proxy.sol";
 import "../src/factory/KassERC1155.sol";
 
-contract KassERC1155TestSetup is Test {
+// solhint-disable contract-name-camelcase
+
+contract TestSetup_KassERC1967Proxy is Test {
     KassERC1967Proxy public _kassERC1967Proxy = new KassERC1967Proxy();
     KassERC1155 public _kassERC1155 = new KassERC1155();
 
@@ -23,7 +25,7 @@ contract KassERC1155TestSetup is Test {
     }
 }
 
-contract KassERC1155Test is KassERC1155TestSetup {
+contract Test_KassERC1967Proxy is TestSetup_KassERC1967Proxy {
 
     function test_CannotInitializeTwice() public {
         // initialize proxy with a new implementation

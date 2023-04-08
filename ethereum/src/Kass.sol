@@ -127,7 +127,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         TokenStandard tokenStandard
     ) private returns (address l1TokenAddress) {
         // compute L1 instance request payload
-        uint256[] memory payload = instanceCreationMessagePayload(l2TokenAddress, data);
+        uint256[] memory payload = instanceCreationMessagePayload(l2TokenAddress, data, tokenStandard);
 
         // consume L1 instance request message
         _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);

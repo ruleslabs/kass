@@ -6,7 +6,9 @@ import "forge-std/Test.sol";
 
 import "../src/KassUtils.sol";
 
-contract KassUtilsTest is Test {
+// solhint-disable contract-name-camelcase
+
+contract Test_KassUtils is Test {
 
     // CONCAT
     function test_ConcatMulitpleStrings() public {
