@@ -8,6 +8,8 @@ import "../src/KassUtils.sol";
 import "../src/factory/KassERC721.sol";
 import "./KassTestBase.sol";
 
+// solhint-disable contract-name-camelcase
+
 contract TestSetup_721_DepositCancel is KassTestBase, ERC721Holder {
     KassERC721 public _l1TokenInstance;
 

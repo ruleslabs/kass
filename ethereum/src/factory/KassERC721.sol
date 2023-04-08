@@ -28,14 +28,14 @@ contract KassERC721 is Context, ERC721, Ownable, UUPSUpgradeable {
     modifier initializer() {
         address implementation = _getImplementation();
 
-        require(!_initialized, "Kass1155: Already initialized");
+        require(!_initialized, "Kass721: Already initialized");
         _initialized = true;
 
         _;
     }
 
     modifier onlyDeployer() {
-        require(_deployer == _msgSender(), "Kass1155: Not deployer");
+        require(_deployer == _msgSender(), "Kass721: Not deployer");
 
         _;
     }
