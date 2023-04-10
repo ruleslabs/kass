@@ -13,17 +13,24 @@ library KassUtils {
     uint256 private constant BYTES_16_MASK = 2 ** (8 * 16) - 1;
 
     function strToUint256(string memory str) public pure returns (uint256 res) {
-        bytes32 stringInBytes32 = bytes32(bytes(str));
-        uint256 strLen = bytes(str).length;
-        require(strLen <= 32, "String cannot be longer than 32");
+        // require(strLen <= 32, "String cannot be longer than 32");
 
-        uint256 shift = 256 - 8 * strLen;
-
-        uint256 stringInUint256;
         assembly {
-            stringInUint256 := shr(shift, stringInBytes32)
+            let strLen := mload(str)
+
+            if gt(strLen, 32) {
+                let ptr := mload(0x40)
+                mstore(ptr, 0x8c379a000000000000000000000000000000000000000000000000000000000) // shl(229, 4594637)
+                mstore(add(ptr, 0x04), 0x20)
+                mstore(add(ptr, 0x24), 31)
+                mstore(add(ptr, 0x44), "String cannot be longer than 32")
+                revert(ptr, 0x65)
+            }
+
+            let shift := sub(256, mul(8, strLen))
+            let temp := mload(add(str, 0x20))
+            res := shr(shift, temp)
         }
-        return stringInUint256;
     }
 
     function encodeTightlyPacked(string[] calldata arr) public pure returns (bytes memory encoded) {
