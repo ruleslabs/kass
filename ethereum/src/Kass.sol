@@ -4,6 +4,8 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
 import "./factory/KassERC721.sol";
 import "./factory/KassERC1155.sol";
@@ -21,6 +23,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
     // L1 token address can be computed offchain from L2 token address
     // it does not need to be indexed
     event LogL1InstanceCreated(uint256 indexed l2TokenAddress, address l1TokenAddress);
+    event LogL2InstanceRequested(address indexed l1TokenAddress);
     event LogOwnershipClaimed(
         uint256 indexed l2TokenAddress,
         address l1TokenAddress,
@@ -127,7 +130,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         TokenStandard tokenStandard
     ) private returns (address l1TokenAddress) {
         // compute L1 instance request payload
-        uint256[] memory payload = instanceCreationMessagePayload(l2TokenAddress, data, tokenStandard);
+        uint256[] memory payload = l1InstanceCreationMessagePayload(l2TokenAddress, data, tokenStandard);
 
         // consume L1 instance request message
         _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);
@@ -136,7 +139,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         if (tokenStandard == TokenStandard.ERC721) {
             l1TokenAddress = cloneKassERC721(bytes32(l2TokenAddress), abi.encode(data[0], data[1]));
         } else if (tokenStandard == TokenStandard.ERC1155) {
-            l1TokenAddress = cloneKassERC1155(bytes32(l2TokenAddress), abi.encode(KassUtils.concat(data)));
+            l1TokenAddress = cloneKassERC1155(bytes32(l2TokenAddress), abi.encode(KassUtils.encodeTightlyPacked(data)));
         } else {
             revert("Kass: Unkown token standard");
         }
@@ -160,6 +163,36 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
 
     function createL1Instance1155(uint256 l2TokenAddress, string[] calldata uri) public returns (address) {
         return _createL1Instance(l2TokenAddress, uri, TokenStandard.ERC1155);
+    }
+
+    // INSTANCE CREATION REQUEST
+
+    function _requestL2Instance(
+        address l1TokenAddress,
+        uint256[] memory data,
+        TokenStandard tokenStandard
+    ) private {
+        // compute L2 instance request payload and sent it
+        uint256[] memory payload = l2InstanceCreationMessagePayload(l1TokenAddress, data, tokenStandard);
+        _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, INSTANCE_CREATION_HANDLER_SELECTOR, payload);
+
+        // emit event
+        emit LogL2InstanceRequested(l1TokenAddress);
+    }
+
+    function requestL2Instance721(address l1TokenAddress) public {
+        uint256[] memory data = new uint256[](2);
+
+        data[0] = KassUtils.strToFelt252(ERC721(l1TokenAddress).name());
+        data[1] = KassUtils.strToFelt252(ERC721(l1TokenAddress).symbol());
+
+        _requestL2Instance(l1TokenAddress, data, TokenStandard.ERC721);
+    }
+
+    function requestL2Instance1155(address l1TokenAddress) public {
+        uint256[] memory data = KassUtils.strToFelt252Words(ERC1155(l1TokenAddress).uri(0x0));
+
+        _requestL2Instance(l1TokenAddress, data, TokenStandard.ERC1155);
     }
 
     // OWNERSHIP CLAIM

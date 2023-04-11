@@ -36,19 +36,19 @@ contract Test_KassUtils is Test {
         assertEq(string(KassUtils.encodeTightlyPacked(arr)), "");
     }
 
-    // STR TO UINT256
+    // STR TO FELT252
     function test_BasicStrToUint256() public {
         uint256 res;
 
         res = KassUtils.strToFelt252("Hello world !");
-        assertEq(res, uint256(0x48656C6C6F20776F726C642021));
+        assertEq(res, 0x48656C6C6F20776F726C642021);
     }
 
     function test_EmptyStrToUint256() public {
         uint256 res;
 
         res = KassUtils.strToFelt252("");
-        assertEq(res, uint256(0x0));
+        assertEq(res, 0);
     }
 
     function test_TooLongStrToUint256() public {
@@ -56,9 +56,11 @@ contract Test_KassUtils is Test {
         KassUtils.strToFelt252("12345678901234567890123456789012");
     }
 
-    // STR TO STR 32 WORDS
+    // STR TO FELT252 WORDS
     function test_BasicStrToStr32Words_1() public {
-        uint256[] memory res = KassUtils.strToFelt252Words("123456789012345678901234567890-098765432109876543210987654321-1234567890");
+        uint256[] memory res = KassUtils.strToFelt252Words(
+            "123456789012345678901234567890-098765432109876543210987654321-1234567890"
+        );
 
         assertEq(res.length, 3);
         assertEq(res[0], KassUtils.strToFelt252("123456789012345678901234567890-"));
@@ -101,7 +103,9 @@ contract Test_KassUtils is Test {
         assertEq(res[0], KassUtils.strToFelt252("1"));
     }
     function test_BasicStrToStr32Words_7() public {
-        uint256[] memory res = KassUtils.strToFelt252Words("123456789012345678901234567890-098765432109876543210987654321-");
+        uint256[] memory res = KassUtils.strToFelt252Words(
+            "123456789012345678901234567890-098765432109876543210987654321-"
+        );
 
         assertEq(res.length, 2);
         assertEq(res[0], KassUtils.strToFelt252("123456789012345678901234567890-"));

@@ -37,7 +37,7 @@ contract Test_1155_KassInstanceCreation is TestSetup_1155_KassInstanceCreation {
         expectL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI, TokenStandard.ERC1155);
         KassERC1155 l1TokenInstance = KassERC1155(_kass.createL1Instance1155(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
 
-        assertEq(l1TokenInstance.uri(0), KassUtils.concat(L2_TOKEN_URI));
+        assertEq(l1TokenInstance.uri(0), string(KassUtils.encodeTightlyPacked(L2_TOKEN_URI)));
     }
 
     function test_1155_CannotCreateL1TokenInstanceWithDifferentL2TokenAddressFromL2Request() public {

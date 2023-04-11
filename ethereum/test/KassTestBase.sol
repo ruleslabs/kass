@@ -15,6 +15,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
     Kass internal _kass;
     address internal _starknetMessagingAddress;
 
+    string internal constant L2_TOKEN_FLAT_URI = "https://api.rules.art/metadata/{id}.json";
     string internal constant L2_TOKEN_NAME = "L2 Kass Token";
     string internal constant L2_TOKEN_SYMBOL = "L2KT";
 
@@ -30,6 +31,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
     uint256 public constant CAIRO_FIELD_PRIME = 0x800000000000011000000000000000000000000000000000000000000000001;
 
     event LogL1InstanceCreated(uint256 indexed l2TokenAddress, address l1TokenAddress);
+    event LogL2InstanceRequested(address indexed l1TokenAddress);
     event LogOwnershipClaimed(
         uint256 indexed l2TokenAddress,
         address l1TokenAddress,
@@ -112,7 +114,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
             abi.encodeWithSelector(
                 IStarknetMessaging.consumeMessageFromL2.selector,
                 L2_KASS_ADDRESS,
-                instanceCreationMessagePayload(l2TokenAddress, data, tokenStandard)
+                l1InstanceCreationMessagePayload(l2TokenAddress, data, tokenStandard)
             ),
             abi.encode(bytes32(0x0))
         );
@@ -154,7 +156,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.consumeMessageFromL2.selector,
             L2_KASS_ADDRESS,
-            instanceCreationMessagePayload(l2TokenAddress, data, tokenStandard)
+            l1InstanceCreationMessagePayload(l2TokenAddress, data, tokenStandard)
         );
 
         // expect L1 message send
@@ -165,6 +167,33 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
         vm.expectEmit(true, true, true, true, address(_kass));
         emit LogL1InstanceCreated(l2TokenAddress, l1TokenAddress);
+    }
+
+    function expectL2InstanceRequest(
+        address l1TokenAddress,
+        uint256[] memory data,
+        TokenStandard tokenStandard
+    ) internal {
+        bytes memory messageCalldata = abi.encodeWithSelector(
+            IStarknetMessaging.sendMessageToL2.selector,
+            L2_KASS_ADDRESS,
+            INSTANCE_CREATION_HANDLER_SELECTOR,
+            l2InstanceCreationMessagePayload(l1TokenAddress, data, tokenStandard)
+        );
+
+        // expect L1 message send
+        vm.expectCall(_starknetMessagingAddress, messageCalldata);
+
+        // mock message sending return value
+        vm.mockCall(
+            _starknetMessagingAddress,
+            messageCalldata,
+            abi.encode(bytes32(0), 0)
+        );
+
+        // expect event
+        vm.expectEmit(true, true, true, true, address(_kass));
+        emit LogL2InstanceRequested(l1TokenAddress);
     }
 
     function expectOwnershipClaim(uint256 l2TokenAddress, address l1Owner) internal {
