@@ -9,21 +9,19 @@ enum TokenStandard {
 
 library KassUtils {
 
-    // 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff
-    uint256 private constant BYTES_16_MASK = 2 ** (8 * 16) - 1;
+    // 0x00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    uint256 private constant BYTES_31_MASK = 2 ** (8 * 31) - 1;
 
-    function strToUint256(string memory str) public pure returns (uint256 res) {
-        // require(strLen <= 32, "String cannot be longer than 32");
-
+    function strToFelt252(string memory str) public pure returns (uint256 res) {
         assembly {
             let strLen := mload(str)
 
-            if gt(strLen, 32) {
+            if gt(strLen, 31) {
                 let ptr := mload(0x40)
                 mstore(ptr, 0x8c379a000000000000000000000000000000000000000000000000000000000) // shl(229, 4594637)
                 mstore(add(ptr, 0x04), 0x20)
                 mstore(add(ptr, 0x24), 31)
-                mstore(add(ptr, 0x44), "String cannot be longer than 32")
+                mstore(add(ptr, 0x44), "String cannot be longer than 31")
                 revert(ptr, 0x65)
             }
 
@@ -39,34 +37,32 @@ library KassUtils {
         }
     }
 
-    function strToUint128Words(string memory str) public pure returns (uint128[] memory res) {
+    function strToFelt252Words(string memory str) public pure returns (uint256[] memory res) {
         assembly {
             // get str len
             let strLen := mload(str)
-            let resLen := div(add(strLen, 0xf), 0x10)
+            let resLen := div(add(strLen, 0x1e), 0x1f)
 
-            let needsFinalWordShift := not(iszero(mod(strLen, 0x10)))
+            let needsFinalWordShift := not(iszero(mod(strLen, 0x1f)))
 
             // init res
             res := mload(0x40)
 
             for
                 {
-                    let strIndex := 0x10 // 0x20 - 0x10
+                    let strIndex := 0x1f
                     let resIndex := 0
                     let temp
-                    let shift
                 }
                 lt(resIndex, resLen)
                 {
-                    strIndex := add(strIndex, 0x10)
+                    strIndex := add(strIndex, 0x1f)
                     resIndex := add(resIndex, 1)
                 }
             {
-                temp := mload(add(str, strIndex))
+                temp := and(mload(add(str, strIndex)), BYTES_31_MASK)
                 if and(eq(add(resIndex, 1), resLen), needsFinalWordShift) {
-                    shift := sub(128, mul(8, mod(strLen, 0x10)))
-                    temp := shr(shift, and(temp, BYTES_16_MASK))
+                    temp := shr(sub(248, mul(8, mod(strLen, 0x1f))), temp)
                 }
 
                 mstore(add(res, add(0x20, mul(resIndex, 0x20))), temp)
