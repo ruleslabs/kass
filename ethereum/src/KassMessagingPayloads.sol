@@ -54,7 +54,7 @@ abstract contract KassMessagingPayloads is StarknetConstants {
         }
     }
 
-    function ownershipClaimMessagePayload(
+    function l1OwnershipClaimMessagePayload(
         uint256 l2TokenAddress,
         address l1Owner
     ) internal pure returns (uint256[] memory payload) {
@@ -67,6 +67,19 @@ abstract contract KassMessagingPayloads is StarknetConstants {
 
         // store L1 owner
         payload[2] = uint256(uint160(l1Owner));
+    }
+
+    function l2OwnershipClaimMessagePayload(
+        address l1TokenAddress,
+        uint256 l2Owner
+    ) internal pure returns (uint256[] memory payload) {
+        payload = new uint256[](2);
+
+        // store L1 token address
+        payload[0] = uint256(uint160(l1TokenAddress));
+
+        // store L2 owner
+        payload[1] = l2Owner;
     }
 
     function tokenDepositOnL1MessagePayload(

@@ -24,11 +24,17 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
     // it does not need to be indexed
     event LogL1InstanceCreated(uint256 indexed l2TokenAddress, address l1TokenAddress);
     event LogL2InstanceRequested(address indexed l1TokenAddress);
-    event LogOwnershipClaimed(
+
+    event LogL1OwnershipClaimed(
         uint256 indexed l2TokenAddress,
         address l1TokenAddress,
         address l1Owner
     );
+    event LogL2OwnershipClaimed(
+        address indexed l1TokenAddress,
+        uint256 l2Owner
+    );
+
     event LogDeposit(
         address indexed sender,
         uint256 indexed l2TokenAddress,
@@ -44,6 +50,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         uint256 amount,
         address indexed l1Recipient
     );
+
     event LogDepositCancelRequest(
         address indexed sender,
         uint256 indexed l2TokenAddress,
@@ -197,9 +204,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
 
     // OWNERSHIP CLAIM
 
-    function claimOwnership(uint256 l2TokenAddress) public {
+    function claimL1Ownership(uint256 l2TokenAddress) public {
         // compute ownership claim payload
-        uint256[] memory payload = ownershipClaimMessagePayload(l2TokenAddress, _msgSender());
+        uint256[] memory payload = l1OwnershipClaimMessagePayload(l2TokenAddress, _msgSender());
 
         // consume ownership claim message
         _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);
@@ -211,7 +218,22 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         Ownable(l1TokenAddress).transferOwnership(_msgSender());
 
         // emit event
-        emit LogOwnershipClaimed(l2TokenAddress, l1TokenAddress, _msgSender());
+        emit LogL1OwnershipClaimed(l2TokenAddress, l1TokenAddress, _msgSender());
+    }
+
+    // OWNERSHIP REQUEST
+
+    function requestL2Ownership(address l1TokenAddress, uint256 l2Owner) public {
+        // assert L1 token owner is sender
+        address l1Owner = Ownable(l1TokenAddress).owner();
+        require(l1Owner == _msgSender(), "Sender is not the owner");
+
+        // compute L2 instance request payload and sent it
+        uint256[] memory payload = l2OwnershipClaimMessagePayload(l1TokenAddress, l2Owner);
+        _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, OWNERSHIP_CLAIM_HANDLER_SELECTOR, payload);
+
+        // emit event
+        emit LogL2OwnershipClaimed(l1TokenAddress, l2Owner);
     }
 
     // WITHDRAW

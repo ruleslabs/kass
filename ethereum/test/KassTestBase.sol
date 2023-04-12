@@ -32,11 +32,17 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
     event LogL1InstanceCreated(uint256 indexed l2TokenAddress, address l1TokenAddress);
     event LogL2InstanceRequested(address indexed l1TokenAddress);
-    event LogOwnershipClaimed(
+
+    event LogL1OwnershipClaimed(
         uint256 indexed l2TokenAddress,
         address l1TokenAddress,
         address l1Owner
     );
+    event LogL2OwnershipClaimed(
+        address indexed l1TokenAddress,
+        uint256 l2Owner
+    );
+
     event LogDeposit(
         address indexed sender,
         uint256 indexed l2TokenAddress,
@@ -52,6 +58,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         uint256 amount,
         address indexed l1Recipient
     );
+
     event LogDepositCancelRequest(
         address indexed sender,
         uint256 indexed l2TokenAddress,
@@ -127,7 +134,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
             abi.encodeWithSelector(
                 IStarknetMessaging.consumeMessageFromL2.selector,
                 L2_KASS_ADDRESS,
-                ownershipClaimMessagePayload(l2TokenAddress, l1Owner)
+                l1OwnershipClaimMessagePayload(l2TokenAddress, l1Owner)
             ),
             abi.encode(bytes32(0x0))
         );
@@ -196,11 +203,11 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         emit LogL2InstanceRequested(l1TokenAddress);
     }
 
-    function expectOwnershipClaim(uint256 l2TokenAddress, address l1Owner) internal {
+    function expectL1OwnershipClaim(uint256 l2TokenAddress, address l1Owner) internal {
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.consumeMessageFromL2.selector,
             L2_KASS_ADDRESS,
-            ownershipClaimMessagePayload(l2TokenAddress, l1Owner)
+            l1OwnershipClaimMessagePayload(l2TokenAddress, l1Owner)
         );
 
         // expect L1 message send
@@ -210,7 +217,23 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         address l1TokenAddress = _kass.computeL1TokenAddress(l2TokenAddress);
 
         vm.expectEmit(true, true, true, true, address(_kass));
-        emit LogOwnershipClaimed(l2TokenAddress, l1TokenAddress, l1Owner);
+        emit LogL1OwnershipClaimed(l2TokenAddress, l1TokenAddress, l1Owner);
+    }
+
+    function expectL2OwnershipRequest(address l1TokenAddress, uint256 l2Owner) internal {
+        bytes memory messageCalldata = abi.encodeWithSelector(
+            IStarknetMessaging.sendMessageToL2.selector,
+            L2_KASS_ADDRESS,
+            OWNERSHIP_CLAIM_HANDLER_SELECTOR,
+            l2OwnershipClaimMessagePayload(l1TokenAddress, l2Owner)
+        );
+
+        // expect L1 message send
+        vm.expectCall(_starknetMessagingAddress, messageCalldata);
+
+        // expect event
+        vm.expectEmit(true, true, true, true, address(_kass));
+        emit LogL2OwnershipClaimed(l1TokenAddress, l2Owner);
     }
 
     function expectWithdrawOnL1(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, address l1Recipient) internal {
