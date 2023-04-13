@@ -180,8 +180,21 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         TokenStandard tokenStandard
     ) private {
         // compute L2 instance request payload and sent it
-        uint256[] memory payload = l2InstanceCreationMessagePayload(l1TokenAddress, data, tokenStandard);
-        _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, INSTANCE_CREATION_HANDLER_SELECTOR, payload);
+        uint256[] memory payload = l2InstanceCreationMessagePayload(l1TokenAddress, data);
+
+        // handler selector
+        uint256 handlerSelector;
+
+        if (tokenStandard == TokenStandard.ERC721) {
+            handlerSelector = INSTANCE_CREATION_721_HANDLER_SELECTOR;
+        } else if (tokenStandard == TokenStandard.ERC1155) {
+            handlerSelector = INSTANCE_CREATION_1155_HANDLER_SELECTOR;
+        } else {
+            revert("Kass: Unkown token standard");
+        }
+
+        // send message
+        _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, handlerSelector, payload);
 
         // emit event
         emit LogL2InstanceRequested(l1TokenAddress);

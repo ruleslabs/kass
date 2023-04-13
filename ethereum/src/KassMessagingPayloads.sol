@@ -32,25 +32,16 @@ abstract contract KassMessagingPayloads is StarknetConstants {
 
     function l2InstanceCreationMessagePayload(
         address l1TokenAddress,
-        uint256[] memory data,
-        TokenStandard tokenStandard
+        uint256[] memory data
     ) internal pure returns (uint256[] memory payload) {
-        payload = new uint256[](data.length + 2);
-
-        if (tokenStandard == TokenStandard.ERC721) {
-            payload[0] = REQUEST_L2_721_INSTANCE;
-        } else if (tokenStandard == TokenStandard.ERC1155) {
-            payload[0] = REQUEST_L2_1155_INSTANCE;
-        } else {
-            revert("Kass: Unkown token standard");
-        }
+        payload = new uint256[](data.length + 1);
 
         // store L2 token address
-        payload[1] = uint160(l1TokenAddress);
+        payload[0] = uint160(l1TokenAddress);
 
         // store token URI
         for (uint8 i = 0; i < data.length; ++i) {
-            payload[i + 2] = data[i];
+            payload[i + 1] = data[i];
         }
     }
 

@@ -5,7 +5,8 @@ pragma solidity ^0.8.19;
 abstract contract StarknetConstants {
     // The selector of the deposit handler in L2.
     uint256 internal constant DEPOSIT_HANDLER_SELECTOR = 0x0;
-    uint256 internal constant INSTANCE_CREATION_HANDLER_SELECTOR = 0x0;
+    uint256 internal constant INSTANCE_CREATION_721_HANDLER_SELECTOR = 0x0;
+    uint256 internal constant INSTANCE_CREATION_1155_HANDLER_SELECTOR = 0x0;
     uint256 internal constant OWNERSHIP_CLAIM_HANDLER_SELECTOR = 0x0;
 
     uint256 internal constant UINT256_PART_SIZE_BITS = 128;
