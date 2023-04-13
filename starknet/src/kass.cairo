@@ -16,6 +16,12 @@ mod Kass {
     use kass::utils::EthAddressTrait;
     use kass::utils::eth_address::EthAddressZeroable;
     use kass::utils::eth_address::EthAddressIntoFelt252;
+    use kass::utils::TokenStandard;
+
+    use kass::TokenDeployer;
+
+    use kass::interfaces::IERC721::IERC721Dispatcher;
+    use kass::interfaces::IERC721::IERC721DispatcherTrait;
 
     use kass::interfaces::IERC1155::IERC1155Dispatcher;
     use kass::interfaces::IERC1155::IERC1155DispatcherTrait;
@@ -28,7 +34,8 @@ mod Kass {
     use kass::constants::CONTRACT_IDENTITY;
     use kass::constants::CONTRACT_VERSION;
 
-    use kass::constants::REQUEST_L1_INSTANCE;
+    use kass::constants::REQUEST_L1_721_INSTANCE;
+    use kass::constants::REQUEST_L1_1155_INSTANCE;
     use kass::constants::TRANSFER_FROM_STARKNET;
     use kass::constants::IERC1155_ACCEPTED_ID;
 
@@ -77,6 +84,8 @@ mod Kass {
         // body
         _l1KassAddress::write(l1KassAddress_);
 
+        TokenDeployer::setDeployerClassHashes();
+
         let caller = starknet::get_caller_address();
         Ownable::transferOwnership(caller);
     }
@@ -116,20 +125,52 @@ mod Kass {
         _l1KassAddress::write(l1KassAddress_);
     }
 
-    // BUSINESS LOGIC
+    // INSTANCE CREATION
 
-    #[external]
-    fn requestL1Instance(l2TokenAddress: starknet::ContractAddress) {
-        // get contract uri
-        let mut uri = IERC1155Dispatcher { contract_address: l2TokenAddress }.uri(0.into());
+    #[l1_handler]
+    fn createL2Instance721(
+        from_address: felt252,
+        l1TokenAddress: EthAddress,
+        data: Array<felt252>
+    ) {
+        _assertHandlerExecutionIsLegit(EthAddressTrait::new(from_address));
 
+        TokenDeployer::deployKassERC721(l1TokenAddress.into(), data.span());
+    }
+
+    #[l1_handler]
+    fn createL2Instance1155(
+        from_address: felt252,
+        l1TokenAddress: EthAddress,
+        data: Array<felt252>
+    ) {
+        _assertHandlerExecutionIsLegit(EthAddressTrait::new(from_address));
+
+        TokenDeployer::deployKassERC1155(l1TokenAddress.into(), data.span());
+    }
+
+    // INSTANCE REQUEST
+
+    fn _requestL1Instance(
+        l2TokenAddress: starknet::ContractAddress,
+        ref data: Array<felt252>,
+        tokenStandard: TokenStandard
+    ) {
         // load payload
         let mut message_payload: Array<felt252> = ArrayTrait::new();
 
-        message_payload.append(REQUEST_L1_INSTANCE);
+        match tokenStandard {
+            TokenStandard::ERC721(_) => {
+                message_payload.append(REQUEST_L1_721_INSTANCE);
+            },
+            TokenStandard::ERC1155(_) => {
+                message_payload.append(REQUEST_L1_1155_INSTANCE);
+            }
+        }
+
         message_payload.append(l2TokenAddress.into());
 
-        message_payload.concat(ref uri);
+        message_payload.concat(ref data);
 
         // send instance request to L1
         starknet::syscalls::send_message_to_l1_syscall(
@@ -137,6 +178,27 @@ mod Kass {
             payload: message_payload.span()
         );
     }
+
+    #[external]
+    fn requestL1Instance721(l2TokenAddress: starknet::ContractAddress) {
+        // get contract name and symbol
+        let mut data: Array<felt252> = ArrayTrait::new();
+
+        data.append(IERC721Dispatcher { contract_address: l2TokenAddress }.name());
+        data.append(IERC721Dispatcher { contract_address: l2TokenAddress }.symbol());
+
+        _requestL1Instance(l2TokenAddress, ref data, TokenStandard::ERC721(()));
+    }
+
+    #[external]
+    fn requestL1Instance1155(l2TokenAddress: starknet::ContractAddress) {
+        // get contract uri
+        let mut uri = IERC1155Dispatcher { contract_address: l2TokenAddress }.uri(0.into());
+
+        _requestL1Instance(l2TokenAddress, ref uri, TokenStandard::ERC1155(()));
+    }
+
+    // DEPOSIT
 
     #[external]
     fn deposit(l2TokenAddress: starknet::ContractAddress, tokenId: u256, amount: u256, l1Recipient: EthAddress) {
@@ -192,6 +254,10 @@ mod Kass {
 
     // HANDLERS
 
+    fn _assertHandlerExecutionIsLegit(from_address: EthAddress) {
+        assert(from_address == l1KassAddress(), 'EXPECTED_FROM_L1_KASS_ONLY');
+    }
+
     // withdraw l1 handler
     #[l1_handler]
     fn withdraw(
@@ -201,7 +267,7 @@ mod Kass {
         tokenId: u256,
         amount: u256
     ) {
-        assert(from_address == l1KassAddress().into(), 'EXPECTED_FROM_L1_KASS_ONLY');
+        _assertHandlerExecutionIsLegit(EthAddressTrait::new(from_address));
 
         let contractAddress = starknet::get_contract_address();
 

@@ -82,3 +82,14 @@ impl EthAddressStorageAccess of StorageAccess::<EthAddress> {
         )
     }
 }
+
+impl EthAddressPartialEq of PartialEq::<EthAddress> {
+    #[inline(always)]
+    fn eq(a: EthAddress, b: EthAddress) -> bool {
+        a.into() == b.into()
+    }
+    #[inline(always)]
+    fn ne(a: EthAddress, b: EthAddress) -> bool {
+        !(a == b)
+    }
+}
