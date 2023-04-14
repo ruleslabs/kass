@@ -19,6 +19,7 @@ mod Kass {
     use kass::utils::TokenStandard;
 
     use kass::TokenDeployer;
+    use kass::KassMessagingPayloads;
 
     use kass::interfaces::IERC721::IERC721Dispatcher;
     use kass::interfaces::IERC721::IERC721DispatcherTrait;
@@ -34,9 +35,6 @@ mod Kass {
     use kass::constants::CONTRACT_IDENTITY;
     use kass::constants::CONTRACT_VERSION;
 
-    use kass::constants::REQUEST_L1_721_INSTANCE;
-    use kass::constants::REQUEST_L1_1155_INSTANCE;
-    use kass::constants::TRANSFER_FROM_STARKNET;
     use kass::constants::IERC1155_ACCEPTED_ID;
 
     // STORAGE
@@ -157,20 +155,11 @@ mod Kass {
         tokenStandard: TokenStandard
     ) {
         // load payload
-        let mut message_payload: Array<felt252> = ArrayTrait::new();
-
-        match tokenStandard {
-            TokenStandard::ERC721(_) => {
-                message_payload.append(REQUEST_L1_721_INSTANCE);
-            },
-            TokenStandard::ERC1155(_) => {
-                message_payload.append(REQUEST_L1_1155_INSTANCE);
-            }
-        }
-
-        message_payload.append(l2TokenAddress.into());
-
-        message_payload.concat(ref data);
+        let message_payload = KassMessagingPayloads::l1InstanceCreationMessagePayload(
+            l2TokenAddress,
+            ref data,
+            tokenStandard
+        );
 
         // send instance request to L1
         starknet::syscalls::send_message_to_l1_syscall(
@@ -200,38 +189,70 @@ mod Kass {
 
     // DEPOSIT
 
-    #[external]
-    fn deposit(l2TokenAddress: starknet::ContractAddress, tokenId: u256, amount: u256, l1Recipient: EthAddress) {
+    fn _deposit(
+        l2TokenAddress: starknet::ContractAddress,
+        tokenId: u256,
+        amount: u256,
+        l1Recipient: EthAddress,
+        tokenStandad: TokenStandard
+    ) {
         let caller = starknet::get_caller_address();
         let contractAddress = starknet::get_contract_address();
 
         // transfer tokens
-        IERC1155Dispatcher { contract_address: l2TokenAddress }.safeTransferFrom(
-            caller,
-            contractAddress,
-            tokenId,
-            amount,
-            ArrayTrait::<felt252>::new()
-        );
+        match tokenStandad {
+            TokenStandard::ERC721(_) => {
+                IERC721Dispatcher { contract_address: l2TokenAddress }.safeTransferFrom(
+                    caller,
+                    contractAddress,
+                    tokenId
+                );
+            },
+            TokenStandard::ERC721(_) => {
+                IERC1155Dispatcher { contract_address: l2TokenAddress }.safeTransferFrom(
+                    caller,
+                    contractAddress,
+                    tokenId,
+                    amount,
+                    ArrayTrait::<felt252>::new()
+                );
+            }
+        }
 
         // load payload
-        let mut message_payload: Array<felt252> = ArrayTrait::new();
-
-        message_payload.append(TRANSFER_FROM_STARKNET);
-        message_payload.append(l1Recipient.into());
-        message_payload.append(l2TokenAddress.into());
-
-        message_payload.append(tokenId.low.into());
-        message_payload.append(tokenId.high.into());
-
-        message_payload.append(amount.low.into());
-        message_payload.append(amount.high.into());
+        let mut message_payload = tokenDepositOnL1MessagePayload(
+            l2TokenAddress,
+            tokenId,
+            amount,
+            l1Recipient,
+            tokenStandard
+        );
 
         // send deposit request to L1
         starknet::syscalls::send_message_to_l1_syscall(
             to_address: l1KassAddress().into(),
             payload: message_payload.span()
         );
+    }
+
+    #[external]
+    fn deposit721(
+        l2TokenAddress: starknet::ContractAddress,
+        tokenId: u256,
+        amount: u256,
+        l1Recipient: EthAddress
+    ) {
+        _deposit(l2TokenAddress, tokenId, 1_u256, l2Recipient, TokenStandard.ERC721);
+    }
+
+    #[external]
+    fn deposit1155(
+        l2TokenAddress: starknet::ContractAddress,
+        tokenId: u256,
+        amount: u256,
+        l1Recipient: EthAddress
+    ) {
+        _deposit(l2TokenAddress, tokenId, amount, l2Recipient, TokenStandard.ERC1155);
     }
 
     #[external]
