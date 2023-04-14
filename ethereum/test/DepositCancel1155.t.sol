@@ -11,15 +11,15 @@ import "./KassTestBase.sol";
 // solhint-disable contract-name-camelcase
 
 contract TestSetup_1155_DepositCancel is KassTestBase, ERC1155Holder {
-    KassERC1155 public _l1TokenInstance;
+    KassERC1155 public _l1TokenWrapper;
 
     function setUp() public override {
         super.setUp();
 
         // request and create L1 instance
-        requestL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI, TokenStandard.ERC1155);
-        _l1TokenInstance = KassERC1155(
-            _kass.createL1Instance1155(L2_TOKEN_ADDRESS, L2_TOKEN_URI)
+        requestL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI, TokenStandard.ERC1155);
+        _l1TokenWrapper = KassERC1155(
+            _kass.createL1Wrapper1155(L2_TOKEN_ADDRESS, L2_TOKEN_URI)
         );
     }
 
@@ -32,18 +32,18 @@ contract TestSetup_1155_DepositCancel is KassTestBase, ERC1155Holder {
     ) internal {
         address sender = address(this);
 
-        uint256 balance = _l1TokenInstance.balanceOf(sender, tokenId);
+        uint256 balance = _l1TokenWrapper.balanceOf(sender, tokenId);
 
         // mint tokens
         vm.prank(address(_kass));
-        _l1TokenInstance.mint(sender, tokenId, amount);
+        _l1TokenWrapper.mint(sender, tokenId, amount);
 
         // deposit tokens on L2
         expectDepositOnL2(sender, l2TokenAddress, tokenId, amount, l2Recipient, nonce);
         _kass.deposit1155(l2TokenAddress, tokenId, amount, l2Recipient);
 
         // check if balance is correct
-        assertEq(_l1TokenInstance.balanceOf(sender, tokenId), balance);
+        assertEq(_l1TokenWrapper.balanceOf(sender, tokenId), balance);
     }
 
     function _1155_basicDepositCancelTest(
@@ -55,7 +55,7 @@ contract TestSetup_1155_DepositCancel is KassTestBase, ERC1155Holder {
     ) internal {
         address sender = address(this);
 
-        uint256 balance = _l1TokenInstance.balanceOf(sender, tokenId);
+        uint256 balance = _l1TokenWrapper.balanceOf(sender, tokenId);
 
         // deposit on L1 and send back to L2
         _1155_mintAndDepositBackOnL2(l2TokenAddress, tokenId, amount, l2Recipient, nonce);
@@ -65,14 +65,14 @@ contract TestSetup_1155_DepositCancel is KassTestBase, ERC1155Holder {
         _kass.requestDepositCancel1155(l2TokenAddress, tokenId, amount, l2Recipient, nonce);
 
         // check if balance still the same
-        assertEq(_l1TokenInstance.balanceOf(sender, tokenId), balance);
+        assertEq(_l1TokenWrapper.balanceOf(sender, tokenId), balance);
 
         // deposit cancel request
         expectDepositCancel(sender, l2TokenAddress, tokenId, amount, l2Recipient, nonce);
         _kass.cancelDeposit1155(l2TokenAddress, tokenId, amount, l2Recipient, nonce);
 
         // check if balance was updated
-        assertEq(_l1TokenInstance.balanceOf(sender, tokenId), balance + amount);
+        assertEq(_l1TokenWrapper.balanceOf(sender, tokenId), balance + amount);
     }
 }
 

@@ -6,7 +6,7 @@ import "./StarknetConstants.sol";
 import "./KassUtils.sol";
 
 abstract contract KassMessagingPayloads is StarknetConstants {
-    function l1InstanceCreationMessagePayload(
+    function l1WrapperCreationMessagePayload(
         uint256 l2TokenAddress,
         string[] memory data,
         TokenStandard tokenStandard
@@ -30,7 +30,7 @@ abstract contract KassMessagingPayloads is StarknetConstants {
         }
     }
 
-    function l2InstanceCreationMessagePayload(
+    function l2WrapperCreationMessagePayload(
         address l1TokenAddress,
         uint256[] memory data
     ) internal pure returns (uint256[] memory payload) {
@@ -77,15 +77,22 @@ abstract contract KassMessagingPayloads is StarknetConstants {
         uint256 l2TokenAddress,
         uint256 tokenId,
         uint256 amount,
-        address l1Recipient
+        address l1Recipient,
+        TokenStandard tokenStandard
     ) internal pure returns (uint256[] memory payload) {
         payload = new uint256[](7);
 
-        payload[0] = TRANSFER_FROM_STARKNET;
+        if (tokenStandard == TokenStandard.ERC721) {
+            payload[0] = TRANSFER_721_FROM_STARKNET;
+        } else if (tokenStandard == TokenStandard.ERC1155) {
+            payload[0] = TRANSFER_1155_FROM_STARKNET;
+        } else {
+            revert("Kass: Unkown token standard");
+        }
 
-        payload[1] = uint256(uint160(l1Recipient));
+        payload[1] = l2TokenAddress;
 
-        payload[2] = l2TokenAddress;
+        payload[2] = uint256(uint160(l1Recipient));
 
         payload[3] = uint128(tokenId >> UINT256_PART_SIZE_BITS); // low
         payload[4] = uint128(tokenId & (UINT256_PART_SIZE - 1)); // high
@@ -102,9 +109,9 @@ abstract contract KassMessagingPayloads is StarknetConstants {
     ) internal pure returns (uint256[] memory payload) {
         payload = new uint256[](6);
 
-        payload[0] = l2Recipient;
+        payload[0] = l2TokenAddress;
 
-        payload[1] = l2TokenAddress;
+        payload[1] = l2Recipient;
 
         payload[2] = uint128(tokenId >> UINT256_PART_SIZE_BITS); // low
         payload[3] = uint128(tokenId & (UINT256_PART_SIZE - 1)); // high

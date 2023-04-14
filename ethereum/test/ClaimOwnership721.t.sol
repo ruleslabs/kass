@@ -9,14 +9,14 @@ import "./KassTestBase.sol";
 // solhint-disable contract-name-camelcase
 
 contract TestSetup_721_KassClaimOwnership is KassTestBase {
-    KassERC721 public _l1TokenInstance;
+    KassERC721 public _l1TokenWrapper;
 
     function setUp() public override {
         super.setUp();
 
         // request and create L1 instance
-        requestL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL, TokenStandard.ERC721);
-        _l1TokenInstance = KassERC721(_kass.createL1Instance721(L2_TOKEN_ADDRESS, L2_TOKEN_NAME, L2_TOKEN_SYMBOL));
+        requestL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL, TokenStandard.ERC721);
+        _l1TokenWrapper = KassERC721(_kass.createL1Wrapper721(L2_TOKEN_ADDRESS, L2_TOKEN_NAME, L2_TOKEN_SYMBOL));
     }
 }
 
@@ -30,6 +30,6 @@ contract Test_721_KassClaimOwnership is TestSetup_721_KassClaimOwnership {
         expectL1OwnershipClaim(L2_TOKEN_ADDRESS, l1Owner);
         _kass.claimL1Ownership(L2_TOKEN_ADDRESS);
 
-        assertEq(_l1TokenInstance.owner(), l1Owner);
+        assertEq(_l1TokenWrapper.owner(), l1Owner);
     }
 }

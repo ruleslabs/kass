@@ -9,28 +9,28 @@ import "./KassTestBase.sol";
 // solhint-disable contract-name-camelcase
 
 contract TestSetup_721_Withdraw is KassTestBase {
-    KassERC721 public _l1TokenInstance;
+    KassERC721 public _l1TokenWrapper;
 
     function setUp() public override {
         super.setUp();
 
         // request and create L1 instance
-        requestL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL, TokenStandard.ERC721);
-        _l1TokenInstance = KassERC721(_kass.createL1Instance721(L2_TOKEN_ADDRESS, L2_TOKEN_NAME, L2_TOKEN_SYMBOL));
+        requestL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL, TokenStandard.ERC721);
+        _l1TokenWrapper = KassERC721(_kass.createL1Wrapper721(L2_TOKEN_ADDRESS, L2_TOKEN_NAME, L2_TOKEN_SYMBOL));
     }
 
     function _721_basicWithdrawTest(uint256 l2TokenAddress, uint256 tokenId, address l1Recipient) internal {
         // assert token does not exist on L1
         vm.expectRevert("ERC721: invalid token ID");
-        _l1TokenInstance.ownerOf(tokenId);
+        _l1TokenWrapper.ownerOf(tokenId);
 
         // deposit from L2 and withdraw to L1
-        depositOnL1(l2TokenAddress, tokenId, 0x1, l1Recipient);
-        expectWithdrawOnL1(l2TokenAddress, tokenId, 0x1, l1Recipient);
+        depositOnL1(l2TokenAddress, tokenId, 0x1, l1Recipient, TokenStandard.ERC721);
+        expectWithdrawOnL1(l2TokenAddress, tokenId, 0x1, l1Recipient, TokenStandard.ERC721);
         _kass.withdraw721(l2TokenAddress, tokenId, l1Recipient);
 
         // assert token owner is l1Recipient
-        assertEq(_l1TokenInstance.ownerOf(tokenId), l1Recipient);
+        assertEq(_l1TokenWrapper.ownerOf(tokenId), l1Recipient);
     }
 }
 
@@ -62,7 +62,7 @@ contract Test_721_Withdraw is TestSetup_721_Withdraw {
         uint256 tokenId = uint256(keccak256("token 1"));
 
         // deposit from L2
-        depositOnL1(L2_TOKEN_ADDRESS, tokenId, 0x1, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, 0x1, l1Recipient, TokenStandard.ERC721);
 
         vm.expectRevert();
         _kass.withdraw721(L2_TOKEN_ADDRESS, tokenId - 1, l1Recipient);
@@ -74,7 +74,7 @@ contract Test_721_Withdraw is TestSetup_721_Withdraw {
         uint256 tokenId = uint256(keccak256("token 1"));
 
         // deposit from L2
-        depositOnL1(L2_TOKEN_ADDRESS, tokenId, 0x1, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, 0x1, l1Recipient, TokenStandard.ERC721);
 
         vm.expectRevert();
         _kass.withdraw721(L2_TOKEN_ADDRESS, tokenId, fakeL1Recipient);
@@ -85,10 +85,10 @@ contract Test_721_Withdraw is TestSetup_721_Withdraw {
         uint256 tokenId = uint256(keccak256("token 1"));
 
         // deposit from L2
-        depositOnL1(L2_TOKEN_ADDRESS, tokenId, 0x1, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, 0x1, l1Recipient, TokenStandard.ERC721);
 
         // withdraw
-        expectWithdrawOnL1(L2_TOKEN_ADDRESS, tokenId, 0x1, l1Recipient);
+        expectWithdrawOnL1(L2_TOKEN_ADDRESS, tokenId, 0x1, l1Recipient, TokenStandard.ERC721);
         _kass.withdraw721(L2_TOKEN_ADDRESS, tokenId, l1Recipient);
 
         vm.clearMockedCalls();

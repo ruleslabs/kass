@@ -9,13 +9,13 @@ import "./KassTestBase.sol";
 
 // solhint-disable contract-name-camelcase
 
-contract TestSetup_721_KassInstanceRequest is KassTestBase {
-    ERC721 public _l1TokenInstance = new ERC721(L2_TOKEN_NAME, L2_TOKEN_SYMBOL);
+contract TestSetup_721_KassWrapperRequest is KassTestBase {
+    ERC721 public _l1TokenWrapper = new ERC721(L2_TOKEN_NAME, L2_TOKEN_SYMBOL);
 }
 
-contract Test_721_KassInstanceRequest is TestSetup_721_KassInstanceRequest {
+contract Test_721_KassWrapperRequest is TestSetup_721_KassWrapperRequest {
 
-    function test_721_L2TokenInstanceRequest() public {
+    function test_721_L2TokenWrapperRequest() public {
         // pre compute address
         uint256[] memory data = new uint256[](2);
 
@@ -23,7 +23,7 @@ contract Test_721_KassInstanceRequest is TestSetup_721_KassInstanceRequest {
         data[1] = KassUtils.strToFelt252(L2_TOKEN_SYMBOL);
 
         // create L1 instance
-        expectL2InstanceRequest(address(_l1TokenInstance), data, TokenStandard.ERC721);
-        _kass.requestL2Instance721(address(_l1TokenInstance));
+        expectL2WrapperRequest(address(_l1TokenWrapper), data, TokenStandard.ERC721);
+        _kass.requestL2Wrapper721(address(_l1TokenWrapper));
     }
 }

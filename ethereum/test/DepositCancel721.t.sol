@@ -11,14 +11,14 @@ import "./KassTestBase.sol";
 // solhint-disable contract-name-camelcase
 
 contract TestSetup_721_DepositCancel is KassTestBase, ERC721Holder {
-    KassERC721 public _l1TokenInstance;
+    KassERC721 public _l1TokenWrapper;
 
     function setUp() public override {
         super.setUp();
 
         // request and create L1 instance
-        requestL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL, TokenStandard.ERC721);
-        _l1TokenInstance = KassERC721(_kass.createL1Instance721(L2_TOKEN_ADDRESS, L2_TOKEN_NAME, L2_TOKEN_SYMBOL));
+        requestL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL, TokenStandard.ERC721);
+        _l1TokenWrapper = KassERC721(_kass.createL1Wrapper721(L2_TOKEN_ADDRESS, L2_TOKEN_NAME, L2_TOKEN_SYMBOL));
     }
 
     function _721_mintAndDepositBackOnL2(
@@ -31,7 +31,7 @@ contract TestSetup_721_DepositCancel is KassTestBase, ERC721Holder {
 
         // mint tokens
         vm.prank(address(_kass));
-        _l1TokenInstance.mint(sender, tokenId);
+        _l1TokenWrapper.mint(sender, tokenId);
 
         // deposit tokens on L2
         expectDepositOnL2(sender, l2TokenAddress, tokenId, 0x1, l2Recipient, nonce);
@@ -39,7 +39,7 @@ contract TestSetup_721_DepositCancel is KassTestBase, ERC721Holder {
 
         // check if there's no owner
         vm.expectRevert("ERC721: invalid token ID");
-        _l1TokenInstance.ownerOf(tokenId);
+        _l1TokenWrapper.ownerOf(tokenId);
     }
 
     function _721_basicDepositCancelTest(
@@ -59,14 +59,14 @@ contract TestSetup_721_DepositCancel is KassTestBase, ERC721Holder {
 
         // check if there's still no owner
         vm.expectRevert("ERC721: invalid token ID");
-        _l1TokenInstance.ownerOf(tokenId);
+        _l1TokenWrapper.ownerOf(tokenId);
 
         // deposit cancel request
         expectDepositCancel(sender, l2TokenAddress, tokenId, 0x1, l2Recipient, nonce);
         _kass.cancelDeposit721(l2TokenAddress, tokenId, l2Recipient, nonce);
 
         // check if owner is correct
-        assertEq(_l1TokenInstance.ownerOf(tokenId), sender);
+        assertEq(_l1TokenWrapper.ownerOf(tokenId), sender);
     }
 }
 

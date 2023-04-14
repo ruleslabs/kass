@@ -9,14 +9,14 @@ import "./KassTestBase.sol";
 // solhint-disable contract-name-camelcase
 
 contract WithdrawTestSetup is KassTestBase {
-    KassERC1155 public _l1TokenInstance;
+    KassERC1155 public _l1TokenWrapper;
 
     function setUp() public override {
         super.setUp();
 
         // request and create L1 instance
-        requestL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI, TokenStandard.ERC1155);
-        _l1TokenInstance = KassERC1155(_kass.createL1Instance1155(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
+        requestL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI, TokenStandard.ERC1155);
+        _l1TokenWrapper = KassERC1155(_kass.createL1Wrapper1155(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
     }
 
     function _1155_basicWithdrawTest(
@@ -26,15 +26,15 @@ contract WithdrawTestSetup is KassTestBase {
         address l1Recipient
     ) internal {
         // assert balance is empty
-        assertEq(_l1TokenInstance.balanceOf(l1Recipient, tokenId), 0);
+        assertEq(_l1TokenWrapper.balanceOf(l1Recipient, tokenId), 0);
 
         // deposit from L2 and withdraw to L1
-        depositOnL1(l2TokenAddress, tokenId, amount, l1Recipient);
-        expectWithdrawOnL1(l2TokenAddress, tokenId, amount, l1Recipient);
+        depositOnL1(l2TokenAddress, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
+        expectWithdrawOnL1(l2TokenAddress, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
         _kass.withdraw1155(l2TokenAddress, tokenId, amount, l1Recipient);
 
         // assert balance was updated
-        assertEq(_l1TokenInstance.balanceOf(l1Recipient, tokenId), amount);
+        assertEq(_l1TokenWrapper.balanceOf(l1Recipient, tokenId), amount);
     }
 }
 
@@ -70,7 +70,7 @@ contract WithdrawTest is WithdrawTestSetup {
         uint256 amount = 0x10;
 
         // deposit from L2
-        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
 
         vm.expectRevert();
         _kass.withdraw1155(L2_TOKEN_ADDRESS, tokenId - 1, amount, l1Recipient);
@@ -82,7 +82,7 @@ contract WithdrawTest is WithdrawTestSetup {
         uint256 amount = 0x10;
 
         // deposit from L2
-        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
 
         vm.expectRevert();
         _kass.withdraw1155(L2_TOKEN_ADDRESS, tokenId, amount + 1, l1Recipient);
@@ -95,7 +95,7 @@ contract WithdrawTest is WithdrawTestSetup {
         uint256 amount = 0x10;
 
         // deposit from L2
-        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
 
         vm.expectRevert();
         _kass.withdraw1155(L2_TOKEN_ADDRESS, tokenId, amount, fakeL1Recipient);
@@ -107,10 +107,10 @@ contract WithdrawTest is WithdrawTestSetup {
         uint256 amount = 0x10;
 
         // deposit from L2
-        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
 
         // withdraw
-        expectWithdrawOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        expectWithdrawOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
         _kass.withdraw1155(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
 
         vm.clearMockedCalls();
@@ -124,7 +124,7 @@ contract WithdrawTest is WithdrawTestSetup {
         uint256 amount = 0x0;
 
         // deposit from L2
-        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
 
         // withdraw
         vm.expectRevert("Cannot withdraw null amount");

@@ -11,20 +11,20 @@ import "./KassTestBase.sol";
 // solhint-disable contract-name-camelcase
 
 contract TestSetup_1155_Deposit is KassTestBase, ERC1155Holder {
-    KassERC1155 public _l1TokenInstance;
+    KassERC1155 public _l1TokenWrapper;
 
     function setUp() public override {
         super.setUp();
 
         // request and create L1 instance
-        requestL1InstanceCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI, TokenStandard.ERC1155);
-        _l1TokenInstance = KassERC1155(_kass.createL1Instance1155(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
+        requestL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI, TokenStandard.ERC1155);
+        _l1TokenWrapper = KassERC1155(_kass.createL1Wrapper1155(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
     }
 
     function _1155_mintTokens(address to, uint256 tokenId, uint256 amount) internal {
         // mint tokens
         vm.prank(address(_kass));
-        _l1TokenInstance.mint(to, tokenId, amount);
+        _l1TokenWrapper.mint(to, tokenId, amount);
     }
 
     function _1155_basicDepositTest(
@@ -34,14 +34,14 @@ contract TestSetup_1155_Deposit is KassTestBase, ERC1155Holder {
         uint256 amountToDepositOnL2,
         uint256 l2Recipient
     ) internal {
-        uint256 balance = _l1TokenInstance.balanceOf(sender, tokenId);
+        uint256 balance = _l1TokenWrapper.balanceOf(sender, tokenId);
 
         // deposit on L2
         expectDepositOnL2(sender, l2TokenAddress, tokenId, amountToDepositOnL2, l2Recipient, 0x0);
         _kass.deposit1155(l2TokenAddress, tokenId, amountToDepositOnL2, l2Recipient);
 
         // check if balance was updated
-        assertEq(_l1TokenInstance.balanceOf(sender, tokenId), balance - amountToDepositOnL2);
+        assertEq(_l1TokenWrapper.balanceOf(sender, tokenId), balance - amountToDepositOnL2);
     }
 }
 
