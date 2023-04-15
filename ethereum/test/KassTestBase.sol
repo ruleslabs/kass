@@ -30,7 +30,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
     uint256 public constant CAIRO_FIELD_PRIME = 0x800000000000011000000000000000000000000000000000000000000000001;
 
-    event LogL1WrapperCreated(uint256 indexed l2TokenAddress, address l1TokenAddress);
+    event LogL1WrapperCreated(bytes32 indexed l2TokenAddress, address l1TokenAddress);
     event LogL2WrapperRequested(address indexed l1TokenAddress);
 
     event LogL1OwnershipClaimed(
@@ -114,14 +114,16 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         uint256 l2TokenAddress,
         string[] memory data,
         TokenStandard tokenStandard
-    ) internal {
+    ) internal returns (uint256[] memory messagePayload) {
+        messagePayload = _l1WrapperCreationMessagePayload(l2TokenAddress, data, tokenStandard);
+
         // prepare L1 instance creation message from L2
         vm.mockCall(
             _starknetMessagingAddress,
             abi.encodeWithSelector(
                 IStarknetMessaging.consumeMessageFromL2.selector,
                 L2_KASS_ADDRESS,
-                l1WrapperCreationMessagePayload(l2TokenAddress, data, tokenStandard)
+                messagePayload
             ),
             abi.encode(bytes32(0x0))
         );
@@ -165,11 +167,13 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         uint256 l2TokenAddress,
         string[] memory data,
         TokenStandard tokenStandard
-    ) internal {
+    ) internal returns (uint256[] memory messagePayload) {
+        messagePayload = _l1WrapperCreationMessagePayload(l2TokenAddress, data, tokenStandard);
+
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.consumeMessageFromL2.selector,
             L2_KASS_ADDRESS,
-            l1WrapperCreationMessagePayload(l2TokenAddress, data, tokenStandard)
+            messagePayload
         );
 
         // expect L1 message send
@@ -179,7 +183,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         address l1TokenAddress = _kass.computeL1TokenAddress(l2TokenAddress);
 
         vm.expectEmit(true, true, true, true, address(_kass));
-        emit LogL1WrapperCreated(l2TokenAddress, l1TokenAddress);
+        emit LogL1WrapperCreated(bytes32(l2TokenAddress), l1TokenAddress);
     }
 
     function expectL2WrapperRequest(
@@ -288,7 +292,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.sendMessageToL2.selector,
             L2_KASS_ADDRESS,
-            DEPOSIT_HANDLER_SELECTOR,
+            WITHDRAW_721_L2_HANDLER_SELECTOR,
             tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient)
         );
 
@@ -321,7 +325,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.startL1ToL2MessageCancellation.selector,
             L2_KASS_ADDRESS,
-            DEPOSIT_HANDLER_SELECTOR,
+            WITHDRAW_721_L2_HANDLER_SELECTOR,
             tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient),
             nonce
         );
@@ -346,7 +350,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.cancelL1ToL2Message.selector,
             L2_KASS_ADDRESS,
-            DEPOSIT_HANDLER_SELECTOR,
+            WITHDRAW_721_L2_HANDLER_SELECTOR,
             tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient),
             nonce
         );
@@ -357,5 +361,31 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         // expect event
         vm.expectEmit(true, true, true, true, address(_kass));
         emit LogDepositCancel(sender, l2TokenAddress, tokenId, amount, l2Recipient, nonce);
+    }
+
+    // INTERNALS
+
+    function _l1WrapperCreationMessagePayload(
+        uint256 l2TokenAddress,
+        string[] memory data,
+        TokenStandard tokenStandard
+    ) private pure returns (uint256[] memory payload) {
+        payload = new uint256[](data.length + 2);
+
+        if (tokenStandard == TokenStandard.ERC721) {
+            payload[0] = REQUEST_L1_721_INSTANCE;
+        } else if (tokenStandard == TokenStandard.ERC1155) {
+            payload[0] = REQUEST_L1_1155_INSTANCE;
+        } else {
+            revert("Kass: Unkown token standard");
+        }
+
+        // store L2 token address
+        payload[1] = l2TokenAddress;
+
+        // store token URI
+        for (uint8 i = 0; i < data.length; ++i) {
+            payload[i + 2] = KassUtils.strToFelt252(data[i]);
+        }
     }
 }

@@ -2,31 +2,37 @@
 
 pragma solidity ^0.8.19;
 
+import "@openzeppelin/contracts/utils/Strings.sol";
+
 import "./StarknetConstants.sol";
+import "./KassStructs.sol";
 import "./KassUtils.sol";
 
-abstract contract KassMessagingPayloads is StarknetConstants {
-    function l1WrapperCreationMessagePayload(
-        uint256 l2TokenAddress,
-        string[] memory data,
-        TokenStandard tokenStandard
-    ) internal pure returns (uint256[] memory payload) {
-        payload = new uint256[](data.length + 2);
+abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
+    function parseWrapperRequestMessagePayload(
+        uint256[] calldata payload
+    ) internal pure returns (WrapperRequest memory wrapperRequest) {
+        wrapperRequest.tokenAddress = bytes32(payload[1]);
 
-        if (tokenStandard == TokenStandard.ERC721) {
-            payload[0] = REQUEST_L1_721_INSTANCE;
-        } else if (tokenStandard == TokenStandard.ERC1155) {
-            payload[0] = REQUEST_L1_1155_INSTANCE;
+        if (payload[0] == REQUEST_L1_721_INSTANCE) {
+            wrapperRequest.tokenStandard = TokenStandard.ERC721;
+
+            wrapperRequest._calldata = abi.encode(
+                KassUtils.felt252ToStr(payload[2]),
+                KassUtils.felt252ToStr(payload[3])
+            );
+        } else if (payload[0] == REQUEST_L1_1155_INSTANCE) {
+            wrapperRequest.tokenStandard = TokenStandard.ERC1155;
+
+            // erase payload for payload[2:]
+            assembly {
+                payload.length := sub(payload.length, 0x2)
+                payload.offset := add(payload.offset, 0x40)
+            }
+
+            wrapperRequest._calldata = abi.encode(KassUtils.felt252WordsToStr(payload));
         } else {
-            revert("Kass: Unkown token standard");
-        }
-
-        // store L2 token address
-        payload[1] = l2TokenAddress;
-
-        // store token URI
-        for (uint8 i = 0; i < data.length; ++i) {
-            payload[i + 2] = KassUtils.strToFelt252(data[i]);
+            revert("Invalid message payload");
         }
     }
 

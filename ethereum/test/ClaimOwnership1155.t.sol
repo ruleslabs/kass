@@ -15,8 +15,12 @@ contract TestSetup_1155_KassClaimOwnership is KassTestBase {
         super.setUp();
 
         // request and create L1 instance
-        requestL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI, TokenStandard.ERC1155);
-        _l1TokenWrapper = KassERC1155(_kass.createL1Wrapper1155(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
+        uint256[] memory messagePayload = requestL1WrapperCreation(
+            L2_TOKEN_ADDRESS,
+            L2_TOKEN_URI,
+            TokenStandard.ERC1155
+        );
+        _l1TokenWrapper = KassERC1155(_kass.createL1Wrapper(messagePayload));
     }
 }
 

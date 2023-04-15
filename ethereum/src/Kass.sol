@@ -22,7 +22,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
 
     // L1 token address can be computed offchain from L2 token address
     // it does not need to be indexed
-    event LogL1WrapperCreated(uint256 indexed l2TokenAddress, address l1TokenAddress);
+    event LogL1WrapperCreated(bytes32 indexed l2TokenAddress, address l1TokenAddress);
     event LogL2WrapperRequested(address indexed l1TokenAddress);
 
     event LogL1OwnershipClaimed(
@@ -131,45 +131,24 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
 
     // INSTANCE CREATION
 
-    function _createL1Wrapper(
-        uint256 l2TokenAddress,
-        string[] memory data,
-        TokenStandard tokenStandard
-    ) private returns (address l1TokenAddress) {
-        // compute L1 instance request payload
-        uint256[] memory payload = l1WrapperCreationMessagePayload(l2TokenAddress, data, tokenStandard);
-
+    function createL1Wrapper(uint256[] calldata messagePayload) public returns (address l1TokenAddress) {
         // consume L1 instance request message
-        _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);
+        _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, messagePayload);
+
+        // parse message payload
+        WrapperRequest memory wrapperRequest = parseWrapperRequestMessagePayload(messagePayload);
 
         // deploy Kass ERC1155 with URI
-        if (tokenStandard == TokenStandard.ERC721) {
-            l1TokenAddress = cloneKassERC721(bytes32(l2TokenAddress), abi.encode(data[0], data[1]));
-        } else if (tokenStandard == TokenStandard.ERC1155) {
-            l1TokenAddress = cloneKassERC1155(bytes32(l2TokenAddress), abi.encode(KassUtils.encodeTightlyPacked(data)));
+        if (wrapperRequest.tokenStandard == TokenStandard.ERC721) {
+            l1TokenAddress = cloneKassERC721(wrapperRequest.tokenAddress, wrapperRequest._calldata);
+        } else if (wrapperRequest.tokenStandard == TokenStandard.ERC1155) {
+            l1TokenAddress = cloneKassERC1155(wrapperRequest.tokenAddress, wrapperRequest._calldata);
         } else {
             revert("Kass: Unkown token standard");
         }
 
         // emit event
-        emit LogL1WrapperCreated(l2TokenAddress, l1TokenAddress);
-    }
-
-    function createL1Wrapper721(
-        uint256 l2TokenAddress,
-        string calldata name,
-        string calldata symbol
-    ) public returns (address) {
-        string[] memory data = new string[](2);
-
-        data[0] = name;
-        data[1] = symbol;
-
-        return _createL1Wrapper(l2TokenAddress, data, TokenStandard.ERC721);
-    }
-
-    function createL1Wrapper1155(uint256 l2TokenAddress, string[] calldata uri) public returns (address) {
-        return _createL1Wrapper(l2TokenAddress, uri, TokenStandard.ERC1155);
+        emit LogL1WrapperCreated(wrapperRequest.tokenAddress, l1TokenAddress);
     }
 
     // INSTANCE CREATION REQUEST
@@ -326,7 +305,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         uint256[] memory payload = tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient);
         (, uint256 nonce) = _state.starknetMessaging.sendMessageToL2(
             _state.l2KassAddress,
-            DEPOSIT_HANDLER_SELECTOR,
+            WITHDRAW_721_L2_HANDLER_SELECTOR,
             payload
         );
 
@@ -365,7 +344,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
     ) private {
         _state.starknetMessaging.startL1ToL2MessageCancellation(
             _state.l2KassAddress,
-            DEPOSIT_HANDLER_SELECTOR,
+            WITHDRAW_721_L2_HANDLER_SELECTOR,
             tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient),
             nonce
         );
@@ -404,7 +383,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
     ) private {
         _state.starknetMessaging.cancelL1ToL2Message(
             _state.l2KassAddress,
-            DEPOSIT_HANDLER_SELECTOR,
+            WITHDRAW_721_L2_HANDLER_SELECTOR,
             tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient),
             nonce
         );

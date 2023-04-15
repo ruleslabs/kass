@@ -10,7 +10,8 @@ import "../src/KassUtils.sol";
 
 contract Test_KassUtils is Test {
 
-    // ENCODE TIGHTY PACKED
+    // FELT 252 WORDS TO STR
+
     function test_ConcatMulitpleStrings() public {
         string[] memory arr = new string[](4);
         arr[0] = "Hello";
@@ -18,7 +19,7 @@ contract Test_KassUtils is Test {
         arr[2] = "orld";
         arr[3] = " !";
 
-        assertEq(string(KassUtils.encodeTightlyPacked(arr)), "Hello world !");
+        assertEq(string(KassUtils.felt252WordsToStr(arr)), "Hello world !");
     }
 
     function test_ConcatSingleString() public {
@@ -27,16 +28,31 @@ contract Test_KassUtils is Test {
         arr = new string[](1);
         arr[0] = "42";
 
-        assertEq(string(KassUtils.encodeTightlyPacked(arr)), "42");
+        assertEq(string(KassUtils.felt252WordsToStr(arr)), "42");
     }
 
     function test_ConcatNothing() public {
         string[] memory arr = new string[](0);
 
-        assertEq(string(KassUtils.encodeTightlyPacked(arr)), "");
+        assertEq(string(KassUtils.felt252WordsToStr(arr)), "");
+    }
+
+    // FELT252 TO STR
+
+    function test_BasicFelt252ToStr() public {
+        string memory res = KassUtils.felt252ToStr(0x48656C6C6F20776F726C642021);
+
+        assertEq(res, "Hello world !");
+    }
+
+    function test_ZeroFelt252ToStr() public {
+        string memory res = KassUtils.felt252ToStr(0x0);
+
+        assertEq(res, "");
     }
 
     // STR TO FELT252
+
     function test_BasicStrToUint256() public {
         uint256 res;
 
@@ -57,6 +73,7 @@ contract Test_KassUtils is Test {
     }
 
     // STR TO FELT252 WORDS
+
     function test_BasicStrToStr32Words_1() public {
         uint256[] memory res = KassUtils.strToFelt252Words(
             "123456789012345678901234567890-098765432109876543210987654321-1234567890"

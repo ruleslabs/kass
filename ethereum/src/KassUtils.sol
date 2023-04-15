@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.19;
 
+import "@openzeppelin/contracts/utils/Strings.sol";
+
 enum TokenStandard {
     ERC721,
     ERC1155
@@ -11,6 +13,9 @@ library KassUtils {
 
     // 0x00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
     uint256 private constant BYTES_31_MASK = 2 ** (8 * 31) - 1;
+
+    // 0xff00000000000000000000000000000000000000000000000000000000000000
+    uint256 private constant BYTE_32_MASK = 0xff << (8 * 31);
 
     function strToFelt252(string memory str) public pure returns (uint256 res) {
         assembly {
@@ -31,9 +36,48 @@ library KassUtils {
         }
     }
 
-    function encodeTightlyPacked(string[] calldata arr) public pure returns (bytes memory encoded) {
+    function felt252ToStr(uint256 felt) public pure returns (string memory res) {
+        assembly {
+            // init res
+            res := mload(0x40)
+
+            if eq(felt, 0) {
+                mstore(res, 0)
+                mstore(add(res, 0x20), felt)
+
+                mstore(0x40, add(res, 0x40))
+                return(0, 0x40)
+            }
+
+            let strLen := 32
+
+            // solhint-disable-next-line no-empty-blocks
+            for { } iszero(and(felt, BYTE_32_MASK)) { strLen := sub(strLen, 1) } {
+                felt := shl(8, felt)
+            }
+
+            mstore(res, strLen)
+            mstore(add(res, 0x20), felt)
+
+            mstore(0x40, add(res, 0x40))
+        }
+    }
+
+    function felt252WordsToStr(bytes32[] calldata arr) public pure returns (bytes memory encoded) {
         for (uint256 i = 0; i < arr.length; ++i) {
             encoded = abi.encodePacked(encoded, arr[i]);
+        }
+    }
+
+    function felt252WordsToStr(string[] calldata arr) public pure returns (bytes memory encoded) {
+        for (uint256 i = 0; i < arr.length; ++i) {
+            encoded = abi.encodePacked(encoded, arr[i]);
+        }
+    }
+
+    function felt252WordsToStr(uint256[] calldata arr) public pure returns (bytes memory encoded) {
+        for (uint256 i = 0; i < arr.length; ++i) {
+            encoded = abi.encodePacked(encoded, felt252ToStr(arr[i]));
         }
     }
 

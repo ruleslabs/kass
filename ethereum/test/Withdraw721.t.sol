@@ -15,8 +15,12 @@ contract TestSetup_721_Withdraw is KassTestBase {
         super.setUp();
 
         // request and create L1 instance
-        requestL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL, TokenStandard.ERC721);
-        _l1TokenWrapper = KassERC721(_kass.createL1Wrapper721(L2_TOKEN_ADDRESS, L2_TOKEN_NAME, L2_TOKEN_SYMBOL));
+        uint256[] memory messagePayload = requestL1WrapperCreation(
+            L2_TOKEN_ADDRESS,
+            L2_TOKEN_NAME_AND_SYMBOL,
+            TokenStandard.ERC721
+        );
+        _l1TokenWrapper = KassERC721(_kass.createL1Wrapper(messagePayload));
     }
 
     function _721_basicWithdrawTest(uint256 l2TokenAddress, uint256 tokenId, address l1Recipient) internal {

@@ -77,21 +77,21 @@ abstract contract TokenDeployer is KassStorage {
         }
     }
 
-    function cloneKassERC1155(bytes32 salt, bytes memory data) internal returns (address payable result) {
+    function cloneKassERC1155(bytes32 salt, bytes memory _calldata) internal returns (address payable result) {
         result = cloneProxy(salt);
 
         KassERC1967Proxy(result).initializeKassERC1967Proxy(
             _state.erc1155ImplementationAddress,
-            abi.encodeWithSelector(KassERC1155.initialize.selector, data)
+            abi.encodeWithSelector(KassERC1155.initialize.selector, _calldata)
         );
     }
 
-    function cloneKassERC721(bytes32 salt, bytes memory data) internal returns (address payable result) {
+    function cloneKassERC721(bytes32 salt, bytes memory _calldata) internal returns (address payable result) {
         result = cloneProxy(salt);
 
         KassERC1967Proxy(result).initializeKassERC1967Proxy(
             _state.erc721ImplementationAddress,
-            abi.encodeWithSelector(KassERC1155.initialize.selector, data)
+            abi.encodeWithSelector(KassERC721.initialize.selector, _calldata)
         );
     }
 }

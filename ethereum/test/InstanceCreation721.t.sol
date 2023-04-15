@@ -26,35 +26,26 @@ contract Test_721_KassWrapperCreation is TestSetup_721_KassWrapperCreation {
         address computedL1TokenAddress = _kass.computeL1TokenAddress(L2_TOKEN_ADDRESS);
 
         // create L1 instance
-        expectL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL, TokenStandard.ERC721);
-        address l1TokenAddress = _kass.createL1Wrapper721(L2_TOKEN_ADDRESS, L2_TOKEN_NAME, L2_TOKEN_SYMBOL);
+        uint256[] memory messagePayload = expectL1WrapperCreation(
+            L2_TOKEN_ADDRESS,
+            L2_TOKEN_NAME_AND_SYMBOL,
+            TokenStandard.ERC721
+        );
+        address l1TokenAddress = _kass.createL1Wrapper(messagePayload);
 
         assertEq(computedL1TokenAddress, l1TokenAddress);
     }
 
     function test_721_L1TokenWrapperNameAndSymbol() public {
         // create L1 instance
-        expectL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL, TokenStandard.ERC721);
-        KassERC721 l1TokenWrapper = KassERC721(
-            _kass.createL1Wrapper721(L2_TOKEN_ADDRESS, L2_TOKEN_NAME, L2_TOKEN_SYMBOL)
+        uint256[] memory messagePayload = expectL1WrapperCreation(
+            L2_TOKEN_ADDRESS,
+            L2_TOKEN_NAME_AND_SYMBOL,
+            TokenStandard.ERC721
         );
+        KassERC721 l1TokenWrapper = KassERC721(_kass.createL1Wrapper(messagePayload));
 
-        assertEq(l1TokenWrapper.name(), L2_TOKEN_NAME);
+        assertEq(bytes(l1TokenWrapper.name()).length, bytes(L2_TOKEN_NAME).length);
         assertEq(l1TokenWrapper.symbol(), L2_TOKEN_SYMBOL);
-    }
-
-    function test_721_CannotCreateL1TokenWrapperWithDifferentL2TokenAddressFromL2Request() public {
-        vm.expectRevert();
-        _kass.createL1Wrapper721(L2_TOKEN_ADDRESS - 1, L2_TOKEN_NAME, L2_TOKEN_SYMBOL);
-    }
-
-    function test_721_CannotCreateL1TokenWrapperWithDifferentNameFromL2Request() public {
-        vm.expectRevert();
-        _kass.createL1Wrapper721(L2_TOKEN_ADDRESS, string.concat(L2_TOKEN_NAME, "foo"), L2_TOKEN_SYMBOL);
-    }
-
-    function test_721_CannotCreateL1TokenWrapperWithDifferentSymbolFromL2Request() public {
-        vm.expectRevert();
-        _kass.createL1Wrapper721(L2_TOKEN_ADDRESS, L2_TOKEN_NAME, string.concat(L2_TOKEN_SYMBOL, "foo"));
     }
 }

@@ -26,34 +26,24 @@ contract Test_1155_KassWrapperCreation is TestSetup_1155_KassWrapperCreation {
         address computedL1TokenAddress = _kass.computeL1TokenAddress(L2_TOKEN_ADDRESS);
 
         // create L1 instance
-        expectL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI, TokenStandard.ERC1155);
-        address l1TokenAddress = _kass.createL1Wrapper1155(L2_TOKEN_ADDRESS, L2_TOKEN_URI);
+        uint256[] memory messagePayload = expectL1WrapperCreation(
+            L2_TOKEN_ADDRESS,
+            L2_TOKEN_URI,
+            TokenStandard.ERC1155);
+        address l1TokenAddress = _kass.createL1Wrapper(messagePayload);
 
         assertEq(computedL1TokenAddress, l1TokenAddress);
     }
 
     function test_1155_L1TokenWrapperUri() public {
         // create L1 instance
-        expectL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI, TokenStandard.ERC1155);
-        KassERC1155 l1TokenWrapper = KassERC1155(_kass.createL1Wrapper1155(L2_TOKEN_ADDRESS, L2_TOKEN_URI));
+        uint256[] memory messagePayload = expectL1WrapperCreation(
+            L2_TOKEN_ADDRESS,
+            L2_TOKEN_URI,
+            TokenStandard.ERC1155
+        );
+        KassERC1155 l1TokenWrapper = KassERC1155(_kass.createL1Wrapper(messagePayload));
 
-        assertEq(l1TokenWrapper.uri(0), string(KassUtils.encodeTightlyPacked(L2_TOKEN_URI)));
-    }
-
-    function test_1155_CannotCreateL1TokenWrapperWithDifferentL2TokenAddressFromL2Request() public {
-        vm.expectRevert();
-        _kass.createL1Wrapper1155(L2_TOKEN_ADDRESS - 1, L2_TOKEN_URI);
-    }
-
-    function test_1155_CannotCreateL1TokenWrapperWithDifferentUriFromL2Request() public {
-        string[] memory uri = new string[](L2_TOKEN_URI.length);
-
-        // reverse `L2_TOKEN_URI`
-        for (uint8 i = 0; i < uri.length; ++i) {
-            uri[i] = L2_TOKEN_URI[uri.length - i - 1];
-        }
-
-        vm.expectRevert();
-        _kass.createL1Wrapper1155(L2_TOKEN_ADDRESS, uri);
+        assertEq(l1TokenWrapper.uri(0), string(KassUtils.felt252WordsToStr(L2_TOKEN_URI)));
     }
 }
