@@ -12,6 +12,9 @@ import "./KassStructs.sol";
 import "./KassUtils.sol";
 
 abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
+
+    // PARSE
+
     function parseWrapperRequestMessagePayload(
         uint256[] calldata payload
     ) internal pure returns (WrapperRequest memory wrapperRequest) {
@@ -39,7 +42,9 @@ abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
         }
     }
 
-    function l2WrapperCreationMessagePayload(
+    // COMPUTE
+
+    function computeL2WrapperCreationMessagePayload(
         address tokenAddress
     ) internal view returns (uint256[] memory payload, uint256 handlerSelector) {
         if (ERC165(tokenAddress).supportsInterface(type(IERC721).interfaceId)) {
@@ -65,7 +70,7 @@ abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
         payload[0] = uint160(tokenAddress);
     }
 
-    function l1OwnershipClaimMessagePayload(
+    function computeL1OwnershipClaimMessagePayload(
         uint256 l2TokenAddress,
         address l1Owner
     ) internal pure returns (uint256[] memory payload) {
@@ -80,10 +85,10 @@ abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
         payload[2] = uint256(uint160(l1Owner));
     }
 
-    function l2OwnershipClaimMessagePayload(
+    function computeL2OwnershipClaimMessagePayload(
         address l1TokenAddress,
         uint256 l2Owner
-    ) internal pure returns (uint256[] memory payload) {
+    ) internal pure returns (uint256[] memory payload, uint256 handlerSelector) {
         payload = new uint256[](2);
 
         // store L1 token address
@@ -91,6 +96,8 @@ abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
 
         // store L2 owner
         payload[1] = l2Owner;
+
+        handlerSelector = OWNERSHIP_CLAIM_HANDLER_SELECTOR;
     }
 
     function tokenDepositOnL1MessagePayload(

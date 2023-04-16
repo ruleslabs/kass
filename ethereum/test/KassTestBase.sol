@@ -136,7 +136,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
             abi.encodeWithSelector(
                 IStarknetMessaging.consumeMessageFromL2.selector,
                 L2_KASS_ADDRESS,
-                l1OwnershipClaimMessagePayload(l2TokenAddress, l1Owner)
+                computeL1OwnershipClaimMessagePayload(l2TokenAddress, l1Owner)
             ),
             abi.encode(bytes32(0x0))
         );
@@ -188,7 +188,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
     function expectL2WrapperRequest(address l1TokenAddress) internal {
         // message
-        (uint256[] memory payload, uint256 handlerSelector) = l2WrapperCreationMessagePayload(l1TokenAddress);
+        (uint256[] memory payload, uint256 handlerSelector) = computeL2WrapperCreationMessagePayload(l1TokenAddress);
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.sendMessageToL2.selector,
             L2_KASS_ADDRESS,
@@ -215,7 +215,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.consumeMessageFromL2.selector,
             L2_KASS_ADDRESS,
-            l1OwnershipClaimMessagePayload(l2TokenAddress, l1Owner)
+            computeL1OwnershipClaimMessagePayload(l2TokenAddress, l1Owner)
         );
 
         // expect L1 message send
@@ -229,11 +229,15 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
     }
 
     function expectL2OwnershipRequest(address l1TokenAddress, uint256 l2Owner) internal {
+        (uint256[] memory payload, uint256 handlerSelector) = computeL2OwnershipClaimMessagePayload(
+            l1TokenAddress,
+            l2Owner
+        );
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.sendMessageToL2.selector,
             L2_KASS_ADDRESS,
-            OWNERSHIP_CLAIM_HANDLER_SELECTOR,
-            l2OwnershipClaimMessagePayload(l1TokenAddress, l2Owner)
+            handlerSelector,
+            payload
         );
 
         // expect L1 message send

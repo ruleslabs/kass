@@ -154,10 +154,8 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
     // INSTANCE CREATION REQUEST
 
     function requestL2Wrapper(address tokenAddress) public {
-        // compute l2 Wrapper Creation message payload
-        (uint256[] memory payload, uint256 handlerSelector) = l2WrapperCreationMessagePayload(tokenAddress);
-
-        // send message
+        // compute l2 Wrapper Creation message payload and send it
+        (uint256[] memory payload, uint256 handlerSelector) = computeL2WrapperCreationMessagePayload(tokenAddress);
         _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, handlerSelector, payload);
 
         // emit event
@@ -168,7 +166,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
 
     function claimL1Ownership(uint256 l2TokenAddress) public {
         // compute ownership claim payload
-        uint256[] memory payload = l1OwnershipClaimMessagePayload(l2TokenAddress, _msgSender());
+        uint256[] memory payload = computeL1OwnershipClaimMessagePayload(l2TokenAddress, _msgSender());
 
         // consume ownership claim message
         _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);
@@ -191,8 +189,11 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         require(l1Owner == _msgSender(), "Sender is not the owner");
 
         // compute L2 instance request payload and sent it
-        uint256[] memory payload = l2OwnershipClaimMessagePayload(l1TokenAddress, l2Owner);
-        _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, OWNERSHIP_CLAIM_HANDLER_SELECTOR, payload);
+        (uint256[] memory payload, uint256 handlerSelector) = computeL2OwnershipClaimMessagePayload(
+            l1TokenAddress,
+            l2Owner
+        );
+        _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, handlerSelector, payload);
 
         // emit event
         emit LogL2OwnershipClaimed(l1TokenAddress, l2Owner);
