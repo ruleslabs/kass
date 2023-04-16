@@ -3,6 +3,9 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
 import "./StarknetConstants.sol";
 import "./KassStructs.sol";
@@ -37,18 +40,29 @@ abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
     }
 
     function l2WrapperCreationMessagePayload(
-        address l1TokenAddress,
-        uint256[] memory data
-    ) internal pure returns (uint256[] memory payload) {
-        payload = new uint256[](data.length + 1);
+        address tokenAddress
+    ) internal view returns (uint256[] memory payload, uint256 handlerSelector) {
+        if (ERC165(tokenAddress).supportsInterface(type(IERC721).interfaceId)) {
+            payload = new uint256[](3); // token address + name + symbol
+
+            payload[1] = KassUtils.strToFelt252(ERC721(tokenAddress).name());
+            payload[2] = KassUtils.strToFelt252(ERC721(tokenAddress).symbol());
+
+            handlerSelector = INSTANCE_CREATION_721_HANDLER_SELECTOR;
+        } else if (ERC165(tokenAddress).supportsInterface(type(IERC1155).interfaceId)) {
+            uint256[] memory data = KassUtils.strToFelt252Words(ERC1155(tokenAddress).uri(0x0));
+
+            payload = new uint256[](data.length + 1); // token address + uri
+
+            for (uint8 i = 0; i < data.length; ++i) {
+                payload[i + 1] = data[i];
+            }
+
+            handlerSelector = INSTANCE_CREATION_1155_HANDLER_SELECTOR;
+        }
 
         // store L2 token address
-        payload[0] = uint160(l1TokenAddress);
-
-        // store token URI
-        for (uint8 i = 0; i < data.length; ++i) {
-            payload[i + 1] = data[i];
-        }
+        payload[0] = uint160(tokenAddress);
     }
 
     function l1OwnershipClaimMessagePayload(

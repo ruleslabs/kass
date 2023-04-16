@@ -186,28 +186,14 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         emit LogL1WrapperCreated(bytes32(l2TokenAddress), l1TokenAddress);
     }
 
-    function expectL2WrapperRequest(
-        address l1TokenAddress,
-        uint256[] memory data,
-        TokenStandard tokenStandard
-    ) internal {
-        // handler selector
-        uint256 handlerSelector;
-
-        if (tokenStandard == TokenStandard.ERC721) {
-            handlerSelector = INSTANCE_CREATION_721_HANDLER_SELECTOR;
-        } else if (tokenStandard == TokenStandard.ERC1155) {
-            handlerSelector = INSTANCE_CREATION_1155_HANDLER_SELECTOR;
-        } else {
-            revert("Kass: Unkown token standard");
-        }
-
+    function expectL2WrapperRequest(address l1TokenAddress) internal {
         // message
+        (uint256[] memory payload, uint256 handlerSelector) = l2WrapperCreationMessagePayload(l1TokenAddress);
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.sendMessageToL2.selector,
             L2_KASS_ADDRESS,
             handlerSelector,
-            l2WrapperCreationMessagePayload(l1TokenAddress, data)
+            payload
         );
 
         // expect L1 message send

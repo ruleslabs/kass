@@ -16,14 +16,8 @@ contract TestSetup_721_KassWrapperRequest is KassTestBase {
 contract Test_721_KassWrapperRequest is TestSetup_721_KassWrapperRequest {
 
     function test_721_L2TokenWrapperRequest() public {
-        // pre compute address
-        uint256[] memory data = new uint256[](2);
-
-        data[0] = KassUtils.strToFelt252(L2_TOKEN_NAME);
-        data[1] = KassUtils.strToFelt252(L2_TOKEN_SYMBOL);
-
         // create L1 instance
-        expectL2WrapperRequest(address(_l1TokenWrapper), data, TokenStandard.ERC721);
-        _kass.requestL2Wrapper721(address(_l1TokenWrapper));
+        expectL2WrapperRequest(address(_l1TokenWrapper));
+        _kass.requestL2Wrapper(address(_l1TokenWrapper));
     }
 }

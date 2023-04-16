@@ -153,45 +153,15 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
 
     // INSTANCE CREATION REQUEST
 
-    function _requestL2Wrapper(
-        address l1TokenAddress,
-        uint256[] memory data,
-        TokenStandard tokenStandard
-    ) private {
-        // compute L2 instance request payload and sent it
-        uint256[] memory payload = l2WrapperCreationMessagePayload(l1TokenAddress, data);
-
-        // handler selector
-        uint256 handlerSelector;
-
-        if (tokenStandard == TokenStandard.ERC721) {
-            handlerSelector = INSTANCE_CREATION_721_HANDLER_SELECTOR;
-        } else if (tokenStandard == TokenStandard.ERC1155) {
-            handlerSelector = INSTANCE_CREATION_1155_HANDLER_SELECTOR;
-        } else {
-            revert("Kass: Unkown token standard");
-        }
+    function requestL2Wrapper(address tokenAddress) public {
+        // compute l2 Wrapper Creation message payload
+        (uint256[] memory payload, uint256 handlerSelector) = l2WrapperCreationMessagePayload(tokenAddress);
 
         // send message
         _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, handlerSelector, payload);
 
         // emit event
-        emit LogL2WrapperRequested(l1TokenAddress);
-    }
-
-    function requestL2Wrapper721(address l1TokenAddress) public {
-        uint256[] memory data = new uint256[](2);
-
-        data[0] = KassUtils.strToFelt252(ERC721(l1TokenAddress).name());
-        data[1] = KassUtils.strToFelt252(ERC721(l1TokenAddress).symbol());
-
-        _requestL2Wrapper(l1TokenAddress, data, TokenStandard.ERC721);
-    }
-
-    function requestL2Wrapper1155(address l1TokenAddress) public {
-        uint256[] memory data = KassUtils.strToFelt252Words(ERC1155(l1TokenAddress).uri(0x0));
-
-        _requestL2Wrapper(l1TokenAddress, data, TokenStandard.ERC1155);
+        emit LogL2WrapperRequested(tokenAddress);
     }
 
     // OWNERSHIP CLAIM
