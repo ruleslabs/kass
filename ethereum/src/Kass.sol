@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 import "./factory/KassERC721.sol";
 import "./factory/KassERC1155.sol";
@@ -44,11 +45,10 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         uint256 indexed l2Recipient
     );
     event LogWithdrawal(
-        uint256 indexed l2TokenAddress,
-        address l1TokenAddress,
+        bytes32 indexed nativeTokenAddress,
         uint256 tokenId,
         uint256 amount,
-        address indexed l1Recipient
+        address indexed recipient
     );
 
     event LogDepositCancelRequest(
@@ -199,53 +199,6 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         emit LogL2OwnershipClaimed(l1TokenAddress, l2Owner);
     }
 
-    // WITHDRAW
-
-    function _withdraw(
-        uint256 l2TokenAddress,
-        uint256 tokenId,
-        uint256 amount,
-        address l1Recipient,
-        TokenStandard tokenStandard
-    ) internal {
-        require(amount > 0, "Cannot withdraw null amount");
-
-        // compute L1 instance request payload
-        uint256[] memory payload = tokenDepositOnL1MessagePayload(
-            l2TokenAddress,
-            tokenId,
-            amount,
-            l1Recipient,
-            tokenStandard
-        );
-
-        // consume L1 withdraw request message
-        _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);
-
-        // get l1 token instance
-        address l1TokenAddress = computeL1TokenAddress(l2TokenAddress);
-
-        // mint tokens
-        if (tokenStandard == TokenStandard.ERC721) {
-            KassERC721(l1TokenAddress).mint(l1Recipient, tokenId);
-        } else if (tokenStandard == TokenStandard.ERC1155) {
-            KassERC1155(l1TokenAddress).mint(l1Recipient, tokenId, amount);
-        } else {
-            revert("Kass: Unkown token standard");
-        }
-
-        // emit event
-        emit LogWithdrawal(l2TokenAddress, l1TokenAddress, tokenId, amount, l1Recipient);
-    }
-
-    function withdraw721(uint256 l2TokenAddress, uint256 tokenId, address l1Recipient) public {
-        _withdraw(l2TokenAddress, tokenId, 0x1, l1Recipient, TokenStandard.ERC721);
-    }
-
-    function withdraw1155(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, address l1Recipient) public {
-        _withdraw(l2TokenAddress, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
-    }
-
     // DEPOSIT
 
     function _deposit(
@@ -293,6 +246,43 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
 
     function deposit1155(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, uint256 l2Recipient) public {
         _deposit(l2TokenAddress, tokenId, amount, l2Recipient, TokenStandard.ERC1155);
+    }
+
+    // WITHDRAW
+
+    function withdraw(uint256[] calldata messagePayload) public {
+        // consume L1 withdraw request message
+        _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, messagePayload);
+
+        // parse message payload
+        DepositRequest memory depositRequest = parseDepositRequestMessagePayload(messagePayload);
+
+        // get l1 token address (native or wrapper)
+        address l1TokenAddress;
+        if (Address.isContract(address(uint160(uint256(depositRequest.tokenAddress))))) {
+            l1TokenAddress = address(uint160(uint256(depositRequest.tokenAddress)));
+        } else {
+            l1TokenAddress = computeL1TokenAddress(uint256(depositRequest.tokenAddress));
+        }
+
+        // mint or tranfer tokens
+        if (depositRequest.tokenStandard == TokenStandard.ERC721) {
+            KassERC721(l1TokenAddress).mint(depositRequest.recipient, depositRequest.tokenId);
+        } else if (depositRequest.tokenStandard == TokenStandard.ERC1155) {
+            require(depositRequest.amount > 0, "Cannot withdraw null amount");
+
+            KassERC1155(l1TokenAddress).mint(depositRequest.recipient, depositRequest.tokenId, depositRequest.amount);
+        } else {
+            revert("Kass: Unkown token standard");
+        }
+
+        // emit event
+        emit LogWithdrawal(
+            depositRequest.tokenAddress,
+            depositRequest.tokenId,
+            depositRequest.amount,
+            depositRequest.recipient
+        );
     }
 
     // REQUEST DEPOSIT CANCEL

@@ -33,9 +33,15 @@ contract WithdrawTestSetup is KassTestBase {
         assertEq(_l1TokenWrapper.balanceOf(l1Recipient, tokenId), 0);
 
         // deposit from L2 and withdraw to L1
-        depositOnL1(l2TokenAddress, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
+       uint256[] memory messagePayload = depositOnL1(
+            l2TokenAddress,
+            tokenId,
+            amount,
+            l1Recipient,
+            TokenStandard.ERC1155
+        );
         expectWithdrawOnL1(l2TokenAddress, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
-        _kass.withdraw1155(l2TokenAddress, tokenId, amount, l1Recipient);
+        _kass.withdraw(messagePayload);
 
         // assert balance was updated
         assertEq(_l1TokenWrapper.balanceOf(l1Recipient, tokenId), amount);
@@ -68,58 +74,27 @@ contract WithdrawTest is WithdrawTestSetup {
         _1155_basicWithdrawTest(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
     }
 
-    function test_1155_CannotWithdrawFromL2WithDifferentTokenIdFromL2Request() public {
-        address l1Recipient = address(uint160(uint256(keccak256("rando 1"))));
-        uint256 tokenId = uint256(keccak256("token 1"));
-        uint256 amount = 0x10;
-
-        // deposit from L2
-        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
-
-        vm.expectRevert();
-        _kass.withdraw1155(L2_TOKEN_ADDRESS, tokenId - 1, amount, l1Recipient);
-    }
-
-    function test_1155_CannotWithdrawFromL2WithDifferentAmountFromL2Request() public {
-        address l1Recipient = address(uint160(uint256(keccak256("rando 1"))));
-        uint256 tokenId = uint256(keccak256("token 1"));
-        uint256 amount = 0x10;
-
-        // deposit from L2
-        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
-
-        vm.expectRevert();
-        _kass.withdraw1155(L2_TOKEN_ADDRESS, tokenId, amount + 1, l1Recipient);
-    }
-
-    function test_1155_CannotWithdrawFromL2WithDifferentL1RecipientFromL2Request() public {
-        address l1Recipient = address(uint160(uint256(keccak256("rando 1"))));
-        address fakeL1Recipient = address(uint160(uint256(keccak256("rando 2"))));
-        uint256 tokenId = uint256(keccak256("token 1"));
-        uint256 amount = 0x10;
-
-        // deposit from L2
-        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
-
-        vm.expectRevert();
-        _kass.withdraw1155(L2_TOKEN_ADDRESS, tokenId, amount, fakeL1Recipient);
-    }
-
     function test_1155_CannotWithdrawFromL2Twice() public {
         address l1Recipient = address(uint160(uint256(keccak256("rando 1"))));
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amount = 0x10;
 
         // deposit from L2
-        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
+        uint256[] memory messagePayload = depositOnL1(
+            L2_TOKEN_ADDRESS,
+            tokenId,
+            amount,
+            l1Recipient,
+            TokenStandard.ERC1155
+        );
 
         // withdraw
         expectWithdrawOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
-        _kass.withdraw1155(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        _kass.withdraw(messagePayload);
 
         vm.clearMockedCalls();
         vm.expectRevert();
-        _kass.withdraw1155(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        _kass.withdraw(messagePayload);
     }
 
     function test_1155_CannotWithdrawZeroFromL2() public {
@@ -128,10 +103,16 @@ contract WithdrawTest is WithdrawTestSetup {
         uint256 amount = 0x0;
 
         // deposit from L2
-        depositOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
+        uint256[] memory messagePayload = depositOnL1(
+            L2_TOKEN_ADDRESS,
+            tokenId,
+            amount,
+            l1Recipient,
+            TokenStandard.ERC1155
+        );
 
         // withdraw
         vm.expectRevert("Cannot withdraw null amount");
-        _kass.withdraw1155(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        _kass.withdraw(messagePayload);
     }
 }

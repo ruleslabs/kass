@@ -42,6 +42,26 @@ abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
         }
     }
 
+    function parseDepositRequestMessagePayload(
+        uint256[] calldata payload
+    ) internal pure returns (DepositRequest memory depositRequest) {
+        depositRequest.tokenAddress = bytes32(payload[1]);
+
+        depositRequest.recipient = address(uint160(payload[2]));
+
+        depositRequest.tokenId = payload[3] | payload[4] << UINT256_PART_SIZE_BITS;
+
+        if (payload[0] == TRANSFER_721_FROM_STARKNET) {
+            depositRequest.tokenStandard = TokenStandard.ERC721;
+        } else if (payload[0] == TRANSFER_1155_FROM_STARKNET) {
+            depositRequest.tokenStandard = TokenStandard.ERC1155;
+
+            depositRequest.amount = payload[5] | payload[6] << UINT256_PART_SIZE_BITS;
+        } else {
+            revert("Invalid message payload");
+        }
+    }
+
     // COMPUTE
 
     function computeL2WrapperCreationMessagePayload(
@@ -98,34 +118,6 @@ abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
         payload[1] = l2Owner;
 
         handlerSelector = OWNERSHIP_CLAIM_HANDLER_SELECTOR;
-    }
-
-    function tokenDepositOnL1MessagePayload(
-        uint256 l2TokenAddress,
-        uint256 tokenId,
-        uint256 amount,
-        address l1Recipient,
-        TokenStandard tokenStandard
-    ) internal pure returns (uint256[] memory payload) {
-        payload = new uint256[](7);
-
-        if (tokenStandard == TokenStandard.ERC721) {
-            payload[0] = TRANSFER_721_FROM_STARKNET;
-        } else if (tokenStandard == TokenStandard.ERC1155) {
-            payload[0] = TRANSFER_1155_FROM_STARKNET;
-        } else {
-            revert("Kass: Unkown token standard");
-        }
-
-        payload[1] = l2TokenAddress;
-
-        payload[2] = uint256(uint160(l1Recipient));
-
-        payload[3] = uint128(tokenId >> UINT256_PART_SIZE_BITS); // low
-        payload[4] = uint128(tokenId & (UINT256_PART_SIZE - 1)); // high
-
-        payload[5] = uint128(amount >> UINT256_PART_SIZE_BITS); // low
-        payload[6] = uint128(amount & (UINT256_PART_SIZE - 1)); // high
     }
 
     function tokenDepositOnL2MessagePayload(
