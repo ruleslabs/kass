@@ -37,34 +37,33 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
     );
 
     event LogDeposit(
+        bytes32 indexed tokenAddress,
         address indexed sender,
-        uint256 indexed l2TokenAddress,
-        address l1TokenAddress,
+        uint256 indexed recipient,
         uint256 tokenId,
-        uint256 amount,
-        uint256 indexed l2Recipient
+        uint256 amount
     );
     event LogWithdrawal(
         bytes32 indexed nativeTokenAddress,
+        address indexed recipient,
         uint256 tokenId,
-        uint256 amount,
-        address indexed recipient
+        uint256 amount
     );
 
     event LogDepositCancelRequest(
+        bytes32 indexed l2TokenAddress,
         address indexed sender,
-        uint256 indexed l2TokenAddress,
+        uint256 indexed recipient,
         uint256 tokenId,
         uint256 amount,
-        uint256 indexed l2Recipient,
         uint256 nonce
     );
     event LogDepositCancel(
+        bytes32 indexed l2TokenAddress,
         address indexed sender,
-        uint256 indexed l2TokenAddress,
+        uint256 indexed recipient,
         uint256 tokenId,
         uint256 amount,
-        uint256 indexed l2Recipient,
         uint256 nonce
     );
 
@@ -155,7 +154,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
 
     function requestL2Wrapper(address tokenAddress) public {
         // compute l2 Wrapper Creation message payload and send it
-        (uint256[] memory payload, uint256 handlerSelector) = computeL2WrapperCreationMessagePayload(tokenAddress);
+        (uint256[] memory payload, uint256 handlerSelector) = computeL2WrapperRequestMessagePayload(tokenAddress);
         _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, handlerSelector, payload);
 
         // emit event
@@ -165,10 +164,8 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
     // OWNERSHIP CLAIM
 
     function claimL1Ownership(uint256 l2TokenAddress) public {
-        // compute ownership claim payload
+        // compute ownership claim payload and consume it
         uint256[] memory payload = computeL1OwnershipClaimMessagePayload(l2TokenAddress, _msgSender());
-
-        // consume ownership claim message
         _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);
 
         // get l1 token instance
@@ -201,51 +198,47 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
 
     // DEPOSIT
 
-    function _deposit(
-        uint256 l2TokenAddress,
+    function deposit(
+        bytes32 tokenAddress,
+        uint256 recipient,
         uint256 tokenId,
-        uint256 amount,
-        uint256 l2Recipient,
-        TokenStandard tokenStandard
-    ) private {
-        require(amount > 0, "Cannot deposit null amount");
+        uint256 amount
+    ) public {
+        // get l1 token address (native or wrapper)
+        address l1TokenAddress = getL1TokenAddres(tokenAddress);
 
-        // get l1 token instance
-        address l1TokenAddress = computeL1TokenAddress(l2TokenAddress);
-
-        // burn tokens
-        if (tokenStandard == TokenStandard.ERC721) {
+        // TODO: token tranfer for L1 native tokens
+        // burn or tranfer tokens
+        if (_isERC721(l1TokenAddress)) {
             // check if sender is owner before burning
             require(KassERC721(l1TokenAddress).ownerOf(tokenId) == _msgSender(), "You do not own this token");
 
             KassERC721(l1TokenAddress).burn(tokenId);
-        } else if (tokenStandard == TokenStandard.ERC1155) {
+        } else if (_isERC1155(l1TokenAddress)) {
+            require(amount > 0, "Cannot deposit null amount");
             KassERC1155(l1TokenAddress).burn(_msgSender(), tokenId, amount);
         } else {
             revert("Kass: Unkown token standard");
         }
 
-        // compute L2 deposit payload and sent it
-        uint256[] memory payload = tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient);
-        (, uint256 nonce) = _state.starknetMessaging.sendMessageToL2(
-            _state.l2KassAddress,
-            WITHDRAW_721_L2_HANDLER_SELECTOR,
-            payload
+        // compute l2 Wrapper Creation message payload and send it
+        (uint256[] memory payload, uint256 handlerSelector) = computeTokenDepositMessagePayload(
+            tokenAddress,
+            recipient,
+            tokenId,
+            amount
         );
+        (, uint256 nonce) = _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, handlerSelector, payload);
 
         // save depositor
         _state.depositors[nonce] = _msgSender();
 
         // emit event
-        emit LogDeposit(_msgSender(), l2TokenAddress, l1TokenAddress, tokenId, amount, l2Recipient);
+        emit LogDeposit(tokenAddress, _msgSender(), recipient, tokenId, amount);
     }
 
-    function deposit721(uint256 l2TokenAddress, uint256 tokenId, uint256 l2Recipient) public {
-        _deposit(l2TokenAddress, tokenId, 0x1, l2Recipient, TokenStandard.ERC721);
-    }
-
-    function deposit1155(uint256 l2TokenAddress, uint256 tokenId, uint256 amount, uint256 l2Recipient) public {
-        _deposit(l2TokenAddress, tokenId, amount, l2Recipient, TokenStandard.ERC1155);
+    function deposit(bytes32 tokenAddress, uint256 recipient, uint256 tokenId) public {
+        deposit(tokenAddress, recipient, tokenId, 0x1);
     }
 
     // WITHDRAW
@@ -258,13 +251,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         DepositRequest memory depositRequest = parseDepositRequestMessagePayload(messagePayload);
 
         // get l1 token address (native or wrapper)
-        address l1TokenAddress;
-        if (Address.isContract(address(uint160(uint256(depositRequest.tokenAddress))))) {
-            l1TokenAddress = address(uint160(uint256(depositRequest.tokenAddress)));
-        } else {
-            l1TokenAddress = computeL1TokenAddress(uint256(depositRequest.tokenAddress));
-        }
+        address l1TokenAddress = getL1TokenAddres(depositRequest.tokenAddress);
 
+        // TODO: token tranfer for L1 native tokens
         // mint or tranfer tokens
         if (depositRequest.tokenStandard == TokenStandard.ERC721) {
             KassERC721(l1TokenAddress).mint(depositRequest.recipient, depositRequest.tokenId);
@@ -279,9 +268,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         // emit event
         emit LogWithdrawal(
             depositRequest.tokenAddress,
+            depositRequest.recipient,
             depositRequest.tokenId,
-            depositRequest.amount,
-            depositRequest.recipient
+            depositRequest.amount
         );
     }
 
@@ -296,90 +285,72 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
      * The nonce should be extracted from the LogMessageToL2 event that was emitted by the
      * StarknetMessaging contract upon deposit.
      */
-     function _requestDepositCancel(
-        uint256 l2TokenAddress,
+     function requestDepositCancel(
+        bytes32 tokenAddress,
+        uint256 recipient,
         uint256 tokenId,
         uint256 amount,
-        uint256 l2Recipient,
         uint256 nonce
-    ) private {
-        _state.starknetMessaging.startL1ToL2MessageCancellation(
-            _state.l2KassAddress,
-            WITHDRAW_721_L2_HANDLER_SELECTOR,
-            tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient),
-            nonce
+    ) public onlyDepositor(nonce) {
+        (uint256[] memory payload, uint256 handlerSelector) = computeTokenDepositMessagePayload(
+            tokenAddress,
+            recipient,
+            tokenId,
+            amount
         );
+        _state.starknetMessaging.startL1ToL2MessageCancellation(_state.l2KassAddress, handlerSelector, payload, nonce);
 
-        emit LogDepositCancelRequest(_msgSender(), l2TokenAddress, tokenId, amount, l2Recipient, nonce);
+        emit LogDepositCancelRequest(tokenAddress, _msgSender(), recipient, tokenId, amount, nonce);
     }
 
-    function requestDepositCancel721(
-        uint256 l2TokenAddress,
-        uint256 tokenId,
-        uint256 l2Recipient,
-        uint256 nonce
-    ) public onlyDepositor(nonce) {
-        _requestDepositCancel(l2TokenAddress, tokenId, 0x1, l2Recipient, nonce);
-    }
-
-    function requestDepositCancel1155(
-        uint256 l2TokenAddress,
-        uint256 tokenId,
-        uint256 amount,
-        uint256 l2Recipient,
-        uint256 nonce
-    ) public onlyDepositor(nonce) {
-        _requestDepositCancel(l2TokenAddress, tokenId, amount, l2Recipient, nonce);
+    function requestDepositCancel(bytes32 tokenAddress, uint256 recipient, uint256 tokenId, uint256 nonce) public {
+        requestDepositCancel(tokenAddress, recipient, tokenId, 0x1, nonce);
     }
 
     // CANCEL DEPOSIT
 
-    function _cancelDeposit(
-        uint256 l2TokenAddress,
+    function cancelDeposit(
+        bytes32 tokenAddress,
+        uint256 recipient,
         uint256 tokenId,
         uint256 amount,
-        uint256 l2Recipient,
-        uint256 nonce,
-        TokenStandard tokenStandard
-    ) private {
-        _state.starknetMessaging.cancelL1ToL2Message(
-            _state.l2KassAddress,
-            WITHDRAW_721_L2_HANDLER_SELECTOR,
-            tokenDepositOnL2MessagePayload(l2TokenAddress, tokenId, amount, l2Recipient),
-            nonce
+        uint256 nonce
+    ) public onlyDepositor(nonce) {
+        (uint256[] memory payload, uint256 handlerSelector) = computeTokenDepositMessagePayload(
+            tokenAddress,
+            recipient,
+            tokenId,
+            amount
         );
+        _state.starknetMessaging.cancelL1ToL2Message(_state.l2KassAddress, handlerSelector, payload, nonce);
 
-        address l1TokenAddress = computeL1TokenAddress(l2TokenAddress);
+        address l1TokenAddress = getL1TokenAddres(tokenAddress);
 
-        // mint tokens
-        if (tokenStandard == TokenStandard.ERC721) {
+        // TODO: token tranfer for L1 native tokens
+        // mint or tranfer tokens
+        if (_isERC721(l1TokenAddress)) {
             KassERC721(l1TokenAddress).mint(_msgSender(), tokenId);
-        } else if (tokenStandard == TokenStandard.ERC1155) {
+        } else if (_isERC1155(l1TokenAddress)) {
             KassERC1155(l1TokenAddress).mint(_msgSender(), tokenId, amount);
         } else {
             revert("Kass: Unkown token standard");
         }
 
-        emit LogDepositCancel(_msgSender(), l2TokenAddress, tokenId, amount, l2Recipient, nonce);
+        emit LogDepositCancel(tokenAddress, _msgSender(), recipient, tokenId, amount, nonce);
     }
 
-    function cancelDeposit721(
-        uint256 l2TokenAddress,
-        uint256 tokenId,
-        uint256 l2Recipient,
-        uint256 nonce
-    ) public onlyDepositor(nonce) {
-        _cancelDeposit(l2TokenAddress, tokenId, 0x1, l2Recipient, nonce, TokenStandard.ERC721);
+    function cancelDeposit(bytes32 tokenAddress, uint256 recipient, uint256 tokenId, uint256 nonce) public {
+        cancelDeposit(tokenAddress, recipient, tokenId, 0x1, nonce);
     }
 
-    function cancelDeposit1155(
-        uint256 l2TokenAddress,
-        uint256 tokenId,
-        uint256 amount,
-        uint256 l2Recipient,
-        uint256 nonce
-    ) public onlyDepositor(nonce) {
-        _cancelDeposit(l2TokenAddress, tokenId, amount, l2Recipient, nonce, TokenStandard.ERC1155);
+    // INTERNALS
+
+    function _isERC721(address tokenAddress) private view returns (bool) {
+        return ERC165(tokenAddress).supportsInterface(type(IERC721).interfaceId);
+    }
+
+    function _isERC1155(address tokenAddress) private view returns (bool) {
+        return ERC165(tokenAddress).supportsInterface(type(IERC1155).interfaceId);
     }
 
     fallback() external payable { revert("unsupported"); }

@@ -41,8 +41,8 @@ contract TestSetup_1155_Deposit is KassTestBase, ERC1155Holder {
         uint256 balance = _l1TokenWrapper.balanceOf(sender, tokenId);
 
         // deposit on L2
-        expectDepositOnL2(sender, l2TokenAddress, tokenId, amountToDepositOnL2, l2Recipient, 0x0);
-        _kass.deposit1155(l2TokenAddress, tokenId, amountToDepositOnL2, l2Recipient);
+        expectDepositOnL2(l2TokenAddress, sender, l2Recipient, tokenId, amountToDepositOnL2, 0x0);
+        _kass.deposit(bytes32(l2TokenAddress), l2Recipient, tokenId, amountToDepositOnL2);
 
         // check if balance was updated
         assertEq(_l1TokenWrapper.balanceOf(sender, tokenId), balance - amountToDepositOnL2);
@@ -106,7 +106,7 @@ contract Test_1155_Deposit is TestSetup_1155_Deposit {
 
         // deposit on L2
         vm.expectRevert("ERC1155: burn amount exceeds balance");
-        _kass.deposit1155(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL2, l2Recipient);
+        _kass.deposit(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, amountToDepositOnL2);
     }
 
     function test_1155_CannotDepositToL2Zero() public {
@@ -116,6 +116,6 @@ contract Test_1155_Deposit is TestSetup_1155_Deposit {
 
         // deposit on L2
         vm.expectRevert("Cannot deposit null amount");
-        _kass.deposit1155(L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL1, l2Recipient);
+        _kass.deposit(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, amountToDepositOnL1);
     }
 }

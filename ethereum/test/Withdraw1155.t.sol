@@ -25,9 +25,9 @@ contract WithdrawTestSetup is KassTestBase {
 
     function _1155_basicWithdrawTest(
         uint256 l2TokenAddress,
+        address l1Recipient,
         uint256 tokenId,
-        uint256 amount,
-        address l1Recipient
+        uint256 amount
     ) internal {
         // assert balance is empty
         assertEq(_l1TokenWrapper.balanceOf(l1Recipient, tokenId), 0);
@@ -35,12 +35,12 @@ contract WithdrawTestSetup is KassTestBase {
         // deposit from L2 and withdraw to L1
        uint256[] memory messagePayload = depositOnL1(
             l2TokenAddress,
+            l1Recipient,
             tokenId,
             amount,
-            l1Recipient,
             TokenStandard.ERC1155
         );
-        expectWithdrawOnL1(l2TokenAddress, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
+        expectWithdrawOnL1(l2TokenAddress, l1Recipient, tokenId, amount, TokenStandard.ERC1155);
         _kass.withdraw(messagePayload);
 
         // assert balance was updated
@@ -55,7 +55,7 @@ contract WithdrawTest is WithdrawTestSetup {
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amount = uint256(keccak256("huge amount"));
 
-        _1155_basicWithdrawTest(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        _1155_basicWithdrawTest(L2_TOKEN_ADDRESS, l1Recipient, tokenId, amount);
     }
 
     function test_BasicWithdrawFromL2_2() public {
@@ -63,7 +63,7 @@ contract WithdrawTest is WithdrawTestSetup {
         uint256 tokenId = 0x2;
         uint256 amount = 0x3;
 
-        _1155_basicWithdrawTest(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        _1155_basicWithdrawTest(L2_TOKEN_ADDRESS, l1Recipient, tokenId, amount);
     }
 
     function test_1155_BasicWithdrawFromL2_3() public {
@@ -71,7 +71,7 @@ contract WithdrawTest is WithdrawTestSetup {
         uint256 tokenId = 0x2 << UINT256_PART_SIZE_BITS;
         uint256 amount = 0x3 << UINT256_PART_SIZE_BITS;
 
-        _1155_basicWithdrawTest(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient);
+        _1155_basicWithdrawTest(L2_TOKEN_ADDRESS, l1Recipient, tokenId, amount);
     }
 
     function test_1155_CannotWithdrawFromL2Twice() public {
@@ -82,14 +82,14 @@ contract WithdrawTest is WithdrawTestSetup {
         // deposit from L2
         uint256[] memory messagePayload = depositOnL1(
             L2_TOKEN_ADDRESS,
+            l1Recipient,
             tokenId,
             amount,
-            l1Recipient,
             TokenStandard.ERC1155
         );
 
         // withdraw
-        expectWithdrawOnL1(L2_TOKEN_ADDRESS, tokenId, amount, l1Recipient, TokenStandard.ERC1155);
+        expectWithdrawOnL1(L2_TOKEN_ADDRESS, l1Recipient, tokenId, amount, TokenStandard.ERC1155);
         _kass.withdraw(messagePayload);
 
         vm.clearMockedCalls();
@@ -105,9 +105,9 @@ contract WithdrawTest is WithdrawTestSetup {
         // deposit from L2
         uint256[] memory messagePayload = depositOnL1(
             L2_TOKEN_ADDRESS,
+            l1Recipient,
             tokenId,
             amount,
-            l1Recipient,
             TokenStandard.ERC1155
         );
 

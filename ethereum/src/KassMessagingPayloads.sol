@@ -64,7 +64,7 @@ abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
 
     // COMPUTE
 
-    function computeL2WrapperCreationMessagePayload(
+    function computeL2WrapperRequestMessagePayload(
         address tokenAddress
     ) internal view returns (uint256[] memory payload, uint256 handlerSelector) {
         if (ERC165(tokenAddress).supportsInterface(type(IERC721).interfaceId)) {
@@ -84,6 +84,8 @@ abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
             }
 
             handlerSelector = INSTANCE_CREATION_1155_HANDLER_SELECTOR;
+        } else {
+            revert("Kass: Unkown token standard");
         }
 
         // store L2 token address
@@ -120,22 +122,24 @@ abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
         handlerSelector = OWNERSHIP_CLAIM_HANDLER_SELECTOR;
     }
 
-    function tokenDepositOnL2MessagePayload(
-        uint256 l2TokenAddress,
+    function computeTokenDepositMessagePayload(
+        bytes32 tokenAddress,
+        uint256 recipient,
         uint256 tokenId,
-        uint256 amount,
-        uint256 l2Recipient
-    ) internal pure returns (uint256[] memory payload) {
+        uint256 amount
+    ) internal pure returns (uint256[] memory payload, uint256 handlerSelector) {
         payload = new uint256[](6);
 
-        payload[0] = l2TokenAddress;
+        payload[0] = uint256(tokenAddress);
 
-        payload[1] = l2Recipient;
+        payload[1] = recipient;
 
-        payload[2] = uint128(tokenId >> UINT256_PART_SIZE_BITS); // low
-        payload[3] = uint128(tokenId & (UINT256_PART_SIZE - 1)); // high
+        payload[2] = uint128(tokenId & (UINT256_PART_SIZE - 1)); // low
+        payload[3] = uint128(tokenId >> UINT256_PART_SIZE_BITS); // high
 
-        payload[4] = uint128(amount >> UINT256_PART_SIZE_BITS); // low
-        payload[5] = uint128(amount & (UINT256_PART_SIZE - 1)); // high
+        payload[4] = uint128(amount & (UINT256_PART_SIZE - 1)); // low
+        payload[5] = uint128(amount >> UINT256_PART_SIZE_BITS); // high
+
+        handlerSelector = WITHDRAW_HANDLER_SELECTOR;
     }
 }

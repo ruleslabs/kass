@@ -23,14 +23,14 @@ contract TestSetup_721_Withdraw is KassTestBase {
         _l1TokenWrapper = KassERC721(_kass.createL1Wrapper(messagePayload));
     }
 
-    function _721_basicWithdrawTest(uint256 l2TokenAddress, uint256 tokenId, address l1Recipient) internal {
+    function _721_basicWithdrawTest(uint256 l2TokenAddress, address l1Recipient, uint256 tokenId) internal {
         // assert token does not exist on L1
         vm.expectRevert("ERC721: invalid token ID");
         _l1TokenWrapper.ownerOf(tokenId);
 
         // deposit from L2 and withdraw to L1
-        uint256[] memory messagePayload = depositOnL1(l2TokenAddress, tokenId, 0, l1Recipient, TokenStandard.ERC721);
-        expectWithdrawOnL1(l2TokenAddress, tokenId, 0, l1Recipient, TokenStandard.ERC721);
+        uint256[] memory messagePayload = depositOnL1(l2TokenAddress, l1Recipient, tokenId, 0, TokenStandard.ERC721);
+        expectWithdrawOnL1(l2TokenAddress, l1Recipient, tokenId, 0, TokenStandard.ERC721);
         _kass.withdraw(messagePayload);
 
         // assert token owner is l1Recipient
@@ -44,21 +44,21 @@ contract Test_721_Withdraw is TestSetup_721_Withdraw {
         address l1Recipient = address(uint160(uint256(keccak256("rando 1"))));
         uint256 tokenId = uint256(keccak256("token 1"));
 
-        _721_basicWithdrawTest(L2_TOKEN_ADDRESS, tokenId, l1Recipient);
+        _721_basicWithdrawTest(L2_TOKEN_ADDRESS, l1Recipient, tokenId);
     }
 
     function test_721_BasicWithdrawFromL2_2() public {
         address l1Recipient = address(uint160(uint256(keccak256("rando 2"))));
         uint256 tokenId = 0x2;
 
-        _721_basicWithdrawTest(L2_TOKEN_ADDRESS, tokenId, l1Recipient);
+        _721_basicWithdrawTest(L2_TOKEN_ADDRESS, l1Recipient, tokenId);
     }
 
     function test_721_BasicWithdrawFromL2_3() public {
         address l1Recipient = address(uint160(uint256(keccak256("rando 3"))));
         uint256 tokenId = 0x2 << UINT256_PART_SIZE_BITS;
 
-        _721_basicWithdrawTest(L2_TOKEN_ADDRESS, tokenId, l1Recipient);
+        _721_basicWithdrawTest(L2_TOKEN_ADDRESS, l1Recipient, tokenId);
     }
 
     function test_CannotWithdrawFromL2Twice() public {
@@ -68,14 +68,14 @@ contract Test_721_Withdraw is TestSetup_721_Withdraw {
         // deposit from L2
         uint256[] memory messagePayload = depositOnL1(
             L2_TOKEN_ADDRESS,
+            l1Recipient,
             tokenId,
             0,
-            l1Recipient,
             TokenStandard.ERC721
         );
 
         // withdraw
-        expectWithdrawOnL1(L2_TOKEN_ADDRESS, tokenId, 0, l1Recipient, TokenStandard.ERC721);
+        expectWithdrawOnL1(L2_TOKEN_ADDRESS, l1Recipient, tokenId, 0, TokenStandard.ERC721);
         _kass.withdraw(messagePayload);
 
         vm.clearMockedCalls();

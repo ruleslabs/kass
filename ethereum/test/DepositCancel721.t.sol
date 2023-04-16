@@ -27,8 +27,8 @@ contract TestSetup_721_DepositCancel is KassTestBase, ERC721Holder {
 
     function _721_mintAndDepositBackOnL2(
         uint256 l2TokenAddress,
-        uint256 tokenId,
         uint256 l2Recipient,
+        uint256 tokenId,
         uint256 nonce
     ) internal {
         address sender = address(this);
@@ -38,8 +38,8 @@ contract TestSetup_721_DepositCancel is KassTestBase, ERC721Holder {
         _l1TokenWrapper.mint(sender, tokenId);
 
         // deposit tokens on L2
-        expectDepositOnL2(sender, l2TokenAddress, tokenId, 0x1, l2Recipient, nonce);
-        _kass.deposit721(l2TokenAddress, tokenId, l2Recipient);
+        expectDepositOnL2(l2TokenAddress, sender, l2Recipient, tokenId, 0x1, nonce);
+        _kass.deposit(bytes32(l2TokenAddress), l2Recipient, tokenId);
 
         // check if there's no owner
         vm.expectRevert("ERC721: invalid token ID");
@@ -48,26 +48,26 @@ contract TestSetup_721_DepositCancel is KassTestBase, ERC721Holder {
 
     function _721_basicDepositCancelTest(
         uint256 l2TokenAddress,
-        uint256 tokenId,
         uint256 l2Recipient,
+        uint256 tokenId,
         uint256 nonce
     ) internal {
         address sender = address(this);
 
         // deposit on L1 and send back to L2
-        _721_mintAndDepositBackOnL2(l2TokenAddress, tokenId, l2Recipient, nonce);
+        _721_mintAndDepositBackOnL2(l2TokenAddress, l2Recipient, tokenId, nonce);
 
         // deposit cancel request
-        expectDepositCancelRequest(sender, l2TokenAddress, tokenId, 0x1, l2Recipient, nonce);
-        _kass.requestDepositCancel721(l2TokenAddress, tokenId, l2Recipient, nonce);
+        expectDepositCancelRequest(l2TokenAddress, sender, l2Recipient, tokenId, 0x1, nonce);
+        _kass.requestDepositCancel(bytes32(l2TokenAddress), l2Recipient, tokenId, nonce);
 
         // check if there's still no owner
         vm.expectRevert("ERC721: invalid token ID");
         _l1TokenWrapper.ownerOf(tokenId);
 
         // deposit cancel request
-        expectDepositCancel(sender, l2TokenAddress, tokenId, 0x1, l2Recipient, nonce);
-        _kass.cancelDeposit721(l2TokenAddress, tokenId, l2Recipient, nonce);
+        expectDepositCancel(l2TokenAddress, sender, l2Recipient, tokenId, 0x1, nonce);
+        _kass.cancelDeposit(bytes32(l2TokenAddress), l2Recipient, tokenId, nonce);
 
         // check if owner is correct
         assertEq(_l1TokenWrapper.ownerOf(tokenId), sender);
@@ -81,7 +81,7 @@ contract Test_721_DepositCancel is TestSetup_721_DepositCancel {
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 nonce = uint256(keccak256("huge nonce"));
 
-        _721_basicDepositCancelTest(L2_TOKEN_ADDRESS, tokenId, l2Recipient, nonce);
+        _721_basicDepositCancelTest(L2_TOKEN_ADDRESS, l2Recipient, tokenId, nonce);
     }
 
     function test_721_DepositCancel_2() public {
@@ -89,7 +89,7 @@ contract Test_721_DepositCancel is TestSetup_721_DepositCancel {
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 nonce = 0x0;
 
-        _721_basicDepositCancelTest(L2_TOKEN_ADDRESS, tokenId, l2Recipient, nonce);
+        _721_basicDepositCancelTest(L2_TOKEN_ADDRESS, l2Recipient, tokenId, nonce);
     }
 
     function test_721_CannotRequestDepositCancelForAnotherDepositor() public {
@@ -98,11 +98,11 @@ contract Test_721_DepositCancel is TestSetup_721_DepositCancel {
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 nonce = 0x0;
 
-        _721_mintAndDepositBackOnL2(L2_TOKEN_ADDRESS, tokenId, l2Recipient, nonce);
+        _721_mintAndDepositBackOnL2(L2_TOKEN_ADDRESS, l2Recipient, tokenId, nonce);
 
         vm.startPrank(fakeSender);
         vm.expectRevert("Caller is not the depositor");
-        _kass.requestDepositCancel721(L2_TOKEN_ADDRESS, tokenId, l2Recipient, nonce);
+        _kass.requestDepositCancel(bytes32(L2_TOKEN_ADDRESS),l2Recipient, tokenId, nonce);
     }
 
     function test_721_CannotRequestDepositCancelForUnknownDeposit() public {
@@ -111,6 +111,6 @@ contract Test_721_DepositCancel is TestSetup_721_DepositCancel {
         uint256 nonce = 0x0;
 
         vm.expectRevert("Deposit not found");
-        _kass.cancelDeposit721(L2_TOKEN_ADDRESS, tokenId, l2Recipient, nonce);
+        _kass.cancelDeposit(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, nonce);
     }
 }

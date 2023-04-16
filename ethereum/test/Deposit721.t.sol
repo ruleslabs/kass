@@ -40,8 +40,8 @@ contract Test_721_Deposit is TestSetup_721_Deposit {
         // assert token owner is sender
         assertEq(_l1TokenWrapper.ownerOf(tokenId), sender);
 
-        expectDepositOnL2(sender, L2_TOKEN_ADDRESS, tokenId, 0x1, l2Recipient, 0x0);
-        _kass.deposit721(L2_TOKEN_ADDRESS, tokenId, l2Recipient);
+        expectDepositOnL2(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, 0x1, 0x0);
+        _kass.deposit(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId);
 
         // assert token does not exist on L1
         vm.expectRevert("ERC721: invalid token ID");
@@ -58,6 +58,6 @@ contract Test_721_Deposit is TestSetup_721_Deposit {
 
         // try deposit on L2
         vm.expectRevert("You do not own this token");
-        _kass.deposit721(L2_TOKEN_ADDRESS, tokenId, l2Recipient);
+        _kass.deposit(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId);
     }
 }
