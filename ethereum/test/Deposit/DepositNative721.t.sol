@@ -10,12 +10,18 @@ import "../KassTestBase.sol";
 
 // solhint-disable contract-name-camelcase
 
-contract TestSetup_721_DepositWrappedToken is KassTestBase, ERC721Holder {
+contract TestSetup_721_Wrapped_Deposit is KassTestBase, ERC721Holder {
     KassERC721 public _l1NativeToken;
-    address public _tokenOwner = address(uint160(uint256(keccak256("rando 1"))));
+    address public _tokenOwner = address(uint160(uint256(keccak256("owner"))));
 
     function _bytes32_l1NativeToken() internal view returns (bytes32) {
         return bytes32(uint256(uint160(address(_l1NativeToken))));
+    }
+
+    function _721_mintTokens(address to, uint256 tokenId) internal {
+        // mint tokens
+        vm.prank(_tokenOwner);
+        _l1NativeToken.mint(to, tokenId);
     }
 
     function setUp() public override {
@@ -28,16 +34,15 @@ contract TestSetup_721_DepositWrappedToken is KassTestBase, ERC721Holder {
     }
 }
 
-contract Test_721_DepositWrappedToken is TestSetup_721_DepositWrappedToken {
+contract Test_721_Wrapped_Deposit is TestSetup_721_Wrapped_Deposit {
 
-    function test_721_DepositWrappedTokenToL2_1() public {
+    function test_721_wrapped_DepositToL2_1() public {
         address sender = address(this);
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
 
         // mint Token
-        vm.prank(_tokenOwner);
-        _l1NativeToken.mint(sender, tokenId);
+        _721_mintTokens(sender, tokenId);
 
         // approve kass operator
         _l1NativeToken.approve(address(_kass), tokenId);
@@ -52,20 +57,20 @@ contract Test_721_DepositWrappedToken is TestSetup_721_DepositWrappedToken {
         assertEq(_l1NativeToken.ownerOf(tokenId), address(_kass));
     }
 
-    function test_721_CannotDepositWrappedTokenToL2IfNotTokenOwner() public {
+    function test_721_wrapped_CannotDepositToL2IfNotTokenOwner() public {
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
+        address l1Rando1 = address(uint160(uint256(keccak256("rando 1"))));
 
-        // mint Token to someone else
-        vm.prank(_tokenOwner);
-        _l1NativeToken.mint(address(0x1), tokenId);
+        // mint Token
+        _721_mintTokens(l1Rando1, tokenId);
 
         // try deposit on L2
         vm.expectRevert("ERC721: caller is not token owner or approved");
         _kass.deposit(_bytes32_l1NativeToken(), l2Recipient, tokenId);
 
         // approve kass operator
-        vm.prank(address(0x1));
+        vm.prank(l1Rando1);
         _l1NativeToken.approve(address(_kass), tokenId);
 
         // try deposit on L2

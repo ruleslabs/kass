@@ -10,7 +10,7 @@ import "../KassTestBase.sol";
 
 // solhint-disable contract-name-camelcase
 
-contract TestSetup_1155_Deposit is KassTestBase, ERC1155Holder {
+contract TestSetup_1155_Wrapped_Deposit is KassTestBase, ERC1155Holder {
     KassERC1155 public _l1TokenWrapper;
 
     function setUp() public override {
@@ -32,11 +32,11 @@ contract TestSetup_1155_Deposit is KassTestBase, ERC1155Holder {
     }
 
     function _1155_basicDepositTest(
-        address sender,
         uint256 l2TokenAddress,
+        address sender,
+        uint256 l2Recipient,
         uint256 tokenId,
-        uint256 amountToDepositOnL2,
-        uint256 l2Recipient
+        uint256 amountToDepositOnL2
     ) internal {
         uint256 balance = _l1TokenWrapper.balanceOf(sender, tokenId);
 
@@ -49,9 +49,9 @@ contract TestSetup_1155_Deposit is KassTestBase, ERC1155Holder {
     }
 }
 
-contract Test_1155_Deposit is TestSetup_1155_Deposit {
+contract Test_1155_Wrapped_Deposit is TestSetup_1155_Wrapped_Deposit {
 
-    function test_1155_DepositToL2_1() public {
+    function test_1155_wrapped_DepositToL2_1() public {
         address sender = address(this);
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
@@ -62,10 +62,10 @@ contract Test_1155_Deposit is TestSetup_1155_Deposit {
         _1155_mintTokens(sender, tokenId, amountToMintOnL1);
 
         // test deposit
-        _1155_basicDepositTest(sender, L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL2, l2Recipient);
+        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountToDepositOnL2);
     }
 
-    function test_1155_DepositToL2_2() public {
+    function test_1155_wrapped_DepositToL2_2() public {
         address sender = address(this);
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
@@ -76,10 +76,10 @@ contract Test_1155_Deposit is TestSetup_1155_Deposit {
         _1155_mintTokens(sender, tokenId, amountToMintOnL1);
 
         // test deposit
-        _1155_basicDepositTest(sender, L2_TOKEN_ADDRESS, tokenId, amountToDepositOnL2, l2Recipient);
+        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountToDepositOnL2);
     }
 
-    function tes_1155t_MultipleDepositToL2() public {
+    function tes_1155_wrapped_MultipleDepositToL2() public {
         address sender = address(this);
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
@@ -90,11 +90,11 @@ contract Test_1155_Deposit is TestSetup_1155_Deposit {
         _1155_mintTokens(sender, tokenId, amountToMintOnL1);
 
         // test deposits
-        _1155_basicDepositTest(sender, L2_TOKEN_ADDRESS, tokenId, amountsToDepositOnL2[0], l2Recipient);
-        _1155_basicDepositTest(sender, L2_TOKEN_ADDRESS, tokenId, amountsToDepositOnL2[1], l2Recipient);
+        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountsToDepositOnL2[0]);
+        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountsToDepositOnL2[1]);
     }
 
-    function test_1155_CannotDepositToL2MoreThanBalance() public {
+    function test_1155_wrapped_CannotDepositToL2MoreThanBalance() public {
         address sender = address(this);
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
@@ -109,7 +109,7 @@ contract Test_1155_Deposit is TestSetup_1155_Deposit {
         _kass.deposit(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, amountToDepositOnL2);
     }
 
-    function test_1155_CannotDepositToL2Zero() public {
+    function test_1155_wrapped_CannotDepositZeroToL2() public {
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amountToDepositOnL1 = 0x0;

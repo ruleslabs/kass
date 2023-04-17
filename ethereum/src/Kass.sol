@@ -322,6 +322,12 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         cancelDeposit(tokenAddress, recipient, tokenId, 0x1, nonce);
     }
 
+    // SAFE TRANSFERS CHECK
+
+    function onERC1155Received(address operator, address, uint256, uint256, bytes memory) public view returns (bytes4) {
+        return operator == address(this) ? this.onERC1155Received.selector : bytes4(0);
+    }
+
     // INTERNALS
 
     function _isERC721(address tokenAddress) private view returns (bool) {

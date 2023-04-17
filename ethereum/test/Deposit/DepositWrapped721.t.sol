@@ -10,7 +10,7 @@ import "../KassTestBase.sol";
 
 // solhint-disable contract-name-camelcase
 
-contract TestSetup_721_DepositWrappedToken is KassTestBase, ERC721Holder {
+contract TestSetup_721_Wrapped_Deposit is KassTestBase, ERC721Holder {
     KassERC721 public _l1TokenWrapper;
 
     function setUp() public override {
@@ -26,9 +26,9 @@ contract TestSetup_721_DepositWrappedToken is KassTestBase, ERC721Holder {
     }
 }
 
-contract Test_721_DepositWrappedToken is TestSetup_721_DepositWrappedToken {
+contract Test_721_Wrapped_Deposit is TestSetup_721_Wrapped_Deposit {
 
-    function test_721_DepositWrappedTokenToL2_1() public {
+    function test_721_wrapped_DepositToL2_1() public {
         address sender = address(this);
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
@@ -48,7 +48,7 @@ contract Test_721_DepositWrappedToken is TestSetup_721_DepositWrappedToken {
         _l1TokenWrapper.ownerOf(tokenId);
     }
 
-    function test_721_CannotDepositWrappedTokenToL2IfNotTokenOwner() public {
+    function test_721_wrapped_CannotDepositToL2IfNotTokenOwner() public {
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
 
