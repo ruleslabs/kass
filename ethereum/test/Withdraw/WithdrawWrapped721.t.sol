@@ -3,12 +3,12 @@
 pragma solidity ^0.8.19;
 
 import "../../src/KassUtils.sol";
-import "../../src/factory/KassERC1155.sol";
+import "../../src/factory/KassERC721.sol";
 import "../KassTestBase.sol";
 
 // solhint-disable contract-name-camelcase
 
-contract TestSetup_721_Withdraw is KassTestBase {
+contract TestSetup_721_Wrapped_Withdraw is KassTestBase {
     KassERC721 public _l1TokenWrapper;
 
     function setUp() public override {
@@ -44,30 +44,30 @@ contract TestSetup_721_Withdraw is KassTestBase {
     }
 }
 
-contract Test_721_Withdraw is TestSetup_721_Withdraw {
+contract Test_721_Wrapped_Withdraw is TestSetup_721_Wrapped_Withdraw {
 
-    function test_721_BasicWithdrawFromL2_1() public {
+    function test_721_wrapped_BasicWithdrawFromL2_1() public {
         address l1Recipient = address(uint160(uint256(keccak256("rando 1"))));
         uint256 tokenId = uint256(keccak256("token 1"));
 
         _721_basicWithdrawTest(L2_TOKEN_ADDRESS, l1Recipient, tokenId);
     }
 
-    function test_721_BasicWithdrawFromL2_2() public {
+    function test_721_wrapped_BasicWithdrawFromL2_2() public {
         address l1Recipient = address(uint160(uint256(keccak256("rando 2"))));
         uint256 tokenId = 0x2;
 
         _721_basicWithdrawTest(L2_TOKEN_ADDRESS, l1Recipient, tokenId);
     }
 
-    function test_721_BasicWithdrawFromL2_3() public {
+    function test_721_wrapped_BasicWithdrawFromL2_3() public {
         address l1Recipient = address(uint160(uint256(keccak256("rando 3"))));
         uint256 tokenId = 0x2 << UINT256_PART_SIZE_BITS;
 
         _721_basicWithdrawTest(L2_TOKEN_ADDRESS, l1Recipient, tokenId);
     }
 
-    function test_CannotWithdrawFromL2Twice() public {
+    function test_wrapped_CannotWithdrawFromL2Twice() public {
         address l1Recipient = address(uint160(uint256(keccak256("rando 1"))));
         uint256 tokenId = uint256(keccak256("token 1"));
 
