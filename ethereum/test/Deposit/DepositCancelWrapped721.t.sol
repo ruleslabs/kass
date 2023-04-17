@@ -8,22 +8,11 @@ import "../../src/KassUtils.sol";
 import "../../src/factory/KassERC721.sol";
 import "../KassTestBase.sol";
 
+import "./DepositWrapped721.t.sol";
+
 // solhint-disable contract-name-camelcase
 
-contract TestSetup_721_DepositCancel is KassTestBase, ERC721Holder {
-    KassERC721 public _l1TokenWrapper;
-
-    function setUp() public override {
-        super.setUp();
-
-        // request and create L1 instance
-        uint256[] memory messagePayload = requestL1WrapperCreation(
-            L2_TOKEN_ADDRESS,
-            L2_TOKEN_NAME_AND_SYMBOL,
-            TokenStandard.ERC721
-        );
-        _l1TokenWrapper = KassERC721(_kass.createL1Wrapper(messagePayload));
-    }
+contract TestSetup_721_Wrapped_DepositCancel is TestSetup_721_Wrapped_Deposit {
 
     function _721_mintAndDepositBackOnL2(
         uint256 l2TokenAddress,
@@ -34,8 +23,7 @@ contract TestSetup_721_DepositCancel is KassTestBase, ERC721Holder {
         address sender = address(this);
 
         // mint tokens
-        vm.prank(address(_kass));
-        _l1TokenWrapper.mint(sender, tokenId);
+        _721_mintTokens(sender, tokenId);
 
         // deposit tokens on L2
         expectDepositOnL2(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, 0x1, nonce);
@@ -74,9 +62,9 @@ contract TestSetup_721_DepositCancel is KassTestBase, ERC721Holder {
     }
 }
 
-contract Test_721_DepositCancel is TestSetup_721_DepositCancel {
+contract Test_721_Wrapped_DepositCancel is TestSetup_721_Wrapped_DepositCancel {
 
-    function test_721_DepositCancel_1() public {
+    function test_721_wrapped_DepositCancel_1() public {
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 nonce = uint256(keccak256("huge nonce"));
@@ -84,7 +72,7 @@ contract Test_721_DepositCancel is TestSetup_721_DepositCancel {
         _721_basicDepositCancelTest(L2_TOKEN_ADDRESS, l2Recipient, tokenId, nonce);
     }
 
-    function test_721_DepositCancel_2() public {
+    function test_721_wrapped_DepositCancel_2() public {
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 nonce = 0x0;
@@ -92,7 +80,7 @@ contract Test_721_DepositCancel is TestSetup_721_DepositCancel {
         _721_basicDepositCancelTest(L2_TOKEN_ADDRESS, l2Recipient, tokenId, nonce);
     }
 
-    function test_721_CannotRequestDepositCancelForAnotherDepositor() public {
+    function test_721_wrapped_CannotRequestDepositCancelForAnotherDepositor() public {
         address fakeSender = address(uint160(uint256(keccak256("rando 1"))));
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
@@ -105,7 +93,7 @@ contract Test_721_DepositCancel is TestSetup_721_DepositCancel {
         _kass.requestDepositCancel(bytes32(L2_TOKEN_ADDRESS),l2Recipient, tokenId, nonce);
     }
 
-    function test_721_CannotRequestDepositCancelForUnknownDeposit() public {
+    function test_721_wrapped_CannotRequestDepositCancelForUnknownDeposit() public {
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 nonce = 0x0;

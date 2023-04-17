@@ -24,6 +24,12 @@ contract TestSetup_721_Wrapped_Deposit is KassTestBase, ERC721Holder {
         );
         _l1TokenWrapper = KassERC721(_kass.createL1Wrapper(messagePayload));
     }
+
+    function _721_mintTokens(address to, uint256 tokenId) internal {
+        // mint tokens
+        vm.prank(address(_kass));
+        _l1TokenWrapper.mint(to, tokenId);
+    }
 }
 
 contract Test_721_Wrapped_Deposit is TestSetup_721_Wrapped_Deposit {
@@ -34,8 +40,7 @@ contract Test_721_Wrapped_Deposit is TestSetup_721_Wrapped_Deposit {
         uint256 tokenId = uint256(keccak256("token 1"));
 
         // mint Token
-        vm.prank(address(_kass));
-        _l1TokenWrapper.mint(sender, tokenId);
+        _721_mintTokens(sender, tokenId);
 
         // assert token owner is sender
         assertEq(_l1TokenWrapper.ownerOf(tokenId), sender);
@@ -53,8 +58,7 @@ contract Test_721_Wrapped_Deposit is TestSetup_721_Wrapped_Deposit {
         uint256 tokenId = uint256(keccak256("token 1"));
 
         // mint Token to someone else
-        vm.prank(address(_kass));
-        _l1TokenWrapper.mint(address(0x1), tokenId);
+        _721_mintTokens(address(0x1), tokenId);
 
         // try deposit on L2
         vm.expectRevert("You do not own this token");

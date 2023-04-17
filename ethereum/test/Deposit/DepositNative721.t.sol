@@ -10,18 +10,12 @@ import "../KassTestBase.sol";
 
 // solhint-disable contract-name-camelcase
 
-contract TestSetup_721_Wrapped_Deposit is KassTestBase, ERC721Holder {
+contract TestSetup_721_Native_Deposit is KassTestBase, ERC721Holder {
     KassERC721 public _l1NativeToken;
     address public _tokenOwner = address(uint160(uint256(keccak256("owner"))));
 
     function _bytes32_l1NativeToken() internal view returns (bytes32) {
         return bytes32(uint256(uint160(address(_l1NativeToken))));
-    }
-
-    function _721_mintTokens(address to, uint256 tokenId) internal {
-        // mint tokens
-        vm.prank(_tokenOwner);
-        _l1NativeToken.mint(to, tokenId);
     }
 
     function setUp() public override {
@@ -32,9 +26,15 @@ contract TestSetup_721_Wrapped_Deposit is KassTestBase, ERC721Holder {
         _l1NativeToken.initialize(abi.encode(L2_TOKEN_NAME, L2_TOKEN_SYMBOL));
         vm.stopPrank();
     }
+
+    function _721_mintTokens(address to, uint256 tokenId) internal {
+        // mint tokens
+        vm.prank(_tokenOwner);
+        _l1NativeToken.mint(to, tokenId);
+    }
 }
 
-contract Test_721_Wrapped_Deposit is TestSetup_721_Wrapped_Deposit {
+contract Test_721_Native_Deposit is TestSetup_721_Native_Deposit {
 
     function test_721_wrapped_DepositToL2_1() public {
         address sender = address(this);
