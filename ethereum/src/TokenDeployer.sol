@@ -68,11 +68,15 @@ abstract contract TokenDeployer is KassStorage {
         }
     }
 
-    function getL1TokenAddres(bytes32 nativeTokenAddress) internal view returns (address l1TokenAddress) {
+    function getL1TokenAddres(
+        bytes32 nativeTokenAddress
+    ) internal view returns (address l1TokenAddress, bool isNative) {
         if (Address.isContract(address(uint160(uint256(nativeTokenAddress))))) {
             l1TokenAddress = address(uint160(uint256(nativeTokenAddress)));
+            isNative = true;
         } else {
             l1TokenAddress = computeL1TokenAddress(uint256(nativeTokenAddress));
+            isNative = false;
         }
     }
 

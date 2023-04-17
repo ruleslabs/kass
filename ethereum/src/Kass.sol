@@ -205,21 +205,10 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         uint256 amount
     ) public {
         // get l1 token address (native or wrapper)
-        address l1TokenAddress = getL1TokenAddres(tokenAddress);
+        (address l1TokenAddress, bool isNative) = getL1TokenAddres(tokenAddress);
 
-        // TODO: token tranfer for L1 native tokens
         // burn or tranfer tokens
-        if (_isERC721(l1TokenAddress)) {
-            // check if sender is owner before burning
-            require(KassERC721(l1TokenAddress).ownerOf(tokenId) == _msgSender(), "You do not own this token");
-
-            KassERC721(l1TokenAddress).burn(tokenId);
-        } else if (_isERC1155(l1TokenAddress)) {
-            require(amount > 0, "Cannot deposit null amount");
-            KassERC1155(l1TokenAddress).burn(_msgSender(), tokenId, amount);
-        } else {
-            revert("Kass: Unkown token standard");
-        }
+        _lockTokens(l1TokenAddress, tokenId, amount, isNative);
 
         // compute l2 Wrapper Creation message payload and send it
         (uint256[] memory payload, uint256 handlerSelector) = computeTokenDepositMessagePayload(
@@ -251,19 +240,16 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         DepositRequest memory depositRequest = parseDepositRequestMessagePayload(messagePayload);
 
         // get l1 token address (native or wrapper)
-        address l1TokenAddress = getL1TokenAddres(depositRequest.tokenAddress);
+        (address l1TokenAddress, bool isNative) = getL1TokenAddres(depositRequest.tokenAddress);
 
-        // TODO: token tranfer for L1 native tokens
         // mint or tranfer tokens
-        if (depositRequest.tokenStandard == TokenStandard.ERC721) {
-            KassERC721(l1TokenAddress).mint(depositRequest.recipient, depositRequest.tokenId);
-        } else if (depositRequest.tokenStandard == TokenStandard.ERC1155) {
-            require(depositRequest.amount > 0, "Cannot withdraw null amount");
-
-            KassERC1155(l1TokenAddress).mint(depositRequest.recipient, depositRequest.tokenId, depositRequest.amount);
-        } else {
-            revert("Kass: Unkown token standard");
-        }
+        _unlockTokens(
+            l1TokenAddress,
+            depositRequest.recipient,
+            depositRequest.tokenId,
+            depositRequest.amount,
+            isNative
+        );
 
         // emit event
         emit LogWithdrawal(
@@ -324,17 +310,10 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
         );
         _state.starknetMessaging.cancelL1ToL2Message(_state.l2KassAddress, handlerSelector, payload, nonce);
 
-        address l1TokenAddress = getL1TokenAddres(tokenAddress);
+        (address l1TokenAddress, bool isNative) = getL1TokenAddres(tokenAddress);
 
-        // TODO: token tranfer for L1 native tokens
         // mint or tranfer tokens
-        if (_isERC721(l1TokenAddress)) {
-            KassERC721(l1TokenAddress).mint(_msgSender(), tokenId);
-        } else if (_isERC1155(l1TokenAddress)) {
-            KassERC1155(l1TokenAddress).mint(_msgSender(), tokenId, amount);
-        } else {
-            revert("Kass: Unkown token standard");
-        }
+        _unlockTokens(l1TokenAddress, _msgSender(), tokenId, amount, isNative);
 
         emit LogDepositCancel(tokenAddress, _msgSender(), recipient, tokenId, amount, nonce);
     }
@@ -351,6 +330,57 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
 
     function _isERC1155(address tokenAddress) private view returns (bool) {
         return ERC165(tokenAddress).supportsInterface(type(IERC1155).interfaceId);
+    }
+
+    function _lockTokens(address tokenAddress, uint256 tokenId, uint256 amount, bool isNative) private {
+        // burn or tranfer tokens
+        if (_isERC721(tokenAddress)) {
+            if (isNative) {
+                KassERC721(tokenAddress).transferFrom(_msgSender(), address(this), tokenId);
+            } else {
+                // check if sender is owner before burning
+                require(KassERC721(tokenAddress).ownerOf(tokenId) == _msgSender(), "You do not own this token");
+
+                KassERC721(tokenAddress).burn(tokenId);
+            }
+        } else if (_isERC1155(tokenAddress)) {
+            require(amount > 0, "Cannot deposit null amount");
+
+            if (isNative) {
+                KassERC1155(tokenAddress).safeTransferFrom(_msgSender(), address(this), tokenId, amount, "");
+            } else {
+                KassERC1155(tokenAddress).burn(_msgSender(), tokenId, amount);
+            }
+        } else {
+            revert("Kass: Unkown token standard");
+        }
+    }
+
+    function _unlockTokens(
+        address tokenAddress,
+        address recipient,
+        uint256 tokenId,
+        uint256 amount,
+        bool isNative
+    ) private {
+        // burn or tranfer tokens
+        if (_isERC721(tokenAddress)) {
+            if (isNative) {
+                KassERC721(tokenAddress).transferFrom(address(this), recipient, tokenId);
+            } else {
+                KassERC721(tokenAddress).mint(recipient, tokenId);
+            }
+        } else if (_isERC1155(tokenAddress)) {
+            require(amount > 0, "Cannot withdraw null amount");
+
+            if (isNative) {
+                KassERC1155(tokenAddress).safeTransferFrom(address(this), recipient, tokenId, amount, "");
+            } else {
+                KassERC1155(tokenAddress).mint(recipient, tokenId, amount);
+            }
+        } else {
+            revert("Kass: Unkown token standard");
+        }
     }
 
     fallback() external payable { revert("unsupported"); }
