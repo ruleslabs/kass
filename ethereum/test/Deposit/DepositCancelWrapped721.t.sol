@@ -4,9 +4,9 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 
-import "../src/KassUtils.sol";
-import "../src/factory/KassERC721.sol";
-import "./KassTestBase.sol";
+import "../../src/KassUtils.sol";
+import "../../src/factory/KassERC721.sol";
+import "../KassTestBase.sol";
 
 // solhint-disable contract-name-camelcase
 
@@ -38,7 +38,7 @@ contract TestSetup_721_DepositCancel is KassTestBase, ERC721Holder {
         _l1TokenWrapper.mint(sender, tokenId);
 
         // deposit tokens on L2
-        expectDepositOnL2(l2TokenAddress, sender, l2Recipient, tokenId, 0x1, nonce);
+        expectDepositOnL2(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, 0x1, nonce);
         _kass.deposit(bytes32(l2TokenAddress), l2Recipient, tokenId);
 
         // check if there's no owner
@@ -58,7 +58,7 @@ contract TestSetup_721_DepositCancel is KassTestBase, ERC721Holder {
         _721_mintAndDepositBackOnL2(l2TokenAddress, l2Recipient, tokenId, nonce);
 
         // deposit cancel request
-        expectDepositCancelRequest(l2TokenAddress, sender, l2Recipient, tokenId, 0x1, nonce);
+        expectDepositCancelRequest(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, 0x1, nonce);
         _kass.requestDepositCancel(bytes32(l2TokenAddress), l2Recipient, tokenId, nonce);
 
         // check if there's still no owner
@@ -66,7 +66,7 @@ contract TestSetup_721_DepositCancel is KassTestBase, ERC721Holder {
         _l1TokenWrapper.ownerOf(tokenId);
 
         // deposit cancel request
-        expectDepositCancel(l2TokenAddress, sender, l2Recipient, tokenId, 0x1, nonce);
+        expectDepositCancel(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, 0x1, nonce);
         _kass.cancelDeposit(bytes32(l2TokenAddress), l2Recipient, tokenId, nonce);
 
         // check if owner is correct

@@ -4,8 +4,8 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
-import "../src/KassUtils.sol";
-import "./KassTestBase.sol";
+import "../../src/KassUtils.sol";
+import "../KassTestBase.sol";
 
 // solhint-disable contract-name-camelcase
 

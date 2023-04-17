@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.19;
 
-import "../src/KassUtils.sol";
-import "../src/factory/KassERC1155.sol";
-import "./KassTestBase.sol";
+import "../../src/KassUtils.sol";
+import "../../src/factory/KassERC1155.sol";
+import "../KassTestBase.sol";
 
 // solhint-disable contract-name-camelcase
 
@@ -34,13 +34,13 @@ contract WithdrawTestSetup is KassTestBase {
 
         // deposit from L2 and withdraw to L1
        uint256[] memory messagePayload = depositOnL1(
-            l2TokenAddress,
+            bytes32(l2TokenAddress),
             l1Recipient,
             tokenId,
             amount,
             TokenStandard.ERC1155
         );
-        expectWithdrawOnL1(l2TokenAddress, l1Recipient, tokenId, amount, TokenStandard.ERC1155);
+        expectWithdrawOnL1(bytes32(l2TokenAddress), l1Recipient, tokenId, amount, TokenStandard.ERC1155);
         _kass.withdraw(messagePayload);
 
         // assert balance was updated
@@ -81,7 +81,7 @@ contract WithdrawTest is WithdrawTestSetup {
 
         // deposit from L2
         uint256[] memory messagePayload = depositOnL1(
-            L2_TOKEN_ADDRESS,
+            bytes32(L2_TOKEN_ADDRESS),
             l1Recipient,
             tokenId,
             amount,
@@ -89,7 +89,7 @@ contract WithdrawTest is WithdrawTestSetup {
         );
 
         // withdraw
-        expectWithdrawOnL1(L2_TOKEN_ADDRESS, l1Recipient, tokenId, amount, TokenStandard.ERC1155);
+        expectWithdrawOnL1(bytes32(L2_TOKEN_ADDRESS), l1Recipient, tokenId, amount, TokenStandard.ERC1155);
         _kass.withdraw(messagePayload);
 
         vm.clearMockedCalls();
@@ -104,7 +104,7 @@ contract WithdrawTest is WithdrawTestSetup {
 
         // deposit from L2
         uint256[] memory messagePayload = depositOnL1(
-            L2_TOKEN_ADDRESS,
+            bytes32(L2_TOKEN_ADDRESS),
             l1Recipient,
             tokenId,
             amount,

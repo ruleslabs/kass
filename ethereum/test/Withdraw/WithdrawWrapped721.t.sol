@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.19;
 
-import "../src/KassUtils.sol";
-import "../src/factory/KassERC1155.sol";
-import "./KassTestBase.sol";
+import "../../src/KassUtils.sol";
+import "../../src/factory/KassERC1155.sol";
+import "../KassTestBase.sol";
 
 // solhint-disable contract-name-camelcase
 
@@ -29,8 +29,14 @@ contract TestSetup_721_Withdraw is KassTestBase {
         _l1TokenWrapper.ownerOf(tokenId);
 
         // deposit from L2 and withdraw to L1
-        uint256[] memory messagePayload = depositOnL1(l2TokenAddress, l1Recipient, tokenId, 0, TokenStandard.ERC721);
-        expectWithdrawOnL1(l2TokenAddress, l1Recipient, tokenId, 0, TokenStandard.ERC721);
+        uint256[] memory messagePayload = depositOnL1(
+            bytes32(l2TokenAddress),
+            l1Recipient,
+            tokenId,
+            0,
+            TokenStandard.ERC721
+        );
+        expectWithdrawOnL1(bytes32(l2TokenAddress), l1Recipient, tokenId, 0, TokenStandard.ERC721);
         _kass.withdraw(messagePayload);
 
         // assert token owner is l1Recipient
@@ -67,7 +73,7 @@ contract Test_721_Withdraw is TestSetup_721_Withdraw {
 
         // deposit from L2
         uint256[] memory messagePayload = depositOnL1(
-            L2_TOKEN_ADDRESS,
+            bytes32(L2_TOKEN_ADDRESS),
             l1Recipient,
             tokenId,
             0,
@@ -75,7 +81,7 @@ contract Test_721_Withdraw is TestSetup_721_Withdraw {
         );
 
         // withdraw
-        expectWithdrawOnL1(L2_TOKEN_ADDRESS, l1Recipient, tokenId, 0, TokenStandard.ERC721);
+        expectWithdrawOnL1(bytes32(L2_TOKEN_ADDRESS), l1Recipient, tokenId, 0, TokenStandard.ERC721);
         _kass.withdraw(messagePayload);
 
         vm.clearMockedCalls();

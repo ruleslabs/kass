@@ -4,8 +4,8 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 
-import "../src/factory/KassERC1967Proxy.sol";
-import "../src/factory/KassERC1155.sol";
+import "../../src/factory/KassERC1967Proxy.sol";
+import "../../src/factory/KassERC1155.sol";
 
 // solhint-disable contract-name-camelcase
 

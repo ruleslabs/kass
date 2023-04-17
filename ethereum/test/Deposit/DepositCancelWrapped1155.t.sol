@@ -4,9 +4,9 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 
-import "../src/KassUtils.sol";
-import "../src/factory/KassERC1155.sol";
-import "./KassTestBase.sol";
+import "../../src/KassUtils.sol";
+import "../../src/factory/KassERC1155.sol";
+import "../KassTestBase.sol";
 
 // solhint-disable contract-name-camelcase
 
@@ -41,7 +41,7 @@ contract TestSetup_1155_DepositCancel is KassTestBase, ERC1155Holder {
         _l1TokenWrapper.mint(sender, tokenId, amount);
 
         // deposit tokens on L2
-        expectDepositOnL2(l2TokenAddress, sender, l2Recipient, tokenId, amount, nonce);
+        expectDepositOnL2(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amount, nonce);
         _kass.deposit(bytes32(l2TokenAddress), l2Recipient, tokenId, amount);
 
         // check if balance is correct
@@ -63,14 +63,14 @@ contract TestSetup_1155_DepositCancel is KassTestBase, ERC1155Holder {
         _1155_mintAndDepositBackOnL2(l2TokenAddress, l2Recipient, tokenId, amount, nonce);
 
         // deposit cancel request
-        expectDepositCancelRequest(l2TokenAddress, sender, l2Recipient, tokenId, amount, nonce);
+        expectDepositCancelRequest(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amount, nonce);
         _kass.requestDepositCancel(bytes32(l2TokenAddress), l2Recipient, tokenId, amount, nonce);
 
         // check if balance still the same
         assertEq(_l1TokenWrapper.balanceOf(sender, tokenId), balance);
 
         // deposit cancel request
-        expectDepositCancel(l2TokenAddress, sender, l2Recipient, tokenId, amount, nonce);
+        expectDepositCancel(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amount, nonce);
         _kass.cancelDeposit(bytes32(l2TokenAddress), l2Recipient, tokenId, amount, nonce);
 
         // check if balance was updated

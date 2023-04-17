@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.19;
 
-import "../src/factory/KassERC1155.sol";
-import "../src/factory/KassERC1967Proxy.sol";
-import "../src/KassUtils.sol";
-import "../src/mocks/UpgradedContractMock.sol";
-import "./KassTestBase.sol";
+import "../../src/factory/KassERC1155.sol";
+import "../../src/factory/KassERC1967Proxy.sol";
+import "../../src/KassUtils.sol";
+import "../../src/mocks/UpgradedContractMock.sol";
+import "../KassTestBase.sol";
 
 // solhint-disable contract-name-camelcase
 

@@ -141,15 +141,15 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
     }
 
     function depositOnL1(
-        uint256 l2TokenAddress,
-        address l1Recipient,
+        bytes32 tokenAddress,
+        address recipient,
         uint256 tokenId,
         uint256 amount,
         TokenStandard tokenStandard
     ) internal returns (uint256[] memory messagePayload) {
         messagePayload = _computeTokenDepositOnL1MessagePayload(
-            l2TokenAddress,
-            l1Recipient,
+            tokenAddress,
+            recipient,
             tokenId,
             amount,
             tokenStandard
@@ -255,16 +255,16 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
     }
 
     function expectDepositOnL2(
-        uint256 l2TokenAddress,
+        bytes32 tokenAddress,
         address sender,
-        uint256 l2Recipient,
+        uint256 recipient,
         uint256 tokenId,
         uint256 amount,
         uint256 nonce
     ) internal {
         (uint256[] memory payload, uint256 handlerSelector) = computeTokenDepositMessagePayload(
-            bytes32(l2TokenAddress),
-            l2Recipient,
+            tokenAddress,
+            recipient,
             tokenId,
             amount
         );
@@ -286,19 +286,19 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         );
 
         vm.expectEmit(true, true, true, true, address(_kass));
-        emit LogDeposit(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amount);
+        emit LogDeposit(tokenAddress, sender, recipient, tokenId, amount);
     }
 
     function expectWithdrawOnL1(
-        uint256 l2TokenAddress,
-        address l1Recipient,
+        bytes32 tokenAddress,
+        address recipient,
         uint256 tokenId,
         uint256 amount,
         TokenStandard tokenStandard
     ) internal returns (uint256[] memory messagePayload) {
         messagePayload = _computeTokenDepositOnL1MessagePayload(
-            l2TokenAddress,
-            l1Recipient,
+            tokenAddress,
+            recipient,
             tokenId,
             amount,
             tokenStandard
@@ -314,21 +314,21 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         vm.expectCall(_starknetMessagingAddress, messageCalldata);
 
         vm.expectEmit(true, true, true, true, address(_kass));
-        emit LogWithdrawal(bytes32(l2TokenAddress), l1Recipient, tokenId, amount);
+        emit LogWithdrawal(tokenAddress, recipient, tokenId, amount);
     }
 
     // cannot test nonce logic since it's handled by the starknet messaging contract.
     function expectDepositCancelRequest(
-        uint256 l2TokenAddress,
+        bytes32 tokenAddress,
         address sender,
-        uint256 l2Recipient,
+        uint256 recipient,
         uint256 tokenId,
         uint256 amount,
         uint256 nonce
     ) internal {
         (uint256[] memory payload, uint256 handlerSelector) = computeTokenDepositMessagePayload(
-            bytes32(l2TokenAddress),
-            l2Recipient,
+            tokenAddress,
+            recipient,
             tokenId,
             amount
         );
@@ -345,21 +345,21 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
         // expect event
         vm.expectEmit(true, true, true, true, address(_kass));
-        emit LogDepositCancelRequest(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amount, nonce);
+        emit LogDepositCancelRequest(tokenAddress, sender, recipient, tokenId, amount, nonce);
     }
 
     // cannot test nonce logic since it's handled by the starknet messaging contract.
     function expectDepositCancel(
-        uint256 l2TokenAddress,
+        bytes32 tokenAddress,
         address sender,
-        uint256 l2Recipient,
+        uint256 recipient,
         uint256 tokenId,
         uint256 amount,
         uint256 nonce
     ) internal {
         (uint256[] memory payload, uint256 handlerSelector) = computeTokenDepositMessagePayload(
-            bytes32(l2TokenAddress),
-            l2Recipient,
+            tokenAddress,
+            recipient,
             tokenId,
             amount
         );
@@ -376,7 +376,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
         // expect event
         vm.expectEmit(true, true, true, true, address(_kass));
-        emit LogDepositCancel(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amount, nonce);
+        emit LogDepositCancel(tokenAddress, sender, recipient, tokenId, amount, nonce);
     }
 
     // INTERNALS
@@ -406,8 +406,8 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
     }
 
     function _computeTokenDepositOnL1MessagePayload(
-        uint256 l2TokenAddress,
-        address l1Recipient,
+        bytes32 tokenAddress,
+        address recipient,
         uint256 tokenId,
         uint256 amount,
         TokenStandard tokenStandard
@@ -425,9 +425,9 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
             revert("Kass: Unkown token standard");
         }
 
-        payload[1] = l2TokenAddress;
+        payload[1] = uint256(tokenAddress);
 
-        payload[2] = uint256(uint160(l1Recipient));
+        payload[2] = uint256(uint160(recipient));
 
         payload[3] = uint128(tokenId & (UINT256_PART_SIZE - 1)); // low
         payload[4] = uint128(tokenId >> UINT256_PART_SIZE_BITS); // high

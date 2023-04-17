@@ -4,9 +4,9 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 
-import "../src/KassUtils.sol";
-import "../src/factory/KassERC1155.sol";
-import "./KassTestBase.sol";
+import "../../src/KassUtils.sol";
+import "../../src/factory/KassERC1155.sol";
+import "../KassTestBase.sol";
 
 // solhint-disable contract-name-camelcase
 
@@ -41,7 +41,7 @@ contract TestSetup_1155_Deposit is KassTestBase, ERC1155Holder {
         uint256 balance = _l1TokenWrapper.balanceOf(sender, tokenId);
 
         // deposit on L2
-        expectDepositOnL2(l2TokenAddress, sender, l2Recipient, tokenId, amountToDepositOnL2, 0x0);
+        expectDepositOnL2(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amountToDepositOnL2, 0x0);
         _kass.deposit(bytes32(l2TokenAddress), l2Recipient, tokenId, amountToDepositOnL2);
 
         // check if balance was updated
