@@ -18,7 +18,7 @@ contract StarknetMessagingMock is IStarknetMessaging {
         uint256 toAddress,
         uint256 selector,
         uint256[] calldata payload
-    ) external returns (bytes32, uint256) { }
+    ) external payable returns (bytes32, uint256) { }
 
     function startL1ToL2MessageCancellation(
         uint256 toAddress,

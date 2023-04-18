@@ -152,12 +152,12 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
 
     // INSTANCE CREATION REQUEST
 
-    function requestL2Wrapper(address tokenAddress) public {
+    function requestL2Wrapper(address tokenAddress) public payable {
         // assert tokenAddress is not a wrapper
         require(isNativeToken(tokenAddress), "Kass: Double wrap not allowed");
 
         // send l2 Wrapper Creation message
-        _sendL2WrapperRequestMessage(tokenAddress);
+        _sendL2WrapperRequestMessage(tokenAddress, msg.value);
 
         // emit event
         emit LogL2WrapperRequested(tokenAddress);
@@ -181,13 +181,13 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
 
     // OWNERSHIP REQUEST
 
-    function requestL2Ownership(address l1TokenAddress, uint256 l2Owner) public {
+    function requestL2Ownership(address l1TokenAddress, uint256 l2Owner) public payable {
         // assert L1 token owner is sender
         address l1Owner = Ownable(l1TokenAddress).owner();
         require(l1Owner == _msgSender(), "Sender is not the owner");
 
         // send L2 wrapper request message
-        _sendL2OwnershipClaimMessage(l1TokenAddress, l2Owner);
+        _sendL2OwnershipClaimMessage(l1TokenAddress, l2Owner, msg.value);
 
         // emit event
         emit LogL2OwnershipClaimed(l1TokenAddress, l2Owner);
@@ -200,7 +200,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         uint256 recipient,
         uint256 tokenId,
         uint256 amount
-    ) public {
+    ) public payable {
         // get l1 token address (native or wrapper)
         (address l1TokenAddress, bool isNative) = getL1TokenAddres(tokenAddress);
 
@@ -208,7 +208,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         _lockTokens(l1TokenAddress, tokenId, amount, isNative);
 
         // send l2 Wrapper Creation message
-        uint256 nonce = _sendTokenDepositMessage(tokenAddress, recipient, tokenId, amount);
+        uint256 nonce = _sendTokenDepositMessage(tokenAddress, recipient, tokenId, amount, msg.value);
 
         // save depositor
         _state.depositors[nonce] = _msgSender();

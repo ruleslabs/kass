@@ -99,11 +99,10 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
         payload[0] = uint160(tokenAddress);
     }
 
-    function _sendL2WrapperRequestMessage(address tokenAddress) internal {
+    function _sendL2WrapperRequestMessage(address tokenAddress, uint256 fee) internal {
         (uint256[] memory payload, uint256 handlerSelector) = _computeL2WrapperRequestMessage(tokenAddress);
 
-        // send message
-        _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, handlerSelector, payload);
+        _sendMessage(handlerSelector, payload, fee);
     }
 
     // L1 OWNERSHIP CLAIM
@@ -145,11 +144,10 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
         handlerSelector = OWNERSHIP_CLAIM_HANDLER_SELECTOR;
     }
 
-    function _sendL2OwnershipClaimMessage(address l1TokenAddress, uint256 l2Owner) internal {
+    function _sendL2OwnershipClaimMessage(address l1TokenAddress, uint256 l2Owner, uint256 fee) internal {
         (uint256[] memory payload, uint256 handlerSelector) = _computeL2OwnershipClaimMessage(l1TokenAddress, l2Owner);
 
-        // send message
-        _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, handlerSelector, payload);
+        _sendMessage(handlerSelector, payload, fee);
     }
 
     // DEPOSIT ON L2
@@ -179,7 +177,8 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
         bytes32 tokenAddress,
         uint256 recipient,
         uint256 tokenId,
-        uint256 amount
+        uint256 amount,
+        uint256 fee
     ) internal returns (uint256) {
         (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
             tokenAddress,
@@ -188,9 +187,7 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
             amount
         );
 
-        // send message
-        (, uint256 nonce) = _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, handlerSelector, payload);
-        return nonce;
+        return _sendMessage(handlerSelector, payload, fee);
     }
 
     function _startL1ToL2TokenDepositMessageCancellation(
@@ -229,5 +226,22 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
 
     function _consumeWithdrawMessage(uint256[] calldata payload) internal {
         _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);
+    }
+
+    // MESSAGE SENDER
+
+    function _sendMessage(
+        uint256 handlerSelector,
+        uint256[] memory payload,
+        uint256 fee
+    ) private returns (uint256) {
+        require(msg.value >= fee, "Kass: Insufficent L1 -> L2 fee");
+
+        (, uint256 nonce) = _state.starknetMessaging.sendMessageToL2{ value: fee }(
+            _state.l2KassAddress,
+            handlerSelector,
+            payload
+        );
+        return nonce;
     }
 }
