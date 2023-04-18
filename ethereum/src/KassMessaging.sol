@@ -10,8 +10,9 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "./StarknetConstants.sol";
 import "./KassStructs.sol";
 import "./KassUtils.sol";
+import "./KassStorage.sol";
 
-abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
+abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
 
     // PARSE
 
@@ -62,9 +63,15 @@ abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
         }
     }
 
-    // COMPUTE
+    // L1 WRAPPER REQUEST
 
-    function computeL2WrapperRequestMessagePayload(
+    function _consumeL1WrapperRequestMessage(uint256[] calldata payload) internal {
+        _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);
+    }
+
+    // L2 WRAPPER REQUEST
+
+    function _computeL2WrapperRequestMessage(
         address tokenAddress
     ) internal view returns (uint256[] memory payload, uint256 handlerSelector) {
         if (ERC165(tokenAddress).supportsInterface(type(IERC721).interfaceId)) {
@@ -92,7 +99,16 @@ abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
         payload[0] = uint160(tokenAddress);
     }
 
-    function computeL1OwnershipClaimMessagePayload(
+    function _sendL2WrapperRequestMessage(address tokenAddress) internal {
+        (uint256[] memory payload, uint256 handlerSelector) = _computeL2WrapperRequestMessage(tokenAddress);
+
+        // send message
+        _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, handlerSelector, payload);
+    }
+
+    // L1 OWNERSHIP CLAIM
+
+    function _computeL1OwnershipClaimMessage(
         uint256 l2TokenAddress,
         address l1Owner
     ) internal pure returns (uint256[] memory payload) {
@@ -107,7 +123,14 @@ abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
         payload[2] = uint256(uint160(l1Owner));
     }
 
-    function computeL2OwnershipClaimMessagePayload(
+    function _consumeL1OwnershipClaimMessage(uint256 l2TokenAddress, address l1Owner) internal {
+        uint256[] memory payload = _computeL1OwnershipClaimMessage(l2TokenAddress, l1Owner);
+        _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);
+    }
+
+    // L2 OWNERSHIP CLAIM
+
+    function _computeL2OwnershipClaimMessage(
         address l1TokenAddress,
         uint256 l2Owner
     ) internal pure returns (uint256[] memory payload, uint256 handlerSelector) {
@@ -122,7 +145,16 @@ abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
         handlerSelector = OWNERSHIP_CLAIM_HANDLER_SELECTOR;
     }
 
-    function computeTokenDepositMessagePayload(
+    function _sendL2OwnershipClaimMessage(address l1TokenAddress, uint256 l2Owner) internal {
+        (uint256[] memory payload, uint256 handlerSelector) = _computeL2OwnershipClaimMessage(l1TokenAddress, l2Owner);
+
+        // send message
+        _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, handlerSelector, payload);
+    }
+
+    // DEPOSIT ON L2
+
+    function _computeTokenDepositOnL2Message(
         bytes32 tokenAddress,
         uint256 recipient,
         uint256 tokenId,
@@ -141,5 +173,61 @@ abstract contract KassMessagingPayloads is StarknetConstants, KassStructs {
         payload[5] = uint128(amount >> UINT256_PART_SIZE_BITS); // high
 
         handlerSelector = WITHDRAW_HANDLER_SELECTOR;
+    }
+
+    function _sendTokenDepositMessage(
+        bytes32 tokenAddress,
+        uint256 recipient,
+        uint256 tokenId,
+        uint256 amount
+    ) internal returns (uint256) {
+        (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
+            tokenAddress,
+            recipient,
+            tokenId,
+            amount
+        );
+
+        // send message
+        (, uint256 nonce) = _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, handlerSelector, payload);
+        return nonce;
+    }
+
+    function _startL1ToL2TokenDepositMessageCancellation(
+        bytes32 tokenAddress,
+        uint256 recipient,
+        uint256 tokenId,
+        uint256 amount,
+        uint256 nonce
+    ) internal {
+        (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
+            tokenAddress,
+            recipient,
+            tokenId,
+            amount
+        );
+        _state.starknetMessaging.startL1ToL2MessageCancellation(_state.l2KassAddress, handlerSelector, payload, nonce);
+    }
+
+    function _cancelL1ToL2TokenDepositMessage(
+        bytes32 tokenAddress,
+        uint256 recipient,
+        uint256 tokenId,
+        uint256 amount,
+        uint256 nonce
+    ) internal {
+        (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
+            tokenAddress,
+            recipient,
+            tokenId,
+            amount
+        );
+        _state.starknetMessaging.cancelL1ToL2Message(_state.l2KassAddress, handlerSelector, payload, nonce);
+    }
+
+    // WITHDRAW ON L1
+
+    function _consumeWithdrawMessage(uint256[] calldata payload) internal {
+        _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);
     }
 }

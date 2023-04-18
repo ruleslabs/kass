@@ -8,10 +8,10 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "../src/Kass.sol";
 import "../src/KassUtils.sol";
 import "../src/mocks/StarknetMessagingMock.sol";
-import "../src/KassMessagingPayloads.sol";
+import "../src/KassMessaging.sol";
 import "../src/StarknetConstants.sol";
 
-abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads {
+abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
     Kass internal _kass;
     address internal _starknetMessagingAddress;
 
@@ -113,7 +113,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         string[] memory data,
         TokenStandard tokenStandard
     ) internal returns (uint256[] memory messagePayload) {
-        messagePayload = _computeL1WrapperCreationMessagePayload(l2TokenAddress, data, tokenStandard);
+        messagePayload = _computeL1WrapperCreationMessage(l2TokenAddress, data, tokenStandard);
 
         // prepare L1 instance creation message from L2
         vm.mockCall(
@@ -134,7 +134,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
             abi.encodeWithSelector(
                 IStarknetMessaging.consumeMessageFromL2.selector,
                 L2_KASS_ADDRESS,
-                computeL1OwnershipClaimMessagePayload(l2TokenAddress, l1Owner)
+                _computeL1OwnershipClaimMessage(l2TokenAddress, l1Owner)
             ),
             abi.encode(bytes32(0x0))
         );
@@ -147,7 +147,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         uint256 amount,
         TokenStandard tokenStandard
     ) internal returns (uint256[] memory messagePayload) {
-        messagePayload = _computeTokenDepositOnL1MessagePayload(
+        messagePayload = _computeTokenDepositOnL1Message(
             tokenAddress,
             recipient,
             tokenId,
@@ -174,7 +174,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         string[] memory data,
         TokenStandard tokenStandard
     ) internal returns (uint256[] memory messagePayload) {
-        messagePayload = _computeL1WrapperCreationMessagePayload(l2TokenAddress, data, tokenStandard);
+        messagePayload = _computeL1WrapperCreationMessage(l2TokenAddress, data, tokenStandard);
 
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.consumeMessageFromL2.selector,
@@ -194,7 +194,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
     function expectL2WrapperRequest(address l1TokenAddress) internal {
         // message
-        (uint256[] memory payload, uint256 handlerSelector) = computeL2WrapperRequestMessagePayload(l1TokenAddress);
+        (uint256[] memory payload, uint256 handlerSelector) = _computeL2WrapperRequestMessage(l1TokenAddress);
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.sendMessageToL2.selector,
             L2_KASS_ADDRESS,
@@ -221,7 +221,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.consumeMessageFromL2.selector,
             L2_KASS_ADDRESS,
-            computeL1OwnershipClaimMessagePayload(l2TokenAddress, l1Owner)
+            _computeL1OwnershipClaimMessage(l2TokenAddress, l1Owner)
         );
 
         // expect L1 message send
@@ -235,7 +235,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
     }
 
     function expectL2OwnershipRequest(address l1TokenAddress, uint256 l2Owner) internal {
-        (uint256[] memory payload, uint256 handlerSelector) = computeL2OwnershipClaimMessagePayload(
+        (uint256[] memory payload, uint256 handlerSelector) = _computeL2OwnershipClaimMessage(
             l1TokenAddress,
             l2Owner
         );
@@ -262,7 +262,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         uint256 amount,
         uint256 nonce
     ) internal {
-        (uint256[] memory payload, uint256 handlerSelector) = computeTokenDepositMessagePayload(
+        (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
             tokenAddress,
             recipient,
             tokenId,
@@ -296,7 +296,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         uint256 amount,
         TokenStandard tokenStandard
     ) internal returns (uint256[] memory messagePayload) {
-        messagePayload = _computeTokenDepositOnL1MessagePayload(
+        messagePayload = _computeTokenDepositOnL1Message(
             tokenAddress,
             recipient,
             tokenId,
@@ -326,7 +326,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         uint256 amount,
         uint256 nonce
     ) internal {
-        (uint256[] memory payload, uint256 handlerSelector) = computeTokenDepositMessagePayload(
+        (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
             tokenAddress,
             recipient,
             tokenId,
@@ -357,7 +357,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         uint256 amount,
         uint256 nonce
     ) internal {
-        (uint256[] memory payload, uint256 handlerSelector) = computeTokenDepositMessagePayload(
+        (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
             tokenAddress,
             recipient,
             tokenId,
@@ -381,7 +381,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
 
     // INTERNALS
 
-    function _computeL1WrapperCreationMessagePayload(
+    function _computeL1WrapperCreationMessage(
         uint256 l2TokenAddress,
         string[] memory data,
         TokenStandard tokenStandard
@@ -405,7 +405,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessagingPayloads
         }
     }
 
-    function _computeTokenDepositOnL1MessagePayload(
+    function _computeTokenDepositOnL1Message(
         bytes32 tokenAddress,
         address recipient,
         uint256 tokenId,
