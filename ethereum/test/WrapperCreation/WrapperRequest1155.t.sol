@@ -20,4 +20,18 @@ contract Test_1155_KassWrapperRequest is TestSetup_1155_KassWrapperRequest {
         expectL2WrapperRequest(address(_l1TokenWrapper));
         _kass.requestL2Wrapper(address(_l1TokenWrapper));
     }
+
+    function test_1155_CannotDoubleWrap() public {
+        // create L1 wrapper
+        requestL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_URI, TokenStandard.ERC1155);
+        uint256[] memory messagePayload = expectL1WrapperCreation(
+            L2_TOKEN_ADDRESS,
+            L2_TOKEN_URI,
+            TokenStandard.ERC1155
+        );
+        address l1TokenWrapper = _kass.createL1Wrapper(messagePayload);
+
+        vm.expectRevert("Kass: Double wrap not allowed");
+        _kass.requestL2Wrapper(l1TokenWrapper);
+    }
 }

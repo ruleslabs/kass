@@ -29,7 +29,8 @@ contract Test_1155_KassWrapperCreation is TestSetup_1155_KassWrapperCreation {
         uint256[] memory messagePayload = expectL1WrapperCreation(
             L2_TOKEN_ADDRESS,
             L2_TOKEN_URI,
-            TokenStandard.ERC1155);
+            TokenStandard.ERC1155
+        );
         address l1TokenAddress = _kass.createL1Wrapper(messagePayload);
 
         assertEq(computedL1TokenAddress, l1TokenAddress);
