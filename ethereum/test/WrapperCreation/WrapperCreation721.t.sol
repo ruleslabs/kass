@@ -14,7 +14,7 @@ contract TestSetup_721_KassWrapperCreation is KassTestBase {
     function setUp() public override {
         super.setUp();
 
-        // request L1 instance
+        // request L1 wrapper
         requestL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL, TokenStandard.ERC721);
     }
 }
@@ -25,7 +25,7 @@ contract Test_721_KassWrapperCreation is TestSetup_721_KassWrapperCreation {
         // pre compute address
         address computedL1TokenAddress = _kass.computeL1TokenAddress(L2_TOKEN_ADDRESS);
 
-        // create L1 instance
+        // create L1 wrapper
         uint256[] memory messagePayload = expectL1WrapperCreation(
             L2_TOKEN_ADDRESS,
             L2_TOKEN_NAME_AND_SYMBOL,
@@ -37,7 +37,7 @@ contract Test_721_KassWrapperCreation is TestSetup_721_KassWrapperCreation {
     }
 
     function test_721_L1TokenWrapperNameAndSymbol() public {
-        // create L1 instance
+        // create L1 wrapper
         uint256[] memory messagePayload = expectL1WrapperCreation(
             L2_TOKEN_ADDRESS,
             L2_TOKEN_NAME_AND_SYMBOL,

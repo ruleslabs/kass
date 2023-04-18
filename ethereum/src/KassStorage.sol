@@ -27,6 +27,9 @@ contract KassStorage {
 
         // (nonce => depositors) mapping
         mapping(uint256 nonce => address depositor) depositors;
+
+        // (wrapper address => bool) mapping
+        mapping(address wrapperAddress => bool isWrapper) isWrapper;
     }
 
     State internal _state;

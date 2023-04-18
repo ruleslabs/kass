@@ -37,7 +37,7 @@ contract Test_KassERC721 is TestSetup_KassERC721 {
     }
 
     function test_721_CannotInitializeTwice() public {
-        // create L1 instance
+        // create L1 wrapper
         vm.expectRevert("Kass721: Already initialized");
         _kassERC721.initialize(abi.encode("bar", "bar"));
         assertEq(_kassERC721.name(), L2_TOKEN_NAME);

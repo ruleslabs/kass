@@ -153,6 +153,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessagingPayloads, UUP
     // INSTANCE CREATION REQUEST
 
     function requestL2Wrapper(address tokenAddress) public {
+        // assert tokenAddress is not a wrapper
+        require(isNativeToken(tokenAddress), "Kass: Double wrap not allowed");
+
         // compute l2 Wrapper Creation message payload and send it
         (uint256[] memory payload, uint256 handlerSelector) = computeL2WrapperRequestMessagePayload(tokenAddress);
         _state.starknetMessaging.sendMessageToL2(_state.l2KassAddress, handlerSelector, payload);

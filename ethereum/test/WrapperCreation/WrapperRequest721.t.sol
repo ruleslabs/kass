@@ -16,8 +16,21 @@ contract TestSetup_721_KassWrapperRequest is KassTestBase {
 contract Test_721_KassWrapperRequest is TestSetup_721_KassWrapperRequest {
 
     function test_721_L2TokenWrapperRequest() public {
-        // create L1 instance
         expectL2WrapperRequest(address(_l1TokenWrapper));
         _kass.requestL2Wrapper(address(_l1TokenWrapper));
+    }
+
+    function test_721_CannotDoubleWrap() public {
+        // create L1 wrapper
+        requestL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL, TokenStandard.ERC721);
+        uint256[] memory messagePayload = expectL1WrapperCreation(
+            L2_TOKEN_ADDRESS,
+            L2_TOKEN_NAME_AND_SYMBOL,
+            TokenStandard.ERC721
+        );
+        address l1TokenWrapper = _kass.createL1Wrapper(messagePayload);
+
+        vm.expectRevert("Kass: Double wrap not allowed");
+        _kass.requestL2Wrapper(l1TokenWrapper);
     }
 }

@@ -38,7 +38,7 @@ contract Test_KassERC1155 is TestSetup_KassERC1155 {
     }
 
     function test_1155_CannotInitializeTwice() public {
-        // create L1 instance
+        // create L1 wrapper
         vm.expectRevert("Kass1155: Already initialized");
         _kassERC1155.initialize(abi.encode("bar"));
         assertEq(_kassERC1155.uri(0), string(KassUtils.felt252WordsToStr(L2_TOKEN_URI)));

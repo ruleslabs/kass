@@ -16,7 +16,7 @@ contract TestSetup_1155_KassWrapperRequest is KassTestBase {
 contract Test_1155_KassWrapperRequest is TestSetup_1155_KassWrapperRequest {
 
     function test_1155_L2TokenWrapperRequest() public {
-        // create L1 instance
+        // create L1 wrapper
         expectL2WrapperRequest(address(_l1TokenWrapper));
         _kass.requestL2Wrapper(address(_l1TokenWrapper));
     }

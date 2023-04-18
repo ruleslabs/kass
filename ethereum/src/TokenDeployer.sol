@@ -47,9 +47,8 @@ abstract contract TokenDeployer is KassStorage {
             mstore(ptr, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
             mstore(add(ptr, 0x14), baseAddressBytes)
             mstore(add(ptr, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
-            mstore(add(ptr, 0x37), l2TokenAddress)
 
-            let bytecodeHash := keccak256(ptr, 0x57)
+            let bytecodeHash := keccak256(ptr, 0x37)
 
             mstore(ptr, 0xff00000000000000000000000000000000000000000000000000000000000000)
             mstore(add(ptr, 0x1), deployerBytes)
@@ -60,12 +59,8 @@ abstract contract TokenDeployer is KassStorage {
         }
     }
 
-    function getNativeTokenAddres(address tokenAddress) internal view returns (uint256 nativeTokenAddress) {
-        assembly {
-            let ptr := mload(0x40)
-            extcodecopy(tokenAddress, ptr, 0x37, 0x20)
-            nativeTokenAddress := mload(ptr)
-        }
+    function isNativeToken(address tokenAddress) internal view returns (bool) {
+        return !_state.isWrapper[tokenAddress];
     }
 
     function getL1TokenAddres(
@@ -89,14 +84,16 @@ abstract contract TokenDeployer is KassStorage {
      */
     function cloneProxy(bytes32 salt) private returns (address payable result) {
         bytes20 targetBytes = bytes20(_state.proxyImplementationAddress);
+
         assembly {
             let clone := mload(0x40)
             mstore(clone, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
             mstore(add(clone, 0x14), targetBytes)
             mstore(add(clone, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
-            mstore(add(clone, 0x37), salt) // append salt at the end of bytecode
-            result := create2(0, clone, 0x57, salt)
+            result := create2(0, clone, 0x37, salt)
         }
+
+        _state.isWrapper[result] = true;
     }
 
     function cloneKassERC1155(bytes32 salt, bytes memory _calldata) internal returns (address payable result) {

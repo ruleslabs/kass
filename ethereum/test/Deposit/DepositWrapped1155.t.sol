@@ -16,7 +16,7 @@ contract TestSetup_1155_Wrapped_Deposit is KassTestBase, ERC1155Holder {
     function setUp() public override {
         super.setUp();
 
-        // request and create L1 instance
+        // request and create L1 wrapper
         uint256[] memory messagePayload = requestL1WrapperCreation(
             L2_TOKEN_ADDRESS,
             L2_TOKEN_URI,
