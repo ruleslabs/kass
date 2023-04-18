@@ -217,7 +217,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         emit LogDeposit(tokenAddress, _msgSender(), recipient, tokenId, amount);
     }
 
-    function deposit(bytes32 tokenAddress, uint256 recipient, uint256 tokenId) public {
+    function deposit(bytes32 tokenAddress, uint256 recipient, uint256 tokenId) public payable {
         deposit(tokenAddress, recipient, tokenId, 0x1);
     }
 

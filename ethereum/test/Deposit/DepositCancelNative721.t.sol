@@ -28,7 +28,7 @@ contract TestSetup_721_Native_DepositCancel is TestSetup_721_Native_Deposit {
 
         // deposit tokens on L2
         expectDepositOnL2(tokenAddress, sender, l2Recipient, tokenId, 0x1, nonce);
-        _kass.deposit(tokenAddress, l2Recipient, tokenId);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(tokenAddress, l2Recipient, tokenId);
 
         // assert token has been transfered to Kass
         assertEq(_l1NativeToken.ownerOf(tokenId), address(_kass));

@@ -30,6 +30,8 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
 
     uint256 public constant CAIRO_FIELD_PRIME = 0x800000000000011000000000000000000000000000000000000000000000001;
 
+    uint256 public constant L1_TO_L2_MESSAGE_FEE = 0x42;
+
     event LogL1WrapperCreated(bytes32 indexed l2TokenAddress, address l1TokenAddress);
     event LogL2WrapperRequested(address indexed l1TokenAddress);
 
@@ -203,7 +205,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         );
 
         // expect L1 message send
-        vm.expectCall(_starknetMessagingAddress, messageCalldata);
+        vm.expectCall(_starknetMessagingAddress, L1_TO_L2_MESSAGE_FEE, messageCalldata);
 
         // mock message sending return value
         vm.mockCall(
@@ -247,7 +249,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         );
 
         // expect L1 message send
-        vm.expectCall(_starknetMessagingAddress, messageCalldata);
+        vm.expectCall(_starknetMessagingAddress, L1_TO_L2_MESSAGE_FEE, messageCalldata);
 
         // expect event
         vm.expectEmit(true, true, true, true, address(_kass));
@@ -276,7 +278,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         );
 
         // expect L1 message send
-        vm.expectCall(_starknetMessagingAddress, messageCalldata);
+        vm.expectCall(_starknetMessagingAddress, L1_TO_L2_MESSAGE_FEE, messageCalldata);
 
         // mock message sending return value
         vm.mockCall(

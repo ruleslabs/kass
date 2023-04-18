@@ -18,7 +18,7 @@ contract Test_1155_KassWrapperRequest is TestSetup_1155_KassWrapperRequest {
     function test_1155_L2TokenWrapperRequest() public {
         // create L1 wrapper
         expectL2WrapperRequest(address(_l1TokenWrapper));
-        _kass.requestL2Wrapper(address(_l1TokenWrapper));
+        _kass.requestL2Wrapper{ value: L1_TO_L2_MESSAGE_FEE }(address(_l1TokenWrapper));
     }
 
     function test_1155_CannotDoubleWrap() public {
@@ -32,6 +32,6 @@ contract Test_1155_KassWrapperRequest is TestSetup_1155_KassWrapperRequest {
         address l1TokenWrapper = _kass.createL1Wrapper(messagePayload);
 
         vm.expectRevert("Kass: Double wrap not allowed");
-        _kass.requestL2Wrapper(l1TokenWrapper);
+        _kass.requestL2Wrapper{ value: L1_TO_L2_MESSAGE_FEE }(l1TokenWrapper);
     }
 }

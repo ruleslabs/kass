@@ -27,15 +27,19 @@ contract Test_1155_KassRequestOwnership is TestSetup_1155_KassRequestOwnership {
 
         // request ownership on L2
         expectL2OwnershipRequest(address(_l1TokenWrapper), l2Owner);
-        _kass.requestL2Ownership(address(_l1TokenWrapper), l2Owner);
+        _kass.requestL2Ownership{ value: L1_TO_L2_MESSAGE_FEE }(address(_l1TokenWrapper), l2Owner);
     }
 
     function test_1155_cannotRequestOwnershipOnL2IfNotOwner() public {
         uint256 l2Owner = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
+        address sender = address(uint160(uint256(keccak256("rando 1"))));
+
+        // give ether to sender
+        vm.deal(sender, 1 ether);
 
         // request ownership on L2
-        vm.prank(address(0x1));
+        vm.prank(sender);
         vm.expectRevert("Sender is not the owner");
-        _kass.requestL2Ownership(address(_l1TokenWrapper), l2Owner);
+        _kass.requestL2Ownership{ value: L1_TO_L2_MESSAGE_FEE }(address(_l1TokenWrapper), l2Owner);
     }
 }

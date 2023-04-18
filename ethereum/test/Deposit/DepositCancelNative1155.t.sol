@@ -33,7 +33,7 @@ contract TestSetup_1155_Native_DepositCancel is TestSetup_1155_Native_Deposit {
 
         // deposit tokens on L2
         expectDepositOnL2(tokenAddress, sender, l2Recipient, tokenId, amount, nonce);
-        _kass.deposit(tokenAddress, l2Recipient, tokenId, amount);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(tokenAddress, l2Recipient, tokenId, amount);
 
         // check if balance is correct
         assertEq(_l1NativeToken.balanceOf(sender, tokenId), balance);

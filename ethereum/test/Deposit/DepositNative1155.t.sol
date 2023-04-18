@@ -43,7 +43,7 @@ contract TestSetup_1155_Native_Deposit is KassTestBase, ERC1155Holder {
 
         // deposit on L2
         expectDepositOnL2(_bytes32_l1NativeToken(), sender, l2Recipient, tokenId, amountToDepositOnL2, 0x0);
-        _kass.deposit(_bytes32_l1NativeToken(), l2Recipient, tokenId, amountToDepositOnL2);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId, amountToDepositOnL2);
 
         // check if balance was updated
         assertEq(_l1NativeToken.balanceOf(sender, tokenId), balance - amountToDepositOnL2);
@@ -119,7 +119,7 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
 
         // deposit on L2
         vm.expectRevert("ERC1155: insufficient balance for transfer");
-        _kass.deposit(_bytes32_l1NativeToken(), l2Recipient, tokenId, amountToDepositOnL2);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId, amountToDepositOnL2);
     }
 
     function test_1155_native_CannotDepositToL2Zero() public {
@@ -129,7 +129,7 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
 
         // deposit on L2
         vm.expectRevert("Cannot deposit null amount");
-        _kass.deposit(_bytes32_l1NativeToken(), l2Recipient, tokenId, amountToDepositOnL1);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId, amountToDepositOnL1);
     }
 
     function test_1155_native_CannotDepositToL2IfNotTokenOwner() public {
@@ -143,7 +143,7 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
 
         // try deposit on L2
         vm.expectRevert("ERC1155: caller is not token owner or approved");
-        _kass.deposit(_bytes32_l1NativeToken(), l2Recipient, tokenId, amount);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId, amount);
 
         // approve kass operator
         vm.prank(l1Rando1);
@@ -151,6 +151,6 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
 
         // try deposit on L2
         vm.expectRevert("ERC1155: caller is not token owner or approved");
-        _kass.deposit(_bytes32_l1NativeToken(), l2Recipient, tokenId, amount);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId, amount);
     }
 }

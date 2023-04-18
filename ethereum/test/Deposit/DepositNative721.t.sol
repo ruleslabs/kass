@@ -51,7 +51,7 @@ contract Test_721_Native_Deposit is TestSetup_721_Native_Deposit {
         assertEq(_l1NativeToken.ownerOf(tokenId), sender);
 
         expectDepositOnL2(_bytes32_l1NativeToken(), sender, l2Recipient, tokenId, 0x1, 0x0);
-        _kass.deposit(_bytes32_l1NativeToken(), l2Recipient, tokenId);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId);
 
         // assert token has been transfered to Kass
         assertEq(_l1NativeToken.ownerOf(tokenId), address(_kass));
@@ -67,7 +67,7 @@ contract Test_721_Native_Deposit is TestSetup_721_Native_Deposit {
 
         // try deposit on L2
         vm.expectRevert("ERC721: caller is not token owner or approved");
-        _kass.deposit(_bytes32_l1NativeToken(), l2Recipient, tokenId);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId);
 
         // approve kass operator
         vm.prank(l1Rando1);
@@ -75,6 +75,6 @@ contract Test_721_Native_Deposit is TestSetup_721_Native_Deposit {
 
         // try deposit on L2
         vm.expectRevert("ERC721: transfer from incorrect owner");
-        _kass.deposit(_bytes32_l1NativeToken(), l2Recipient, tokenId);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId);
     }
 }

@@ -23,7 +23,7 @@ contract TestSetup_721_Native_Withdraw is TestSetup_721_Native_Deposit {
         _l1NativeToken.approve(address(_kass), tokenId);
 
         // deposit
-        _kass.deposit(_bytes32_l1NativeToken(), 0x1, tokenId);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), 0x1, tokenId);
 
         // deposit from L2 and withdraw to L1
         uint256[] memory messagePayload = depositOnL1(
@@ -75,7 +75,7 @@ contract Test_721_Native_Withdraw is TestSetup_721_Native_Withdraw {
         _l1NativeToken.approve(address(_kass), tokenId);
 
         // deposit
-        _kass.deposit(_bytes32_l1NativeToken(), 0x1, tokenId);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), 0x1, tokenId);
 
         // deposit from L2
         uint256[] memory messagePayload = depositOnL1(

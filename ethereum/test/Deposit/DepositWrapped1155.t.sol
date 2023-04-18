@@ -42,7 +42,7 @@ contract TestSetup_1155_Wrapped_Deposit is KassTestBase, ERC1155Holder {
 
         // deposit on L2
         expectDepositOnL2(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amountToDepositOnL2, 0x0);
-        _kass.deposit(bytes32(l2TokenAddress), l2Recipient, tokenId, amountToDepositOnL2);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(l2TokenAddress), l2Recipient, tokenId, amountToDepositOnL2);
 
         // check if balance was updated
         assertEq(_l1TokenWrapper.balanceOf(sender, tokenId), balance - amountToDepositOnL2);
@@ -106,7 +106,7 @@ contract Test_1155_Wrapped_Deposit is TestSetup_1155_Wrapped_Deposit {
 
         // deposit on L2
         vm.expectRevert("ERC1155: burn amount exceeds balance");
-        _kass.deposit(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, amountToDepositOnL2);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, amountToDepositOnL2);
     }
 
     function test_1155_wrapped_CannotDepositZeroToL2() public {
@@ -116,6 +116,6 @@ contract Test_1155_Wrapped_Deposit is TestSetup_1155_Wrapped_Deposit {
 
         // deposit on L2
         vm.expectRevert("Cannot deposit null amount");
-        _kass.deposit(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, amountToDepositOnL1);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, amountToDepositOnL1);
     }
 }

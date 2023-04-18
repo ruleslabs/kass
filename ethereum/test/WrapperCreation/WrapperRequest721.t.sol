@@ -17,7 +17,7 @@ contract Test_721_KassWrapperRequest is TestSetup_721_KassWrapperRequest {
 
     function test_721_L2TokenWrapperRequest() public {
         expectL2WrapperRequest(address(_l1TokenWrapper));
-        _kass.requestL2Wrapper(address(_l1TokenWrapper));
+        _kass.requestL2Wrapper{ value: L1_TO_L2_MESSAGE_FEE }(address(_l1TokenWrapper));
     }
 
     function test_721_CannotDoubleWrap() public {
@@ -31,6 +31,6 @@ contract Test_721_KassWrapperRequest is TestSetup_721_KassWrapperRequest {
         address l1TokenWrapper = _kass.createL1Wrapper(messagePayload);
 
         vm.expectRevert("Kass: Double wrap not allowed");
-        _kass.requestL2Wrapper(l1TokenWrapper);
+        _kass.requestL2Wrapper{ value: L1_TO_L2_MESSAGE_FEE }(l1TokenWrapper);
     }
 }
