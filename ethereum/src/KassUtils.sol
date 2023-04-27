@@ -3,6 +3,8 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
 enum TokenStandard {
     ERC721,
@@ -115,5 +117,13 @@ library KassUtils {
             mstore(res, resLen)
             mstore(0x40, add(res, add(0x20, mul(resLen, 0x20))))
         }
+    }
+
+    function isERC721(address tokenAddress) public view returns (bool) {
+        return ERC165(tokenAddress).supportsInterface(type(IERC721).interfaceId);
+    }
+
+    function isERC1155(address tokenAddress) public view returns (bool) {
+        return ERC165(tokenAddress).supportsInterface(type(IERC1155).interfaceId);
     }
 }

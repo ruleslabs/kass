@@ -74,14 +74,14 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
     function _computeL2WrapperRequestMessage(
         address tokenAddress
     ) internal view returns (uint256[] memory payload, uint256 handlerSelector) {
-        if (ERC165(tokenAddress).supportsInterface(type(IERC721).interfaceId)) {
+        if (KassUtils.isERC721(tokenAddress)) {
             payload = new uint256[](3); // token address + name + symbol
 
             payload[1] = KassUtils.strToFelt252(ERC721(tokenAddress).name());
             payload[2] = KassUtils.strToFelt252(ERC721(tokenAddress).symbol());
 
             handlerSelector = INSTANCE_CREATION_721_HANDLER_SELECTOR;
-        } else if (ERC165(tokenAddress).supportsInterface(type(IERC1155).interfaceId)) {
+        } else if (KassUtils.isERC1155(tokenAddress)) {
             uint256[] memory data = KassUtils.strToFelt252Words(ERC1155(tokenAddress).uri(0x0));
 
             payload = new uint256[](data.length + 1); // token address + uri

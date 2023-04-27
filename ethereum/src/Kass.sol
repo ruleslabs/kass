@@ -156,7 +156,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         // assert tokenAddress is not a wrapper
         require(isNativeToken(tokenAddress), "Kass: Double wrap not allowed");
 
-        // send l2 Wrapper Creation message
+        // send L2 Wrapper Creation message
         _sendL2WrapperRequestMessage(tokenAddress, msg.value);
 
         // emit event
@@ -311,17 +311,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
 
     // INTERNALS
 
-    function _isERC721(address tokenAddress) private view returns (bool) {
-        return ERC165(tokenAddress).supportsInterface(type(IERC721).interfaceId);
-    }
-
-    function _isERC1155(address tokenAddress) private view returns (bool) {
-        return ERC165(tokenAddress).supportsInterface(type(IERC1155).interfaceId);
-    }
-
     function _lockTokens(address tokenAddress, uint256 tokenId, uint256 amount, bool isNative) private {
         // burn or tranfer tokens
-        if (_isERC721(tokenAddress)) {
+        if (KassUtils.isERC721(tokenAddress)) {
             if (isNative) {
                 KassERC721(tokenAddress).transferFrom(_msgSender(), address(this), tokenId);
             } else {
@@ -330,7 +322,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
 
                 KassERC721(tokenAddress).burn(tokenId);
             }
-        } else if (_isERC1155(tokenAddress)) {
+        } else if (KassUtils.isERC1155(tokenAddress)) {
             require(amount > 0, "Cannot deposit null amount");
 
             if (isNative) {
@@ -351,13 +343,13 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         bool isNative
     ) private {
         // burn or tranfer tokens
-        if (_isERC721(tokenAddress)) {
+        if (KassUtils.isERC721(tokenAddress)) {
             if (isNative) {
                 KassERC721(tokenAddress).transferFrom(address(this), recipient, tokenId);
             } else {
                 KassERC721(tokenAddress).mint(recipient, tokenId);
             }
-        } else if (_isERC1155(tokenAddress)) {
+        } else if (KassUtils.isERC1155(tokenAddress)) {
             require(amount > 0, "Cannot withdraw null amount");
 
             if (isNative) {
