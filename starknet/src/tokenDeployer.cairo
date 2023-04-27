@@ -4,7 +4,7 @@ mod TokenDeployer {
     use zeroable::Zeroable;
     use array::ArrayTrait;
 
-    use starknet::ClassHashZeroable;
+    use starknet::class_hash::ClassHashZeroable;
 
     // STORAGE
 

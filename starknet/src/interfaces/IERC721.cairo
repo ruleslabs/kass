@@ -10,4 +10,9 @@ trait IERC721 {
         to: starknet::ContractAddress,
         tokenId: u256
     ) -> u32;
+
+    fn mint(
+        to: starknet::ContractAddress,
+        tokenId: u256
+    ) -> u32;
 }

@@ -4,7 +4,6 @@ mod KassMessagingPayloads {
     use starknet::ContractAddressIntoFelt252;
     use zeroable::Zeroable;
     use array::ArrayTrait;
-    use starknet::ClassHashZeroable;
     use traits::Into;
 
     use kass::utils::ArrayTConcatTrait;
@@ -19,7 +18,7 @@ mod KassMessagingPayloads {
     use kass::constants::TRANSFER_721_FROM_STARKNET;
     use kass::constants::TRANSFER_1155_FROM_STARKNET;
 
-    fn l1InstanceCreationMessagePayload(
+    fn computeL1WrapperRequestMessage(
         l2TokenAddress: starknet::ContractAddress,
         ref data: Array<felt252>,
         tokenStandard: TokenStandard
@@ -29,21 +28,21 @@ mod KassMessagingPayloads {
 
         match tokenStandard {
             TokenStandard::ERC721(_) => {
-                message_payload.append(REQUEST_L1_721_INSTANCE);
+                message_payload.append(REQUEST_L1_721_INSTANCE.into());
             },
             TokenStandard::ERC1155(_) => {
-                message_payload.append(REQUEST_L1_1155_INSTANCE);
+                message_payload.append(REQUEST_L1_1155_INSTANCE.into());
             }
         }
 
         message_payload.append(l2TokenAddress.into());
 
-        message_payload.concat(ref data);
+        message_payload.felt252WordsToStr(ref data);
 
         return message_payload;
     }
 
-    fn tokenDepositOnL1MessagePayload(
+    fn computeTokenDepositOnL1Message(
         l2TokenAddress: starknet::ContractAddress,
         tokenId: u256,
         amount: u256,
@@ -55,14 +54,13 @@ mod KassMessagingPayloads {
 
         match tokenStandard {
             TokenStandard::ERC721(_) => {
-                message_payload.append(TRANSFER_721_FROM_STARKNET);
+                message_payload.append(TRANSFER_721_FROM_STARKNET.into());
             },
             TokenStandard::ERC1155(_) => {
-                message_payload.append(TRANSFER_1155_FROM_STARKNET);
+                message_payload.append(TRANSFER_1155_FROM_STARKNET.into());
             }
         }
 
-        message_payload.append(TRANSFER_FROM_STARKNET);
         message_payload.append(l1Recipient.into());
         message_payload.append(l2TokenAddress.into());
 

@@ -34,14 +34,14 @@ impl EthAddressImpl of EthAddressTrait {
 }
 
 impl EthAddressIntoFelt252 of Into::<EthAddress, felt252> {
-    fn into(address: EthAddress) -> felt252 {
-        address.address
+    fn into(self: EthAddress) -> felt252 {
+        self.address
     }
 }
 
 impl EthAddressSerde of Serde::<EthAddress> {
-    fn serialize(ref serialized: Array<felt252>, input: EthAddress) {
-        Serde::<felt252>::serialize(ref serialized, input.address);
+    fn serialize(ref output: Array<felt252>, input: EthAddress) {
+        Serde::<felt252>::serialize(ref output, input.address);
     }
     fn deserialize(ref serialized: Span<felt252>) -> Option<EthAddress> {
         // Option::Some(EthAddressTrait::new(*serialized.pop_front()?))
@@ -85,11 +85,11 @@ impl EthAddressStorageAccess of StorageAccess::<EthAddress> {
 
 impl EthAddressPartialEq of PartialEq::<EthAddress> {
     #[inline(always)]
-    fn eq(a: EthAddress, b: EthAddress) -> bool {
-        a.into() == b.into()
+    fn eq(lhs: EthAddress, rhs: EthAddress) -> bool {
+        lhs.into() == rhs.into()
     }
     #[inline(always)]
-    fn ne(a: EthAddress, b: EthAddress) -> bool {
-        !(a == b)
+    fn ne(lhs: EthAddress, rhs: EthAddress) -> bool {
+        !(lhs == rhs)
     }
 }

@@ -11,4 +11,10 @@ trait IERC1155 {
         amount: u256,
         data: Array<felt252>
     ) -> u32;
+
+    fn mint(
+        to: starknet::ContractAddress,
+        tokenId: u256,
+        amount: u256
+    ) -> u32;
 }

@@ -57,6 +57,10 @@ mod Kass {
         _setInitialized(classHash);
     }
 
+    fn _l1_handler(from_address: EthAddress) {
+        assert(from_address == l1KassAddress(), 'EXPECTED_FROM_L1_KASS_ONLY');
+    }
+
     // HEADER
 
     #[view]
@@ -123,39 +127,49 @@ mod Kass {
         _l1KassAddress::write(l1KassAddress_);
     }
 
+    // TODO: init status support
+
     // INSTANCE CREATION
 
     #[l1_handler]
-    fn createL2Instance721(
+    fn createL2Wrapper721(
         from_address: felt252,
         l1TokenAddress: EthAddress,
         data: Array<felt252>
     ) {
-        _assertHandlerExecutionIsLegit(EthAddressTrait::new(from_address));
+        // modifiers
+        _l1_handler(EthAddressTrait::new(from_address));
 
+        // body
+
+        // deploy Kass ERC 721
         TokenDeployer::deployKassERC721(l1TokenAddress.into(), data.span());
     }
 
     #[l1_handler]
-    fn createL2Instance1155(
+    fn createL2Wrapper1155(
         from_address: felt252,
         l1TokenAddress: EthAddress,
         data: Array<felt252>
     ) {
-        _assertHandlerExecutionIsLegit(EthAddressTrait::new(from_address));
+        // modifiers
+        _l1_handler(EthAddressTrait::new(from_address));
 
+        // body
+
+        // deploy Kass ERC 1155
         TokenDeployer::deployKassERC1155(l1TokenAddress.into(), data.span());
     }
 
     // INSTANCE REQUEST
 
-    fn _requestL1Instance(
+    fn _requestL1Wrapper(
         l2TokenAddress: starknet::ContractAddress,
         ref data: Array<felt252>,
         tokenStandard: TokenStandard
     ) {
         // load payload
-        let message_payload = KassMessagingPayloads::l1InstanceCreationMessagePayload(
+        let message_payload = KassMessagingPayloads::computeL1WrapperRequestMessage(
             l2TokenAddress,
             ref data,
             tokenStandard
@@ -169,46 +183,46 @@ mod Kass {
     }
 
     #[external]
-    fn requestL1Instance721(l2TokenAddress: starknet::ContractAddress) {
+    fn requestL1Wrapper721(l2TokenAddress: starknet::ContractAddress) {
         // get contract name and symbol
         let mut data: Array<felt252> = ArrayTrait::new();
 
         data.append(IERC721Dispatcher { contract_address: l2TokenAddress }.name());
         data.append(IERC721Dispatcher { contract_address: l2TokenAddress }.symbol());
 
-        _requestL1Instance(l2TokenAddress, ref data, TokenStandard::ERC721(()));
+        _requestL1Wrapper(l2TokenAddress, ref data, TokenStandard::ERC721(()));
     }
 
     #[external]
-    fn requestL1Instance1155(l2TokenAddress: starknet::ContractAddress) {
+    fn requestL1Wrapper1155(l2TokenAddress: starknet::ContractAddress) {
         // get contract uri
         let mut uri = IERC1155Dispatcher { contract_address: l2TokenAddress }.uri(0.into());
 
-        _requestL1Instance(l2TokenAddress, ref uri, TokenStandard::ERC1155(()));
+        _requestL1Wrapper(l2TokenAddress, ref uri, TokenStandard::ERC1155(()));
     }
 
     // DEPOSIT
 
     fn _deposit(
         l2TokenAddress: starknet::ContractAddress,
+        l1Recipient: EthAddress,
         tokenId: u256,
         amount: u256,
-        l1Recipient: EthAddress,
-        tokenStandad: TokenStandard
+        tokenStandard: TokenStandard
     ) {
         let caller = starknet::get_caller_address();
         let contractAddress = starknet::get_contract_address();
 
         // transfer tokens
-        match tokenStandad {
+        match tokenStandard {
             TokenStandard::ERC721(_) => {
-                IERC721Dispatcher { contract_address: l2TokenAddress }.safeTransferFrom(
+                IERC721Dispatcher { contract_address: l2TokenAddress }.transferFrom(
                     caller,
                     contractAddress,
                     tokenId
                 );
             },
-            TokenStandard::ERC721(_) => {
+            TokenStandard::ERC1155(_) => {
                 IERC1155Dispatcher { contract_address: l2TokenAddress }.safeTransferFrom(
                     caller,
                     contractAddress,
@@ -220,7 +234,7 @@ mod Kass {
         }
 
         // load payload
-        let mut message_payload = tokenDepositOnL1MessagePayload(
+        let mut message_payload = KassMessagingPayloads::computeTokenDepositOnL1Message(
             l2TokenAddress,
             tokenId,
             amount,
@@ -236,24 +250,154 @@ mod Kass {
     }
 
     #[external]
-    fn deposit721(
-        l2TokenAddress: starknet::ContractAddress,
-        tokenId: u256,
-        amount: u256,
-        l1Recipient: EthAddress
-    ) {
-        _deposit(l2TokenAddress, tokenId, 1_u256, l2Recipient, TokenStandard.ERC721);
+    fn deposit721(l1Recipient: EthAddress, l2TokenAddress: starknet::ContractAddress, tokenId: u256) {
+        _deposit(
+            :l2TokenAddress,
+            :l1Recipient,
+            :tokenId,
+            amount: u256 { low: 1, high: 0 },
+            tokenStandard: TokenStandard::ERC721(())
+        );
     }
 
     #[external]
-    fn deposit1155(
+    fn deposit1155(l1Recipient: EthAddress, l2TokenAddress: starknet::ContractAddress, tokenId: u256, amount: u256) {
+        _deposit(:l2TokenAddress, :l1Recipient, :tokenId, :amount, tokenStandard: TokenStandard::ERC721(()));
+    }
+
+    // WITHDRAW
+
+    fn _withdraw(
         l2TokenAddress: starknet::ContractAddress,
+        l2Recipient: starknet::ContractAddress,
         tokenId: u256,
         amount: u256,
-        l1Recipient: EthAddress
+        native: bool,
+        tokenStandard: TokenStandard
     ) {
-        _deposit(l2TokenAddress, tokenId, amount, l2Recipient, TokenStandard.ERC1155);
+        let contractAddress = starknet::get_contract_address();
+
+        // transfer tokens
+        if (native) {
+            match tokenStandard {
+                TokenStandard::ERC721(_) => {
+                    IERC721Dispatcher { contract_address: l2TokenAddress }.transferFrom(
+                        contractAddress,
+                        l2Recipient,
+                        tokenId
+                    );
+                },
+                TokenStandard::ERC1155(_) => {
+                    IERC1155Dispatcher { contract_address: l2TokenAddress }.safeTransferFrom(
+                        contractAddress,
+                        l2Recipient,
+                        tokenId,
+                        amount,
+                        ArrayTrait::<felt252>::new()
+                    );
+                }
+            }
+        } else {
+            match tokenStandard {
+                TokenStandard::ERC721(_) => {
+                    IERC721Dispatcher { contract_address: l2TokenAddress }.mint(l2Recipient, tokenId);
+                },
+                TokenStandard::ERC1155(_) => {
+                    IERC1155Dispatcher { contract_address: l2TokenAddress }.mint(l2Recipient, tokenId, amount);
+                }
+            }
+        }
     }
+
+    #[l1_handler]
+    fn withdrawNative721(
+        from_address: felt252,
+        l2TokenAddress: starknet::ContractAddress,
+        l2Recipient: starknet::ContractAddress,
+        tokenId: u256,
+        amount: u256
+    ) {
+        // modifiers
+        _l1_handler(EthAddressTrait::new(from_address));
+
+        // body
+        _withdraw(
+            :l2TokenAddress,
+            :l2Recipient,
+            :tokenId,
+            amount: u256 { low: 1, high: 0 },
+            native: true,
+            tokenStandard: TokenStandard::ERC721(())
+        );
+    }
+
+    #[l1_handler]
+    fn withdrawNative1155(
+        from_address: felt252,
+        l2TokenAddress: starknet::ContractAddress,
+        l2Recipient: starknet::ContractAddress,
+        tokenId: u256,
+        amount: u256
+    ) {
+        // modifiers
+        _l1_handler(EthAddressTrait::new(from_address));
+
+        // body
+        _withdraw(
+            :l2TokenAddress,
+            :l2Recipient,
+            :tokenId,
+            :amount,
+            native: true,
+            tokenStandard: TokenStandard::ERC1155(())
+        );
+    }
+
+    #[l1_handler]
+    fn withdrawWrapped721(
+        from_address: felt252,
+        l2TokenAddress: starknet::ContractAddress,
+        l2Recipient: starknet::ContractAddress,
+        tokenId: u256,
+        amount: u256
+    ) {
+        // modifiers
+        _l1_handler(EthAddressTrait::new(from_address));
+
+        // body
+        _withdraw(
+            :l2TokenAddress,
+            :l2Recipient,
+            :tokenId,
+            amount: u256 { low: 1, high: 0 },
+            native: false,
+            tokenStandard: TokenStandard::ERC721(())
+        );
+    }
+
+    #[l1_handler]
+    fn withdrawWrapped1155(
+        from_address: felt252,
+        l2TokenAddress: starknet::ContractAddress,
+        l2Recipient: starknet::ContractAddress,
+        tokenId: u256,
+        amount: u256
+    ) {
+        // modifiers
+        _l1_handler(EthAddressTrait::new(from_address));
+
+        // body
+        _withdraw(
+            :l2TokenAddress,
+            :l2Recipient,
+            :tokenId,
+            :amount,
+            native: false,
+            tokenStandard: TokenStandard::ERC1155(())
+        );
+    }
+
+    // MISC
 
     #[external]
     fn onERC1155Received(
@@ -273,35 +417,6 @@ mod Kass {
         0_u32
     }
 
-    // HANDLERS
-
-    fn _assertHandlerExecutionIsLegit(from_address: EthAddress) {
-        assert(from_address == l1KassAddress(), 'EXPECTED_FROM_L1_KASS_ONLY');
-    }
-
-    // withdraw l1 handler
-    #[l1_handler]
-    fn withdraw(
-        from_address: felt252,
-        l2Recipient: starknet::ContractAddress,
-        l2TokenAddress: starknet::ContractAddress,
-        tokenId: u256,
-        amount: u256
-    ) {
-        _assertHandlerExecutionIsLegit(EthAddressTrait::new(from_address));
-
-        let contractAddress = starknet::get_contract_address();
-
-        // transfer tokens
-        IERC1155Dispatcher { contract_address: l2TokenAddress }.safeTransferFrom(
-            contractAddress,
-            l2Recipient,
-            tokenId,
-            amount,
-            ArrayTrait::<felt252>::new()
-        );
-    }
-
     // INTERNALS
 
     fn _isInitialized(classHash: starknet::ClassHash) -> bool {
@@ -310,5 +425,13 @@ mod Kass {
 
     fn _setInitialized(classHash: starknet::ClassHash) {
         _initializedClassHashes::write(classHash, true);
+    }
+
+    fn _lockTokens() {
+
+    }
+
+    fn _unlockTokens() {
+
     }
 }
