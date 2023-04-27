@@ -1,6 +1,6 @@
 use kass::utils::token_standard::ContractAddressInterfacesTrait;
 #[contract]
-mod KassMessaging {
+mod Messaging {
 
     use starknet::ContractAddressIntoFelt252;
     use zeroable::Zeroable;

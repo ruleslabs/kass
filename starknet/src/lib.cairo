@@ -1,11 +1,7 @@
 mod kass;
 use kass::Kass;
-
-mod tokenDeployer;
-use tokenDeployer::TokenDeployer;
-
-mod kassMessaging;
-use kassMessaging::KassMessaging;
+use kass::TokenDeployer;
+use kass::Messaging;
 
 mod interfaces;
 mod libraries;

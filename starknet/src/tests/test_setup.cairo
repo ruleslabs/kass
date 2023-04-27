@@ -11,7 +11,6 @@ use kass::utils::eth_address::EthAddressIntoFelt252;
 use kass::tests::L1_KASS_ADDRESS;
 use kass::tests::INITIALIZE_SELECTOR;
 
-
 #[test]
 #[available_gas(2000000)]
 fn test_Initialize() {
