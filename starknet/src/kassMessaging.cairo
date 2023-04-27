@@ -1,3 +1,4 @@
+use kass::utils::token_standard::ContractAddressInterfacesTrait;
 #[contract]
 mod KassMessaging {
 
@@ -11,9 +12,7 @@ mod KassMessaging {
     use kass::utils::EthAddress;
     use kass::utils::EthAddressTrait; // TODO try to remove
     use kass::utils::eth_address::EthAddressZeroable;
-
-    use kass::interfaces::IERC165::IERC165Dispatcher;
-    use kass::interfaces::IERC165::IERC165DispatcherTrait;
+    use kass::utils::token_standard::ContractAddressInterfacesTrait;
 
     use kass::interfaces::IERC721::IERC721Dispatcher;
     use kass::interfaces::IERC721::IERC721DispatcherTrait;
@@ -26,11 +25,7 @@ mod KassMessaging {
     use kass::constants::REQUEST_L1_721_INSTANCE;
     use kass::constants::REQUEST_L1_1155_INSTANCE;
 
-    use kass::constants::TRANSFER_721_FROM_STARKNET;
-    use kass::constants::TRANSFER_1155_FROM_STARKNET;
-
-    use kass::interfaces::IERC721::IERC721_ID;
-    use kass::interfaces::IERC1155::IERC1155_ID;
+    use kass::constants::TRANSFER_FROM_STARKNET;
 
     // STORAGE
 
@@ -60,10 +55,7 @@ mod KassMessaging {
         // load payload
         let mut payload: Array<felt252> = ArrayTrait::new();
 
-        // get token standard
-        let ERC165 = IERC165Dispatcher { contract_address: l2TokenAddress };
-
-        if (ERC165.supports_interface(IERC721_ID)) {
+        if (l2TokenAddress.isERC721()) {
             // token is ERC721
             payload.append(REQUEST_L1_721_INSTANCE.into());
 
@@ -75,7 +67,7 @@ mod KassMessaging {
 
             payload.append(ERC721.name());
             payload.append(ERC721.symbol());
-        } else if (ERC165.supports_interface(IERC1155_ID)) {
+        } else if (l2TokenAddress.isERC1155()) {
             // token is ERC1155
             payload.append(REQUEST_L1_1155_INSTANCE.into());
 
@@ -88,10 +80,7 @@ mod KassMessaging {
 
             payload.concat(ref uri);
         } else {
-            // revert
-            let mut data = array::array_new();
-            array::array_append(ref data, 'Kass: Unkown token standard');
-            panic(data);
+            panic_with_felt252('Kass: Unkown token standard');
         }
 
         return payload;
@@ -107,33 +96,38 @@ mod KassMessaging {
     // DEPOSIT ON L1
 
     fn computeTokenDepositOnL1Message(
-        l2TokenAddress: starknet::ContractAddress,
+        tokenAddress: felt252,
+        recipient: EthAddress,
         tokenId: u256,
-        amount: u256,
-        l1Recipient: EthAddress,
-        tokenStandard: TokenStandard
+        amount: u256
     ) -> Array<felt252> {
         // load payload
-        let mut message_payload: Array<felt252> = ArrayTrait::new();
+        let mut payload: Array<felt252> = ArrayTrait::new();
 
-        match tokenStandard {
-            TokenStandard::ERC721(_) => {
-                message_payload.append(TRANSFER_721_FROM_STARKNET.into());
-            },
-            TokenStandard::ERC1155(_) => {
-                message_payload.append(TRANSFER_1155_FROM_STARKNET.into());
-            }
-        }
+        payload.append(TRANSFER_FROM_STARKNET.into());
 
-        message_payload.append(l1Recipient.into());
-        message_payload.append(l2TokenAddress.into());
+        payload.append(tokenAddress);
 
-        message_payload.append(tokenId.low.into());
-        message_payload.append(tokenId.high.into());
+        payload.append(recipient.into());
 
-        message_payload.append(amount.low.into());
-        message_payload.append(amount.high.into());
+        payload.append(tokenId.low.into());
+        payload.append(tokenId.high.into());
 
-        return message_payload;
+        payload.append(amount.low.into());
+        payload.append(amount.high.into());
+
+        return payload;
+    }
+
+    fn sendTokenDepositMessage(
+        tokenAddress: felt252,
+        recipient: EthAddress,
+        tokenId: u256,
+        amount: u256
+    ) {
+        let paylaod = computeTokenDepositOnL1Message(:tokenAddress, :recipient, :tokenId, :amount);
+
+        // send deposit request to L1
+        starknet::syscalls::send_message_to_l1_syscall(to_address: l1KassAddress().into(), payload: paylaod.span());
     }
 }

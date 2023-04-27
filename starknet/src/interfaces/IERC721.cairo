@@ -6,6 +6,7 @@ const IERC721_ID: u32 = 0x80ac58cd_u32;
 trait IERC721 {
     fn name() -> felt252;
     fn symbol() -> felt252;
+    fn ownerOf(tokenId: u256) -> starknet::ContractAddress;
 
     fn transferFrom(
         from: starknet::ContractAddress,
@@ -15,6 +16,10 @@ trait IERC721 {
 
     fn mint(
         to: starknet::ContractAddress,
+        tokenId: u256
+    ) -> u32;
+
+    fn burn(
         tokenId: u256
     ) -> u32;
 }

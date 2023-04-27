@@ -19,4 +19,10 @@ trait IERC1155 {
         tokenId: u256,
         amount: u256
     ) -> u32;
+
+    fn burn(
+        from: starknet::ContractAddress,
+        tokenId: u256,
+        amount: u256
+    ) -> u32;
 }

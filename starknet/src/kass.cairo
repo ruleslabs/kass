@@ -17,6 +17,7 @@ mod Kass {
     use kass::utils::eth_address::EthAddressZeroable;
     use kass::utils::eth_address::EthAddressIntoFelt252;
     use kass::utils::TokenStandard;
+    use kass::utils::token_standard::ContractAddressInterfacesTrait;
 
     use kass::TokenDeployer;
     use kass::KassMessaging;
@@ -169,66 +170,25 @@ mod Kass {
 
     // DEPOSIT
 
-    fn _deposit(
-        l2TokenAddress: starknet::ContractAddress,
-        l1Recipient: EthAddress,
-        tokenId: u256,
-        amount: u256,
-        tokenStandard: TokenStandard
-    ) {
-        let caller = starknet::get_caller_address();
-        let contractAddress = starknet::get_contract_address();
+    fn _deposit(tokenAddress: felt252, l1Recipient: EthAddress, tokenId: u256, amount: u256) {
+        // TODO: get real data
+        let isNative = false;
+        let l2TokenAddress = starknet::contract_address_const::<0x42>();
 
-        // transfer tokens
-        match tokenStandard {
-            TokenStandard::ERC721(_) => {
-                IERC721Dispatcher { contract_address: l2TokenAddress }.transferFrom(
-                    caller,
-                    contractAddress,
-                    tokenId
-                );
-            },
-            TokenStandard::ERC1155(_) => {
-                IERC1155Dispatcher { contract_address: l2TokenAddress }.safeTransferFrom(
-                    caller,
-                    contractAddress,
-                    tokenId,
-                    amount,
-                    ArrayTrait::<felt252>::new()
-                );
-            }
-        }
+        // burn or tranfer tokens
+        _lockTokens(l2TokenAddress, tokenId, amount, isNative);
 
-        // load payload
-        let mut message_payload = KassMessaging::computeTokenDepositOnL1Message(
-            l2TokenAddress,
-            tokenId,
-            amount,
-            l1Recipient,
-            tokenStandard
-        );
-
-        // send deposit request to L1
-        starknet::syscalls::send_message_to_l1_syscall(
-            to_address: l1KassAddress().into(),
-            payload: message_payload.span()
-        );
+        KassMessaging::sendTokenDepositMessage(tokenAddress, l1Recipient, tokenId, amount);
     }
 
     #[external]
-    fn deposit721(l1Recipient: EthAddress, l2TokenAddress: starknet::ContractAddress, tokenId: u256) {
-        _deposit(
-            :l2TokenAddress,
-            :l1Recipient,
-            :tokenId,
-            amount: u256 { low: 1, high: 0 },
-            tokenStandard: TokenStandard::ERC721(())
-        );
+    fn deposit721(tokenAddress: felt252, l1Recipient: EthAddress, tokenId: u256) {
+        _deposit(:tokenAddress, :l1Recipient, :tokenId, amount: u256 { low: 1, high: 0 });
     }
 
     #[external]
-    fn deposit1155(l1Recipient: EthAddress, l2TokenAddress: starknet::ContractAddress, tokenId: u256, amount: u256) {
-        _deposit(:l2TokenAddress, :l1Recipient, :tokenId, :amount, tokenStandard: TokenStandard::ERC721(()));
+    fn deposit1155(tokenAddress: felt252, l1Recipient: EthAddress, tokenId: u256, amount: u256) {
+        _deposit(:tokenAddress, :l1Recipient, :tokenId, :amount);
     }
 
     // WITHDRAW
@@ -393,8 +353,40 @@ mod Kass {
         _initializedClassHashes::write(classHash, true);
     }
 
-    fn _lockTokens() {
+    fn _lockTokens(l2TokenAddress: starknet::ContractAddress, tokenId: u256, amount: u256, isNative: bool) {
+        let caller = starknet::get_caller_address();
+        let contractAddress = starknet::get_contract_address();
 
+        if (l2TokenAddress.isERC721()) {
+            let ERC721 = IERC721Dispatcher { contract_address: l2TokenAddress };
+
+            if (isNative) {
+                ERC721.transferFrom(from: caller, to: contractAddress, :tokenId);
+            } else {
+                // check if caller is owner before burning
+                assert(ERC721.ownerOf(:tokenId) == caller, 'You do not own this token');
+
+                ERC721.burn(:tokenId);
+            }
+        } else if (l2TokenAddress.isERC1155()) {
+            assert(amount > u256 {low: 0, high: 0 }, 'Cannot deposit null amount');
+
+            let ERC1155 = IERC1155Dispatcher { contract_address: l2TokenAddress };
+
+            if (isNative) {
+                ERC1155.safeTransferFrom(
+                    from: caller,
+                    to: contractAddress,
+                    :tokenId,
+                    :amount,
+                    data: ArrayTrait::<felt252>::new()
+                );
+            } else {
+                ERC1155.burn(from: caller, :tokenId, :amount);
+            }
+        } else {
+            panic_with_felt252('Kass: Unkown token standard');
+        }
     }
 
     fn _unlockTokens() {
