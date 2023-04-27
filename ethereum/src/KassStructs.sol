@@ -21,9 +21,6 @@ contract KassStructs {
         // native token address
         bytes32 tokenAddress;
 
-        // ERC721 or ERC1155
-        TokenStandard tokenStandard;
-
         uint256 tokenId;
 
         uint256 amount;

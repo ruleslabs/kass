@@ -416,16 +416,16 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
     ) internal pure returns (uint256[] memory payload) {
         if (tokenStandard == TokenStandard.ERC721) {
             payload = new uint256[](5);
-            payload[0] = TRANSFER_721_FROM_STARKNET;
         } else if (tokenStandard == TokenStandard.ERC1155) {
             payload = new uint256[](7);
-            payload[0] = TRANSFER_1155_FROM_STARKNET;
 
             payload[5] = uint128(amount & (UINT256_PART_SIZE - 1)); // low
             payload[6] = uint128(amount >> UINT256_PART_SIZE_BITS); // high
         } else {
             revert("Kass: Unkown token standard");
         }
+
+        payload[0] = TRANSFER_FROM_STARKNET;
 
         payload[1] = uint256(tokenAddress);
 

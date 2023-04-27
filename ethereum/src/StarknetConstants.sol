@@ -19,8 +19,7 @@ abstract contract StarknetConstants {
     uint256 internal constant REQUEST_L2_721_INSTANCE = uint32(bytes4(keccak256("REQUEST_L2_721_INSTANCE")));
     uint256 internal constant REQUEST_L2_1155_INSTANCE = uint32(bytes4(keccak256("REQUEST_L2_1155_INSTANCE")));
 
-    uint256 internal constant TRANSFER_721_FROM_STARKNET = uint32(bytes4(keccak256("TRANSFER_721_FROM_STARKNET")));
-    uint256 internal constant TRANSFER_1155_FROM_STARKNET = uint32(bytes4(keccak256("TRANSFER_1155_FROM_STARKNET")));
+    uint256 internal constant TRANSFER_FROM_STARKNET = uint32(bytes4(keccak256("TRANSFER_FROM_STARKNET")));
 
     uint256 internal constant CLAIM_OWNERSHIP = uint32(bytes4(keccak256("CLAIM_OWNERSHIP")));
 

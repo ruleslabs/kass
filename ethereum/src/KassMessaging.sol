@@ -46,20 +46,16 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
     function _parseDepositRequestMessagePayload(
         uint256[] calldata payload
     ) internal pure returns (DepositRequest memory depositRequest) {
+        require(payload[0] == TRANSFER_FROM_STARKNET, "Invalid message payload");
+
         depositRequest.tokenAddress = bytes32(payload[1]);
 
         depositRequest.recipient = address(uint160(payload[2]));
 
         depositRequest.tokenId = payload[3] | payload[4] << UINT256_PART_SIZE_BITS;
 
-        if (payload[0] == TRANSFER_721_FROM_STARKNET) {
-            depositRequest.tokenStandard = TokenStandard.ERC721;
-        } else if (payload[0] == TRANSFER_1155_FROM_STARKNET) {
-            depositRequest.tokenStandard = TokenStandard.ERC1155;
-
+        if (payload.length == 7) {
             depositRequest.amount = payload[5] | payload[6] << UINT256_PART_SIZE_BITS;
-        } else {
-            revert("Invalid message payload");
         }
     }
 
