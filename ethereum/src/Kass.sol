@@ -135,9 +135,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         _consumeL1WrapperRequestMessage(messagePayload);
 
         // parse message payload
-        WrapperRequest memory wrapperRequest = parseWrapperRequestMessagePayload(messagePayload);
+        WrapperRequest memory wrapperRequest = _parseWrapperRequestMessagePayload(messagePayload);
 
-        // deploy Kass ERC1155 with URI
+        // deploy Kass ERC-721/1155
         if (wrapperRequest.tokenStandard == TokenStandard.ERC721) {
             l1TokenAddress = cloneKassERC721(wrapperRequest.tokenAddress, wrapperRequest._calldata);
         } else if (wrapperRequest.tokenStandard == TokenStandard.ERC1155) {
@@ -228,7 +228,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         _consumeWithdrawMessage(messagePayload);
 
         // parse message payload
-        DepositRequest memory depositRequest = parseDepositRequestMessagePayload(messagePayload);
+        DepositRequest memory depositRequest = _parseDepositRequestMessagePayload(messagePayload);
 
         // get l1 token address (native or wrapper)
         (address l1TokenAddress, bool isNative) = getL1TokenAddres(depositRequest.tokenAddress);

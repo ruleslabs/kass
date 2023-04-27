@@ -16,7 +16,7 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
 
     // PARSE
 
-    function parseWrapperRequestMessagePayload(
+    function _parseWrapperRequestMessagePayload(
         uint256[] calldata payload
     ) internal pure returns (WrapperRequest memory wrapperRequest) {
         wrapperRequest.tokenAddress = bytes32(payload[1]);
@@ -43,7 +43,7 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
         }
     }
 
-    function parseDepositRequestMessagePayload(
+    function _parseDepositRequestMessagePayload(
         uint256[] calldata payload
     ) internal pure returns (DepositRequest memory depositRequest) {
         depositRequest.tokenAddress = bytes32(payload[1]);
