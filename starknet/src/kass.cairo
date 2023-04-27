@@ -19,7 +19,7 @@ mod Kass {
     use kass::utils::TokenStandard;
 
     use kass::TokenDeployer;
-    use kass::KassMessagingPayloads;
+    use kass::KassMessaging;
 
     use kass::interfaces::IERC721::IERC721Dispatcher;
     use kass::interfaces::IERC721::IERC721DispatcherTrait;
@@ -40,9 +40,6 @@ mod Kass {
     // STORAGE
 
     struct Storage {
-        // L1 Address of the Kass contract
-        _l1KassAddress: EthAddress,
-
         // (implementation address => initialization status) mapping
         _initializedClassHashes: LegacyMap<starknet::ClassHash, bool>,
     }
@@ -84,7 +81,7 @@ mod Kass {
         _initializer();
 
         // body
-        _l1KassAddress::write(l1KassAddress_);
+        setL1KassAddress(l1KassAddress_);
 
         TokenDeployer::setDeployerClassHashes();
 
@@ -107,7 +104,7 @@ mod Kass {
 
     #[view]
     fn l1KassAddress() -> EthAddress {
-        _l1KassAddress::read()
+        KassMessaging::l1KassAddress()
     }
 
     #[view]
@@ -122,9 +119,7 @@ mod Kass {
         Ownable::_onlyOwner();
 
         // body
-        assert(l1KassAddress_.is_non_zero(), 'ZERO_L1_KASS_ADDRESS');
-
-        _l1KassAddress::write(l1KassAddress_);
+        KassMessaging::setL1KassAddress(l1KassAddress_);
     }
 
     // TODO: init status support
@@ -163,42 +158,13 @@ mod Kass {
 
     // INSTANCE REQUEST
 
-    fn _requestL1Wrapper(
-        l2TokenAddress: starknet::ContractAddress,
-        ref data: Array<felt252>,
-        tokenStandard: TokenStandard
-    ) {
-        // load payload
-        let message_payload = KassMessagingPayloads::computeL1WrapperRequestMessage(
-            l2TokenAddress,
-            ref data,
-            tokenStandard
-        );
+    fn requestL1Wrapper(l2TokenAddress: starknet::ContractAddress) {
+        // TODO: assert token is not a wrapper
 
-        // send instance request to L1
-        starknet::syscalls::send_message_to_l1_syscall(
-            to_address: l1KassAddress().into(),
-            payload: message_payload.span()
-        );
-    }
+        // send L1 Wrapper Creation message
+        KassMessaging::sendL1WrapperRequestMessage(l2TokenAddress);
 
-    #[external]
-    fn requestL1Wrapper721(l2TokenAddress: starknet::ContractAddress) {
-        // get contract name and symbol
-        let mut data: Array<felt252> = ArrayTrait::new();
-
-        data.append(IERC721Dispatcher { contract_address: l2TokenAddress }.name());
-        data.append(IERC721Dispatcher { contract_address: l2TokenAddress }.symbol());
-
-        _requestL1Wrapper(l2TokenAddress, ref data, TokenStandard::ERC721(()));
-    }
-
-    #[external]
-    fn requestL1Wrapper1155(l2TokenAddress: starknet::ContractAddress) {
-        // get contract uri
-        let mut uri = IERC1155Dispatcher { contract_address: l2TokenAddress }.uri(0.into());
-
-        _requestL1Wrapper(l2TokenAddress, ref uri, TokenStandard::ERC1155(()));
+        // TODO: emit event
     }
 
     // DEPOSIT
@@ -234,7 +200,7 @@ mod Kass {
         }
 
         // load payload
-        let mut message_payload = KassMessagingPayloads::computeTokenDepositOnL1Message(
+        let mut message_payload = KassMessaging::computeTokenDepositOnL1Message(
             l2TokenAddress,
             tokenId,
             amount,

@@ -1,5 +1,7 @@
 use starknet::contract_address::ContractAddressSerde;
 
+const IERC1155_ID: u32 = 0xd9b67a26_u32;
+
 #[abi]
 trait IERC1155 {
     fn uri(token_id: u256) -> Array::<felt252>;

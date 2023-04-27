@@ -2,11 +2,11 @@ use array::ArrayTrait;
 use array::SpanTrait;
 
 trait ArrayTConcatTrait<T> {
-    fn felt252WordsToStr(ref self: Array::<T>, ref arr: Array::<T>);
+    fn concat(ref self: Array::<T>, ref arr: Array::<T>);
 }
 
 impl ArrayTConcatImpl<T, impl TDrop: Drop::<T>> of ArrayTConcatTrait::<T> {
-    fn felt252WordsToStr(ref self: Array::<T>, ref arr: Array::<T>) {
+    fn concat(ref self: Array::<T>, ref arr: Array::<T>) {
         match gas::withdraw_gas() {
             Option::Some(_) => {},
             Option::None(_) => {
@@ -18,7 +18,7 @@ impl ArrayTConcatImpl<T, impl TDrop: Drop::<T>> of ArrayTConcatTrait::<T> {
         match arr.pop_front() {
             Option::Some(v) => {
                 self.append(v);
-                self.felt252WordsToStr(ref arr);
+                self.concat(ref arr);
             },
             Option::None(_) => (),
         }

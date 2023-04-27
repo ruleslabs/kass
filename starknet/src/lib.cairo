@@ -4,8 +4,8 @@ use kass::Kass;
 mod tokenDeployer;
 use tokenDeployer::TokenDeployer;
 
-mod kassMessagingPayloads;
-use kassMessagingPayloads::KassMessagingPayloads;
+mod kassMessaging;
+use kassMessaging::KassMessaging;
 
 mod interfaces;
 mod libraries;

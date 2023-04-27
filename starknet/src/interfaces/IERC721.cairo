@@ -1,5 +1,7 @@
 use starknet::contract_address::ContractAddressSerde;
 
+const IERC721_ID: u32 = 0x80ac58cd_u32;
+
 #[abi]
 trait IERC721 {
     fn name() -> felt252;
