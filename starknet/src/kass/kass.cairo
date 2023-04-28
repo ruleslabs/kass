@@ -176,9 +176,9 @@ mod Kass {
         let l2TokenAddress = starknet::contract_address_const::<0x42>();
 
         // burn or tranfer tokens
-        _lockTokens(l2TokenAddress, tokenId, amount, isNative);
+        _lockTokens(tokenAddress: l2TokenAddress, :tokenId, :amount, :isNative);
 
-        Messaging::sendTokenDepositMessage(tokenAddress, l1Recipient, tokenId, amount);
+        Messaging::sendTokenDepositMessage(:tokenAddress, recipient: l1Recipient, :tokenId, :amount);
     }
 
     #[external]
@@ -194,52 +194,32 @@ mod Kass {
     // WITHDRAW
 
     fn _withdraw(
-        l2TokenAddress: starknet::ContractAddress,
-        l2Recipient: starknet::ContractAddress,
+        tokenAddress: felt252,
+        recipient: starknet::ContractAddress,
         tokenId: u256,
         amount: u256,
-        native: bool,
-        tokenStandard: TokenStandard
     ) {
-        let contractAddress = starknet::get_contract_address();
+        // TODO: get real data
+        let isNative = false;
+        let l2TokenAddress = starknet::contract_address_const::<0x42>();
 
-        // transfer tokens
-        if (native) {
-            match tokenStandard {
-                TokenStandard::ERC721(_) => {
-                    IERC721Dispatcher { contract_address: l2TokenAddress }.transferFrom(
-                        contractAddress,
-                        l2Recipient,
-                        tokenId
-                    );
-                },
-                TokenStandard::ERC1155(_) => {
-                    IERC1155Dispatcher { contract_address: l2TokenAddress }.safeTransferFrom(
-                        contractAddress,
-                        l2Recipient,
-                        tokenId,
-                        amount,
-                        ArrayTrait::<felt252>::new()
-                    );
-                }
-            }
-        } else {
-            match tokenStandard {
-                TokenStandard::ERC721(_) => {
-                    IERC721Dispatcher { contract_address: l2TokenAddress }.mint(l2Recipient, tokenId);
-                },
-                TokenStandard::ERC1155(_) => {
-                    IERC1155Dispatcher { contract_address: l2TokenAddress }.mint(l2Recipient, tokenId, amount);
-                }
-            }
-        }
+        _unlockTokens(tokenAddress: l2TokenAddress, :recipient, :tokenId, :amount, :isNative);
     }
 
     #[l1_handler]
-    fn withdrawNative721(
+    fn withdraw721(from_address: felt252, tokenAddress: felt252, recipient: starknet::ContractAddress, tokenId: u256) {
+        // modifiers
+        _l1_handler(EthAddressTrait::new(from_address));
+
+        // body
+        _withdraw(:tokenAddress, :recipient, :tokenId, amount: u256 { low: 1, high: 0 });
+    }
+
+    #[l1_handler]
+    fn withdraw1155(
         from_address: felt252,
-        l2TokenAddress: starknet::ContractAddress,
-        l2Recipient: starknet::ContractAddress,
+        tokenAddress: felt252,
+        recipient: starknet::ContractAddress,
         tokenId: u256,
         amount: u256
     ) {
@@ -247,80 +227,7 @@ mod Kass {
         _l1_handler(EthAddressTrait::new(from_address));
 
         // body
-        _withdraw(
-            :l2TokenAddress,
-            :l2Recipient,
-            :tokenId,
-            amount: u256 { low: 1, high: 0 },
-            native: true,
-            tokenStandard: TokenStandard::ERC721(())
-        );
-    }
-
-    #[l1_handler]
-    fn withdrawNative1155(
-        from_address: felt252,
-        l2TokenAddress: starknet::ContractAddress,
-        l2Recipient: starknet::ContractAddress,
-        tokenId: u256,
-        amount: u256
-    ) {
-        // modifiers
-        _l1_handler(EthAddressTrait::new(from_address));
-
-        // body
-        _withdraw(
-            :l2TokenAddress,
-            :l2Recipient,
-            :tokenId,
-            :amount,
-            native: true,
-            tokenStandard: TokenStandard::ERC1155(())
-        );
-    }
-
-    #[l1_handler]
-    fn withdrawWrapped721(
-        from_address: felt252,
-        l2TokenAddress: starknet::ContractAddress,
-        l2Recipient: starknet::ContractAddress,
-        tokenId: u256,
-        amount: u256
-    ) {
-        // modifiers
-        _l1_handler(EthAddressTrait::new(from_address));
-
-        // body
-        _withdraw(
-            :l2TokenAddress,
-            :l2Recipient,
-            :tokenId,
-            amount: u256 { low: 1, high: 0 },
-            native: false,
-            tokenStandard: TokenStandard::ERC721(())
-        );
-    }
-
-    #[l1_handler]
-    fn withdrawWrapped1155(
-        from_address: felt252,
-        l2TokenAddress: starknet::ContractAddress,
-        l2Recipient: starknet::ContractAddress,
-        tokenId: u256,
-        amount: u256
-    ) {
-        // modifiers
-        _l1_handler(EthAddressTrait::new(from_address));
-
-        // body
-        _withdraw(
-            :l2TokenAddress,
-            :l2Recipient,
-            :tokenId,
-            :amount,
-            native: false,
-            tokenStandard: TokenStandard::ERC1155(())
-        );
+        _withdraw(:tokenAddress, :recipient, :tokenId, :amount);
     }
 
     // MISC
@@ -353,12 +260,12 @@ mod Kass {
         _initializedClassHashes::write(classHash, true);
     }
 
-    fn _lockTokens(l2TokenAddress: starknet::ContractAddress, tokenId: u256, amount: u256, isNative: bool) {
+    fn _lockTokens(tokenAddress: starknet::ContractAddress, tokenId: u256, amount: u256, isNative: bool) {
         let caller = starknet::get_caller_address();
         let contractAddress = starknet::get_contract_address();
 
-        if (l2TokenAddress.isERC721()) {
-            let ERC721 = IERC721Dispatcher { contract_address: l2TokenAddress };
+        if (tokenAddress.isERC721()) {
+            let ERC721 = IERC721Dispatcher { contract_address: tokenAddress };
 
             if (isNative) {
                 ERC721.transferFrom(from: caller, to: contractAddress, :tokenId);
@@ -368,10 +275,10 @@ mod Kass {
 
                 ERC721.burn(:tokenId);
             }
-        } else if (l2TokenAddress.isERC1155()) {
+        } else if (tokenAddress.isERC1155()) {
             assert(amount > u256 {low: 0, high: 0 }, 'Cannot deposit null amount');
 
-            let ERC1155 = IERC1155Dispatcher { contract_address: l2TokenAddress };
+            let ERC1155 = IERC1155Dispatcher { contract_address: tokenAddress };
 
             if (isNative) {
                 ERC1155.safeTransferFrom(
@@ -389,7 +296,41 @@ mod Kass {
         }
     }
 
-    fn _unlockTokens() {
+    fn _unlockTokens(
+        tokenAddress: starknet::ContractAddress,
+        recipient: starknet::ContractAddress,
+        tokenId: u256,
+        amount: u256,
+        isNative: bool
+    ) {
+        let contractAddress = starknet::get_contract_address();
 
+        if (tokenAddress.isERC721()) {
+            let ERC721 = IERC721Dispatcher { contract_address: tokenAddress };
+
+            if (isNative) {
+                ERC721.transferFrom(from: contractAddress, to: recipient, :tokenId);
+            } else {
+                ERC721.mint(to: recipient, :tokenId);
+            }
+        } else if (tokenAddress.isERC1155()) {
+            assert(amount > u256 {low: 0, high: 0 }, 'Cannot withdraw null amount');
+
+            let ERC1155 = IERC1155Dispatcher { contract_address: tokenAddress };
+
+            if (isNative) {
+                ERC1155.safeTransferFrom(
+                    from: contractAddress,
+                    to: recipient,
+                    :tokenId,
+                    :amount,
+                    data: ArrayTrait::<felt252>::new()
+                );
+            } else {
+                ERC1155.mint(to: recipient, :tokenId, :amount);
+            }
+        } else {
+            panic_with_felt252('Kass: Unkown token standard');
+        }
     }
 }
