@@ -173,6 +173,20 @@ mod Kass {
 
     // OWNERSHIP CLAIM
 
+    #[l1_handler]
+    fn claimL2Ownership(from_address: felt252, l1TokenAddress: EthAddress, l2Owner: starknet::ContractAddress) {
+        // modifiers
+        _l1_handler(EthAddressTrait::new(from_address));
+
+        // get L2 token wrapper
+        let l2TokenAddress = starknet::contract_address_const::<0>(); // TODO: compute contract address
+
+        // transfer ownership
+        IOwnableDispatcher { contract_address: l2TokenAddress }.transferOwnership(l2Owner);
+
+        // emit event
+    }
+
     // OWNERSHIP REQUEST
 
     fn requestL1Ownership(tokenAddress: starknet::ContractAddress, l1Owner: EthAddress) {

@@ -1,6 +1,10 @@
 #[abi]
 trait IOwnable {
-  fn getOwner() -> starknet::ContractAddress;
+    fn getOwner() -> starknet::ContractAddress;
+
+    fn transferOwnership(
+        owner: starknet::ContractAddress
+    );
 }
 
 #[contract]
