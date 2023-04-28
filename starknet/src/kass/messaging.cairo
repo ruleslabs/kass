@@ -25,6 +25,8 @@ mod Messaging {
     use kass::constants::REQUEST_L1_721_INSTANCE;
     use kass::constants::REQUEST_L1_1155_INSTANCE;
 
+    use kass::constants::CLAIM_OWNERSHIP;
+
     use kass::constants::TRANSFER_FROM_STARKNET;
 
     // STORAGE
@@ -51,31 +53,30 @@ mod Messaging {
 
     // L1 WRAPPER REQUEST
 
-    fn computeL1WrapperRequestMessage(l2TokenAddress: starknet::ContractAddress) -> Array<felt252> {
-        // load payload
+    fn computeL1WrapperRequestMessage(tokenAddress: starknet::ContractAddress) -> Array<felt252> {
         let mut payload: Array<felt252> = ArrayTrait::new();
 
-        if (l2TokenAddress.isERC721()) {
+        if (tokenAddress.isERC721()) {
             // token is ERC721
             payload.append(REQUEST_L1_721_INSTANCE.into());
 
             // store L2 token address
-            payload.append(l2TokenAddress.into());
+            payload.append(tokenAddress.into());
 
             // store wrapper init calldata
-            let ERC721 = IERC721Dispatcher { contract_address: l2TokenAddress };
+            let ERC721 = IERC721Dispatcher { contract_address: tokenAddress };
 
             payload.append(ERC721.name());
             payload.append(ERC721.symbol());
-        } else if (l2TokenAddress.isERC1155()) {
+        } else if (tokenAddress.isERC1155()) {
             // token is ERC1155
             payload.append(REQUEST_L1_1155_INSTANCE.into());
 
             // store L2 token address
-            payload.append(l2TokenAddress.into());
+            payload.append(tokenAddress.into());
 
             // store wrapper init calldata
-            let ERC1155 = IERC1155Dispatcher { contract_address: l2TokenAddress };
+            let ERC1155 = IERC1155Dispatcher { contract_address: tokenAddress };
             let mut uri = ERC1155.uri(0.into());
 
             payload.concat(ref uri);
@@ -86,11 +87,32 @@ mod Messaging {
         return payload;
     }
 
-    fn sendL1WrapperRequestMessage(l2TokenAddress: starknet::ContractAddress) {
-        let paylaod = computeL1WrapperRequestMessage(l2TokenAddress);
+    fn sendL1WrapperRequestMessage(tokenAddress: starknet::ContractAddress) {
+        let payload = computeL1WrapperRequestMessage(tokenAddress);
 
         // send wrapper request to L1
-        starknet::syscalls::send_message_to_l1_syscall(to_address: l1KassAddress().into(), payload: paylaod.span());
+        starknet::syscalls::send_message_to_l1_syscall(to_address: l1KassAddress().into(), payload: payload.span());
+    }
+
+    // L1 OWNERSHIP REQUEST
+
+    fn computeL1OwnershipRequest(tokenAddress: starknet::ContractAddress, l1Owner: EthAddress) -> Array<felt252> {
+        let mut payload: Array<felt252> = ArrayTrait::new();
+
+        payload.append(CLAIM_OWNERSHIP.into());
+
+        payload.append(tokenAddress.into());
+
+        payload.append(l1Owner.into());
+
+        return payload;
+    }
+
+    fn sendL1OwnershipRequestMessage(tokenAddress: starknet::ContractAddress, l1Owner: EthAddress) {
+        let payload = computeL1OwnershipRequest(:tokenAddress, :l1Owner);
+
+        // send ownership request to L1
+        starknet::syscalls::send_message_to_l1_syscall(to_address: l1KassAddress().into(), payload: payload.span());
     }
 
     // DEPOSIT ON L1
@@ -101,7 +123,6 @@ mod Messaging {
         tokenId: u256,
         amount: u256
     ) -> Array<felt252> {
-        // load payload
         let mut payload: Array<felt252> = ArrayTrait::new();
 
         payload.append(TRANSFER_FROM_STARKNET.into());
@@ -125,9 +146,9 @@ mod Messaging {
         tokenId: u256,
         amount: u256
     ) {
-        let paylaod = computeTokenDepositOnL1Message(:tokenAddress, :recipient, :tokenId, :amount);
+        let payload = computeTokenDepositOnL1Message(:tokenAddress, :recipient, :tokenId, :amount);
 
         // send deposit request to L1
-        starknet::syscalls::send_message_to_l1_syscall(to_address: l1KassAddress().into(), payload: paylaod.span());
+        starknet::syscalls::send_message_to_l1_syscall(to_address: l1KassAddress().into(), payload: payload.span());
     }
 }

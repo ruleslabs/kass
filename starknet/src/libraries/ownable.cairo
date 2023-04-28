@@ -1,3 +1,8 @@
+#[abi]
+trait IOwnable {
+  fn getOwner() -> starknet::ContractAddress;
+}
+
 #[contract]
 mod Ownable {
 

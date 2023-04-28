@@ -22,6 +22,9 @@ mod Kass {
     use kass::TokenDeployer;
     use kass::Messaging;
 
+    use kass::libraries::ownable::IOwnableDispatcher;
+    use kass::libraries::ownable::IOwnableDispatcherTrait;
+
     use kass::interfaces::IERC721::IERC721Dispatcher;
     use kass::interfaces::IERC721::IERC721DispatcherTrait;
 
@@ -125,7 +128,7 @@ mod Kass {
 
     // TODO: init status support
 
-    // INSTANCE CREATION
+    // WRAPPER CREATION
 
     #[l1_handler]
     fn createL2Wrapper721(
@@ -157,15 +160,33 @@ mod Kass {
         TokenDeployer::deployKassERC1155(l1TokenAddress.into(), data.span());
     }
 
-    // INSTANCE REQUEST
+    // WRAPPER REQUEST
 
-    fn requestL1Wrapper(l2TokenAddress: starknet::ContractAddress) {
+    fn requestL1Wrapper(tokenAddress: starknet::ContractAddress) {
         // TODO: assert token is not a wrapper
 
         // send L1 Wrapper Creation message
-        Messaging::sendL1WrapperRequestMessage(l2TokenAddress);
+        Messaging::sendL1WrapperRequestMessage(:tokenAddress);
 
         // TODO: emit event
+    }
+
+    // OWNERSHIP CLAIM
+
+    // OWNERSHIP REQUEST
+
+    fn requestL1Ownership(tokenAddress: starknet::ContractAddress, l1Owner: EthAddress) {
+        // assert L2 token owner is sender
+        let caller = starknet::get_caller_address();
+        assert(
+            IOwnableDispatcher { contract_address: tokenAddress }.getOwner() == caller,
+            'Caller is not the owner'
+        );
+
+        // send L2 wrapper request message
+        Messaging::sendL1OwnershipRequestMessage(:tokenAddress, :l1Owner);
+
+        // emit event
     }
 
     // DEPOSIT
