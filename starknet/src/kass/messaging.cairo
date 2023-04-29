@@ -6,19 +6,22 @@ mod Messaging {
     use zeroable::Zeroable;
     use array::ArrayTrait;
     use traits::Into;
+    use starknet::EthAddressZeroable;
 
-    use kass::utils::ArrayTConcatTrait;
-    use kass::utils::TokenStandard;
-    use kass::utils::EthAddress;
-    use kass::utils::EthAddressTrait; // TODO try to remove
-    use kass::utils::eth_address::EthAddressZeroable;
-    use kass::utils::token_standard::ContractAddressInterfacesTrait;
+    // INTERFACES
 
     use kass::interfaces::IERC721::IERC721Dispatcher;
     use kass::interfaces::IERC721::IERC721DispatcherTrait;
 
     use kass::interfaces::IERC1155::IERC1155Dispatcher;
     use kass::interfaces::IERC1155::IERC1155DispatcherTrait;
+
+    // UTILS
+
+    use kass::utils::EthAddressStorageAccess;
+    use kass::utils::ArrayTConcatTrait;
+    use kass::utils::TokenStandard;
+    use kass::utils::token_standard::ContractAddressInterfacesTrait;
 
     // CONSTANTS
 
@@ -33,19 +36,19 @@ mod Messaging {
 
     struct Storage {
         // L1 Address of the Kass contract
-        _l1KassAddress: EthAddress,
+        _l1KassAddress: starknet::EthAddress,
     }
 
     // GETTERS
 
     #[view]
-    fn l1KassAddress() -> EthAddress {
+    fn l1KassAddress() -> starknet::EthAddress {
         _l1KassAddress::read()
     }
 
     // SETTERS
 
-    fn setL1KassAddress(l1KassAddress_: EthAddress) {
+    fn setL1KassAddress(l1KassAddress_: starknet::EthAddress) {
         assert(l1KassAddress_.is_non_zero(), 'ZERO_L1_KASS_ADDRESS');
 
         _l1KassAddress::write(l1KassAddress_);
@@ -96,7 +99,10 @@ mod Messaging {
 
     // L1 OWNERSHIP REQUEST
 
-    fn computeL1OwnershipRequest(tokenAddress: starknet::ContractAddress, l1Owner: EthAddress) -> Array<felt252> {
+    fn computeL1OwnershipRequest(
+        tokenAddress: starknet::ContractAddress,
+        l1Owner: starknet::EthAddress
+    ) -> Array<felt252> {
         let mut payload: Array<felt252> = ArrayTrait::new();
 
         payload.append(CLAIM_OWNERSHIP.into());
@@ -108,7 +114,7 @@ mod Messaging {
         return payload;
     }
 
-    fn sendL1OwnershipRequestMessage(tokenAddress: starknet::ContractAddress, l1Owner: EthAddress) {
+    fn sendL1OwnershipRequestMessage(tokenAddress: starknet::ContractAddress, l1Owner: starknet::EthAddress) {
         let payload = computeL1OwnershipRequest(:tokenAddress, :l1Owner);
 
         // send ownership request to L1
@@ -119,7 +125,7 @@ mod Messaging {
 
     fn computeTokenDepositOnL1Message(
         tokenAddress: felt252,
-        recipient: EthAddress,
+        recipient: starknet::EthAddress,
         tokenId: u256,
         amount: u256
     ) -> Array<felt252> {
@@ -142,7 +148,7 @@ mod Messaging {
 
     fn sendTokenDepositMessage(
         tokenAddress: felt252,
-        recipient: EthAddress,
+        recipient: starknet::EthAddress,
         tokenId: u256,
         amount: u256
     ) {

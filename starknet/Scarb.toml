@@ -2,7 +2,7 @@
 name = "kass"
 version = "0.1.0"
 
-[dependencies]
-# foo = { path = "vendor/foo" }
-
 [[target.starknet-contract]]
+
+[scripts]
+test = "cairo-test . --starknet"

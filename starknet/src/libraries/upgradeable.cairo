@@ -3,6 +3,7 @@ mod Upgradeable {
     // USES
 
     use starknet::SyscallResultTrait;
+    use array::ArrayTrait;
 
     use super::Call;
     use super::CallSerde;
@@ -26,7 +27,7 @@ mod Upgradeable {
         starknet::syscalls::library_call_syscall(
             class_hash: newClassHash,
             function_selector: selector,
-            calldata: array::ArrayTrait::span(@calldata)
+            calldata: calldata.span()
         ).unwrap_syscall();
     }
 

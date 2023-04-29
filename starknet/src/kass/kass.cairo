@@ -1,3 +1,13 @@
+use kass::libraries::Upgradeable;
+
+#[abi]
+trait IKass {
+    fn upgradeToAndCall(
+        newClassHash: starknet::ClassHash,
+        call: Upgradeable::Call
+    );
+}
+
 #[contract]
 mod Kass {
 
@@ -8,16 +18,20 @@ mod Kass {
     use integer::Felt252IntoU256;
     use integer::U128IntoFelt252;
     use traits::Into;
+    use traits::TryInto;
+    use option::OptionTrait;
     use zeroable::Zeroable;
+    use starknet::EthAddressIntoFelt252;
+    use starknet::Felt252TryIntoEthAddress;
+    use starknet::EthAddressSerde;
+    use starknet::EthAddressZeroable;
+    use starknet::StorageAccess;
 
     use kass::utils::ArrayTConcatTrait;
     use kass::utils::LegacyHashClassHash;
-    use kass::utils::EthAddress;
-    use kass::utils::EthAddressTrait;
-    use kass::utils::eth_address::EthAddressZeroable;
-    use kass::utils::eth_address::EthAddressIntoFelt252;
     use kass::utils::TokenStandard;
     use kass::utils::token_standard::ContractAddressInterfacesTrait;
+    use kass::utils::EthAddressStorageAccess;
 
     use kass::TokenDeployer;
     use kass::Messaging;
@@ -58,7 +72,7 @@ mod Kass {
         _setInitialized(classHash);
     }
 
-    fn _l1_handler(from_address: EthAddress) {
+    fn _l1_handler(from_address: starknet::EthAddress) {
         assert(from_address == l1KassAddress(), 'EXPECTED_FROM_L1_KASS_ONLY');
     }
 
@@ -80,7 +94,7 @@ mod Kass {
     fn constructor() { }
 
     #[external]
-    fn initialize(l1KassAddress_: EthAddress) {
+    fn initialize(l1KassAddress_: starknet::EthAddress) {
         // modifiers
         _initializer();
 
@@ -107,7 +121,7 @@ mod Kass {
     // GETTERS
 
     #[view]
-    fn l1KassAddress() -> EthAddress {
+    fn l1KassAddress() -> starknet::EthAddress {
         Messaging::l1KassAddress()
     }
 
@@ -118,7 +132,7 @@ mod Kass {
 
     // SETTERS
 
-    fn setL1KassAddress(l1KassAddress_: EthAddress) {
+    fn setL1KassAddress(l1KassAddress_: starknet::EthAddress) {
         // modifiers
         Ownable::_onlyOwner();
 
@@ -133,11 +147,11 @@ mod Kass {
     #[l1_handler]
     fn createL2Wrapper721(
         from_address: felt252,
-        l1TokenAddress: EthAddress,
+        l1TokenAddress: starknet::EthAddress,
         data: Array<felt252>
     ) {
         // modifiers
-        _l1_handler(EthAddressTrait::new(from_address));
+        _l1_handler(from_address.try_into().unwrap());
 
         // body
 
@@ -148,11 +162,11 @@ mod Kass {
     #[l1_handler]
     fn createL2Wrapper1155(
         from_address: felt252,
-        l1TokenAddress: EthAddress,
+        l1TokenAddress: starknet::EthAddress,
         data: Array<felt252>
     ) {
         // modifiers
-        _l1_handler(EthAddressTrait::new(from_address));
+        _l1_handler(from_address.try_into().unwrap());
 
         // body
 
@@ -174,9 +188,9 @@ mod Kass {
     // OWNERSHIP CLAIM
 
     #[l1_handler]
-    fn claimL2Ownership(from_address: felt252, l1TokenAddress: EthAddress, l2Owner: starknet::ContractAddress) {
+    fn claimL2Ownership(from_address: felt252, l1TokenAddress: starknet::EthAddress, l2Owner: starknet::ContractAddress) {
         // modifiers
-        _l1_handler(EthAddressTrait::new(from_address));
+        _l1_handler(from_address.try_into().unwrap());
 
         // get L2 token wrapper
         let l2TokenAddress = starknet::contract_address_const::<0>(); // TODO: compute contract address
@@ -189,7 +203,7 @@ mod Kass {
 
     // OWNERSHIP REQUEST
 
-    fn requestL1Ownership(tokenAddress: starknet::ContractAddress, l1Owner: EthAddress) {
+    fn requestL1Ownership(tokenAddress: starknet::ContractAddress, l1Owner: starknet::EthAddress) {
         // assert L2 token owner is sender
         let caller = starknet::get_caller_address();
         assert(
@@ -205,7 +219,7 @@ mod Kass {
 
     // DEPOSIT
 
-    fn _deposit(tokenAddress: felt252, l1Recipient: EthAddress, tokenId: u256, amount: u256) {
+    fn _deposit(tokenAddress: felt252, l1Recipient: starknet::EthAddress, tokenId: u256, amount: u256) {
         // TODO: get real data
         let isNative = false;
         let l2TokenAddress = starknet::contract_address_const::<0x42>();
@@ -217,12 +231,12 @@ mod Kass {
     }
 
     #[external]
-    fn deposit721(tokenAddress: felt252, l1Recipient: EthAddress, tokenId: u256) {
+    fn deposit721(tokenAddress: felt252, l1Recipient: starknet::EthAddress, tokenId: u256) {
         _deposit(:tokenAddress, :l1Recipient, :tokenId, amount: u256 { low: 1, high: 0 });
     }
 
     #[external]
-    fn deposit1155(tokenAddress: felt252, l1Recipient: EthAddress, tokenId: u256, amount: u256) {
+    fn deposit1155(tokenAddress: felt252, l1Recipient: starknet::EthAddress, tokenId: u256, amount: u256) {
         _deposit(:tokenAddress, :l1Recipient, :tokenId, :amount);
     }
 
@@ -244,7 +258,7 @@ mod Kass {
     #[l1_handler]
     fn withdraw721(from_address: felt252, tokenAddress: felt252, recipient: starknet::ContractAddress, tokenId: u256) {
         // modifiers
-        _l1_handler(EthAddressTrait::new(from_address));
+        _l1_handler(from_address.try_into().unwrap());
 
         // body
         _withdraw(:tokenAddress, :recipient, :tokenId, amount: u256 { low: 1, high: 0 });
@@ -259,7 +273,7 @@ mod Kass {
         amount: u256
     ) {
         // modifiers
-        _l1_handler(EthAddressTrait::new(from_address));
+        _l1_handler(from_address.try_into().unwrap());
 
         // body
         _withdraw(:tokenAddress, :recipient, :tokenId, :amount);
@@ -310,6 +324,8 @@ mod Kass {
 
                 ERC721.burn(:tokenId);
             }
+
+            return ();
         } else if (tokenAddress.isERC1155()) {
             assert(amount > u256 {low: 0, high: 0 }, 'Cannot deposit null amount');
 
@@ -326,6 +342,8 @@ mod Kass {
             } else {
                 ERC1155.burn(from: caller, :tokenId, :amount);
             }
+
+            return ();
         } else {
             panic_with_felt252('Kass: Unkown token standard');
         }
@@ -348,6 +366,8 @@ mod Kass {
             } else {
                 ERC721.mint(to: recipient, :tokenId);
             }
+
+            return ();
         } else if (tokenAddress.isERC1155()) {
             assert(amount > u256 {low: 0, high: 0 }, 'Cannot withdraw null amount');
 
@@ -364,6 +384,8 @@ mod Kass {
             } else {
                 ERC1155.mint(to: recipient, :tokenId, :amount);
             }
+
+            return ();
         } else {
             panic_with_felt252('Kass: Unkown token standard');
         }

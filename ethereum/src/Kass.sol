@@ -128,7 +128,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         _state.initializedImplementations[implementation] = true;
     }
 
-    // INSTANCE CREATION
+    // WRAPPER CREATION
 
     function createL1Wrapper(uint256[] calldata messagePayload) public returns (address l1TokenAddress) {
         // consume L1 wrapper request message
@@ -150,7 +150,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         emit LogL1WrapperCreated(wrapperRequest.tokenAddress, l1TokenAddress);
     }
 
-    // INSTANCE CREATION REQUEST
+    // WRAPPER REQUEST
 
     function requestL2Wrapper(address tokenAddress) public payable {
         // assert tokenAddress is not a wrapper
@@ -169,7 +169,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         // consume ownership claim message
         _consumeL1OwnershipClaimMessage(l2TokenAddress, _msgSender());
 
-        // get l1 token wrapped
+        // get l1 token wrapper
         address l1TokenAddress = computeL1TokenAddress(l2TokenAddress);
 
         // transfer ownership

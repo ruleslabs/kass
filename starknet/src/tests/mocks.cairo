@@ -1,0 +1,4 @@
+mod mock_upgraded_contract;
+use mock_upgraded_contract::MockUpgradedContract;
+use mock_upgraded_contract::IMockUpgradedContractDispatcher;
+use mock_upgraded_contract::IMockUpgradedContractDispatcherTrait;
