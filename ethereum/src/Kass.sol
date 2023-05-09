@@ -320,7 +320,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
                 // check if sender is owner before burning
                 require(KassERC721(tokenAddress).ownerOf(tokenId) == _msgSender(), "You do not own this token");
 
-                KassERC721(tokenAddress).burn(tokenId);
+                KassERC721(tokenAddress).permissionedBurn(tokenId);
             }
         } else if (KassUtils.isERC1155(tokenAddress)) {
             require(amount > 0, "Cannot deposit null amount");
@@ -328,7 +328,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
             if (isNative) {
                 KassERC1155(tokenAddress).safeTransferFrom(_msgSender(), address(this), tokenId, amount, "");
             } else {
-                KassERC1155(tokenAddress).burn(_msgSender(), tokenId, amount);
+                KassERC1155(tokenAddress).permissionedBurn(_msgSender(), tokenId, amount);
             }
         } else {
             revert("Kass: Unkown token standard");
@@ -347,7 +347,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
             if (isNative) {
                 KassERC721(tokenAddress).transferFrom(address(this), recipient, tokenId);
             } else {
-                KassERC721(tokenAddress).mint(recipient, tokenId);
+                KassERC721(tokenAddress).permissionedMint(recipient, tokenId);
             }
         } else if (KassUtils.isERC1155(tokenAddress)) {
             require(amount > 0, "Cannot withdraw null amount");
@@ -355,7 +355,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
             if (isNative) {
                 KassERC1155(tokenAddress).safeTransferFrom(address(this), recipient, tokenId, amount, "");
             } else {
-                KassERC1155(tokenAddress).mint(recipient, tokenId, amount);
+                KassERC1155(tokenAddress).permissionedMint(recipient, tokenId, amount);
             }
         } else {
             revert("Kass: Unkown token standard");

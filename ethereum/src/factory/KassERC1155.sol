@@ -53,12 +53,12 @@ contract KassERC1155 is Context, ERC1155, Ownable, UUPSUpgradeable {
     // MINT & BURN
 
     // mint
-    function mint(address to, uint256 id, uint256 amount) public onlyDeployer {
+    function permissionedMint(address to, uint256 id, uint256 amount) public onlyDeployer {
         _mint(to, id, amount, "");
     }
 
     // burn
-    function burn(address from, uint256 id, uint256 amount) public onlyDeployer {
+    function permissionedBurn(address from, uint256 id, uint256 amount) public onlyDeployer {
         _burn(from, id, amount);
     }
 

@@ -30,7 +30,7 @@ contract TestSetup_1155_Native_Deposit is KassTestBase, ERC1155Holder {
     function _1155_mintTokens(address to, uint256 tokenId, uint256 amount) internal {
         // mint tokens
         vm.prank(_tokenOwner);
-        _l1NativeToken.mint(to, tokenId, amount);
+        _l1NativeToken.permissionedMint(to, tokenId, amount);
     }
 
     function _1155_basicDepositTest(

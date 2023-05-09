@@ -28,7 +28,7 @@ contract TestSetup_1155_Wrapped_Deposit is KassTestBase, ERC1155Holder {
     function _1155_mintTokens(address to, uint256 tokenId, uint256 amount) internal {
         // mint tokens
         vm.prank(address(_kass));
-        _l1TokenWrapper.mint(to, tokenId, amount);
+        _l1TokenWrapper.permissionedMint(to, tokenId, amount);
     }
 
     function _1155_basicDepositTest(

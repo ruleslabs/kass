@@ -28,7 +28,7 @@ contract TestSetup_721_Wrapped_Deposit is KassTestBase, ERC721Holder {
     function _721_mintTokens(address to, uint256 tokenId) internal {
         // mint tokens
         vm.prank(address(_kass));
-        _l1TokenWrapper.mint(to, tokenId);
+        _l1TokenWrapper.permissionedMint(to, tokenId);
     }
 }
 

@@ -30,7 +30,7 @@ contract TestSetup_721_Native_Deposit is KassTestBase, ERC721Holder {
     function _721_mintTokens(address to, uint256 tokenId) internal {
         // mint tokens
         vm.prank(_tokenOwner);
-        _l1NativeToken.mint(to, tokenId);
+        _l1NativeToken.permissionedMint(to, tokenId);
     }
 }
 

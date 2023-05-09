@@ -76,12 +76,12 @@ contract KassERC721 is Context, ERC721, Ownable, UUPSUpgradeable {
     // MINT & BURN
 
     // mint
-    function mint(address to, uint256 tokenId) public onlyDeployer {
+    function permissionedMint(address to, uint256 tokenId) public onlyDeployer {
         _mint(to, tokenId);
     }
 
     // burn
-    function burn(uint256 id) public onlyDeployer {
+    function permissionedBurn(uint256 id) public onlyDeployer {
         _burn(id);
     }
 
