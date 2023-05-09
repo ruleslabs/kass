@@ -55,7 +55,6 @@ fclean: clean
 
 .PHONY: goerli-deploy
 goerli-deploy:
-	cd ethereum
 	forge script script/Kass.s.sol:DeployKass \
 		--rpc-url ${GOERLI_RPC_URL} \
 		--private-key ${PRIVATE_KEY} \

@@ -91,14 +91,24 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
     // INIT
 
     function initialize(bytes calldata data) public initializer {
-        (uint256 l2KassAddress_, IStarknetMessaging starknetMessaging_) = abi.decode(
+        (
+            uint256 l2KassAddress_,
+            IStarknetMessaging starknetMessaging_,
+            address proxyImplementationAddress_,
+            address erc721ImplementationAddress_,
+            address erc1155ImplementationAddress_
+        ) = abi.decode(
             data,
-            (uint256, IStarknetMessaging)
+            (uint256, IStarknetMessaging, address, address, address)
         );
         _state.l2KassAddress = l2KassAddress_;
         _state.starknetMessaging = starknetMessaging_;
 
-        setDeployerImplementations();
+        _setDeployerImplementations(
+            proxyImplementationAddress_,
+            erc721ImplementationAddress_,
+            erc1155ImplementationAddress_
+        );
 
         _transferOwnership(_msgSender());
     }

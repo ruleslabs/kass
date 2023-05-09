@@ -3,7 +3,6 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-// import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "./interfaces/IStarknetMessaging.sol";
 import "./KassUtils.sol";
@@ -15,24 +14,31 @@ import "./KassStorage.sol";
 abstract contract TokenDeployer is KassStorage {
     // CONSTRUCTOR
 
-    function setDeployerImplementations() internal {
-        if (_state.proxyImplementationAddress == address(0x0)) {
-            _state.proxyImplementationAddress = address(
-                new KassERC1967Proxy{ salt: keccak256("KassERC1967Proxy") }()
-            );
-        }
+    function _setDeployerImplementations(
+        address proxyImplementationAddress_,
+        address erc721ImplementationAddress_,
+        address erc1155ImplementationAddress_
+    ) internal {
+        _state.proxyImplementationAddress = proxyImplementationAddress_;
+        _state.erc721ImplementationAddress = erc721ImplementationAddress_;
+        _state.erc1155ImplementationAddress = erc1155ImplementationAddress_;
+        // if (_state.proxyImplementationAddress == address(0x0)) {
+        //     _state.proxyImplementationAddress = address(
+        //         new KassERC1967Proxy{ salt: keccak256("KassERC1967Proxy") }()
+        //     );
+        // }
 
-        if (_state.erc721ImplementationAddress == address(0x0)) {
-            _state.erc721ImplementationAddress = address(
-                new KassERC721{ salt: keccak256("KassERC721") }()
-            );
-        }
+        // if (_state.erc721ImplementationAddress == address(0x0)) {
+        //     _state.erc721ImplementationAddress = address(
+        //         new KassERC721{ salt: keccak256("KassERC721") }()
+        //     );
+        // }
 
-        if (_state.erc1155ImplementationAddress == address(0x0)) {
-            _state.erc1155ImplementationAddress = address(
-                new KassERC1155{ salt: keccak256("KassERC1155") }()
-            );
-        }
+        // if (_state.erc1155ImplementationAddress == address(0x0)) {
+        //     _state.erc1155ImplementationAddress = address(
+        //         new KassERC1155{ salt: keccak256("KassERC1155") }()
+        //     );
+        // }
     }
 
     // GETTERS

@@ -32,7 +32,16 @@ contract Test_Setup is KassTestBase {
 
         _kass.upgradeToAndCall(
             newImplementation,
-            abi.encodeWithSelector(Kass.initialize.selector, abi.encode(uint256(0x0), address(0x0)))
+            abi.encodeWithSelector(
+                Kass.initialize.selector,
+                abi.encode(
+                    uint256(0x0),
+                    address(0x0),
+                    address(0x0),
+                    address(0x0),
+                    address(0x0)
+                )
+            )
         );
 
         assertEq(_kass.l2KassAddress(), 0x0);

@@ -11,6 +11,10 @@ import "../src/mocks/StarknetMessagingMock.sol";
 import "../src/KassMessaging.sol";
 import "../src/StarknetConstants.sol";
 
+import "../src/factory/KassERC721.sol";
+import "../src/factory/KassERC1155.sol";
+import "../src/factory/KassERC1967Proxy.sol";
+
 abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
     Kass internal _kass;
     address internal _starknetMessagingAddress;
@@ -98,11 +102,24 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
 
         address implementationAddress = address(new Kass());
 
+        address proxyImplementationAddress = address(new KassERC1967Proxy());
+        address erc721ImplementationAddress = address(new KassERC721());
+        address erc1155ImplementationAddress = address(new KassERC1155());
+
         // setup bridge
         address payable kassAddress = payable(
             new ERC1967Proxy(
                 implementationAddress,
-                abi.encodeWithSelector(Kass.initialize.selector, abi.encode(L2_KASS_ADDRESS, starknetMessaging))
+                abi.encodeWithSelector(
+                    Kass.initialize.selector,
+                    abi.encode(
+                        L2_KASS_ADDRESS,
+                        starknetMessaging,
+                        proxyImplementationAddress,
+                        erc721ImplementationAddress,
+                        erc1155ImplementationAddress
+                    )
+                )
             )
         );
         _kass = Kass(kassAddress);

@@ -8,6 +8,9 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "./HelperConfig.s.sol";
 
 import "../src/Kass.sol";
+import "../src/factory/KassERC721.sol";
+import "../src/factory/KassERC1155.sol";
+import "../src/factory/KassERC1967Proxy.sol";
 
 contract DeployKass is Script {
     // solhint-disable-next-line no-empty-blocks
@@ -24,19 +27,41 @@ contract DeployKass is Script {
 
         vm.startBroadcast();
 
-        // deploy implementation
+        // deploy implementations
         address implementationAddress = address(new Kass());
+
+        address proxyImplementationAddress = address(new KassERC1967Proxy{ salt: keccak256("KassERC1967Proxy") }());
+        address erc721ImplementationAddress = address(new KassERC721{ salt: keccak256("KassERC721") }());
+        address erc1155ImplementationAddress = address(new KassERC1155{ salt: keccak256("KassERC1155") }());
 
         // deploy proxy
         if (proxyAddress == address(0x0))
-            new ERC1967Proxy(
+            new ERC1967Proxy{ salt: "Kass" }(
                 implementationAddress,
-                abi.encodeWithSelector(Kass.initialize.selector, abi.encode(l2KassAddress, starknetMessagingAddress))
+                abi.encodeWithSelector(
+                    Kass.initialize.selector,
+                    abi.encode(
+                        l2KassAddress,
+                        starknetMessagingAddress,
+                        proxyImplementationAddress,
+                        erc721ImplementationAddress,
+                        erc1155ImplementationAddress
+                    )
+                )
             );
         else {
             Kass(payable(proxyAddress)).upgradeToAndCall(
                 implementationAddress,
-                abi.encodeWithSelector(Kass.initialize.selector, abi.encode(l2KassAddress, starknetMessagingAddress))
+                abi.encodeWithSelector(
+                    Kass.initialize.selector,
+                    abi.encode(
+                        l2KassAddress,
+                        starknetMessagingAddress,
+                        proxyImplementationAddress,
+                        erc721ImplementationAddress,
+                        erc1155ImplementationAddress
+                    )
+                )
             );
         }
 
