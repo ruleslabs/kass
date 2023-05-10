@@ -124,6 +124,18 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         return _state.l2KassAddress;
     }
 
+    function proxyImplementationAddress() public view returns (address) {
+        return _state.proxyImplementationAddress;
+    }
+
+    function erc721ImplementationAddress() public view returns (address) {
+        return _state.erc721ImplementationAddress;
+    }
+
+    function erc1155ImplementationAddress() public view returns (address) {
+        return _state.erc1155ImplementationAddress;
+    }
+
     function isInitialized(address implementation) private view returns (bool) {
         return _state.initializedImplementations[implementation];
     }

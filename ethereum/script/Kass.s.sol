@@ -22,7 +22,10 @@ contract DeployKass is Script {
         (
             address starknetMessagingAddress,
             uint256 l2KassAddress,
-            address proxyAddress
+            address proxyAddress,
+            address proxyImplementationAddress,
+            address erc721ImplementationAddress,
+            address erc1155ImplementationAddress
         ) = helperConfig.activeNetworkConfig();
 
         vm.startBroadcast();
@@ -30,13 +33,21 @@ contract DeployKass is Script {
         // deploy implementations
         address implementationAddress = address(new Kass());
 
-        address proxyImplementationAddress = address(new KassERC1967Proxy{ salt: keccak256("KassERC1967Proxy") }());
-        address erc721ImplementationAddress = address(new KassERC721{ salt: keccak256("KassERC721") }());
-        address erc1155ImplementationAddress = address(new KassERC1155{ salt: keccak256("KassERC1155") }());
+        if (proxyImplementationAddress == address(0x0)) {
+            proxyImplementationAddress = address(new KassERC1967Proxy{ salt: keccak256("KassERC1967Proxy") }());
+        }
+
+        if (erc721ImplementationAddress == address(0x0)) {
+            erc721ImplementationAddress = address(new KassERC721{ salt: keccak256("KassERC721") }());
+        }
+
+        if (erc1155ImplementationAddress == address(0x0)) {
+            erc1155ImplementationAddress = address(new KassERC1155{ salt: keccak256("KassERC1155") }());
+        }
 
         // deploy proxy
         if (proxyAddress == address(0x0))
-            new ERC1967Proxy{ salt: "Kass" }(
+            new ERC1967Proxy{ salt: keccak256("Kass") }(
                 implementationAddress,
                 abi.encodeWithSelector(
                     Kass.initialize.selector,
