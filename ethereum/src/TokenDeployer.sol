@@ -77,8 +77,6 @@ abstract contract TokenDeployer is KassStorage {
             mstore(add(clone, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
             result := create2(0, clone, 0x37, salt)
         }
-
-        _state.isWrapper[result] = true;
     }
 
     function cloneKassERC1155(bytes32 salt, bytes memory _calldata) internal returns (address payable result) {

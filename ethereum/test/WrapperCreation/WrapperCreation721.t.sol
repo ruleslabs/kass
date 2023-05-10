@@ -15,35 +15,25 @@ contract TestSetup_721_KassWrapperCreation is KassTestBase {
         super.setUp();
 
         // request L1 wrapper
-        requestL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL, TokenStandard.ERC721);
+        depositOnL1(bytes32(L2_TOKEN_ADDRESS), address(0x1), 0x1, 0x1, TokenStandard.ERC721, L2_TOKEN_NAME_AND_SYMBOL);
     }
 }
 
 contract Test_721_KassWrapperCreation is TestSetup_721_KassWrapperCreation {
 
-    function test_721_L1TokenWrapperComputedAddress() public {
-        // pre compute address
-        address computedL1TokenAddress = _kass.computeL1TokenAddress(L2_TOKEN_ADDRESS);
-
-        // create L1 wrapper
-        uint256[] memory messagePayload = expectL1WrapperCreation(
-            L2_TOKEN_ADDRESS,
-            L2_TOKEN_NAME_AND_SYMBOL,
-            TokenStandard.ERC721
-        );
-        address l1TokenAddress = _kass.createL1Wrapper(messagePayload);
-
-        assertEq(computedL1TokenAddress, l1TokenAddress);
-    }
-
     function test_721_L1TokenWrapperNameAndSymbol() public {
         // create L1 wrapper
-        uint256[] memory messagePayload = expectL1WrapperCreation(
-            L2_TOKEN_ADDRESS,
-            L2_TOKEN_NAME_AND_SYMBOL,
-            TokenStandard.ERC721
+        uint256[] memory messagePayload = expectWithdrawOnL1(
+            bytes32(L2_TOKEN_ADDRESS),
+            address(0x1),
+            0x1,
+            0x1,
+            TokenStandard.ERC721,
+            L2_TOKEN_NAME_AND_SYMBOL
         );
-        KassERC721 l1TokenWrapper = KassERC721(_kass.createL1Wrapper(messagePayload));
+        _kass.withdraw(messagePayload);
+
+        KassERC721 l1TokenWrapper = KassERC721(_kass.computeL1TokenAddress(L2_TOKEN_ADDRESS));
 
         assertEq(bytes(l1TokenWrapper.name()).length, bytes(L2_TOKEN_NAME).length);
         assertEq(l1TokenWrapper.symbol(), L2_TOKEN_SYMBOL);

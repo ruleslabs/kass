@@ -16,13 +16,8 @@ contract TestSetup_721_Wrapped_Deposit is KassTestBase, ERC721Holder {
     function setUp() public override {
         super.setUp();
 
-        // request and create L1 wrapper
-        uint256[] memory messagePayload = requestL1WrapperCreation(
-            L2_TOKEN_ADDRESS,
-            L2_TOKEN_NAME_AND_SYMBOL,
-            TokenStandard.ERC721
-        );
-        _l1TokenWrapper = KassERC721(_kass.createL1Wrapper(messagePayload));
+        // create L1 wrapper
+        _l1TokenWrapper = KassERC721(_createL1Wrapper(TokenStandard.ERC721));
     }
 
     function _721_mintTokens(address to, uint256 tokenId) internal {
@@ -45,7 +40,7 @@ contract Test_721_Wrapped_Deposit is TestSetup_721_Wrapped_Deposit {
         // assert token owner is sender
         assertEq(_l1TokenWrapper.ownerOf(tokenId), sender);
 
-        expectDepositOnL2(bytes32(L2_TOKEN_ADDRESS), sender, l2Recipient, tokenId, 0x1, 0x0);
+        expectDepositOnL2(bytes32(L2_TOKEN_ADDRESS), sender, l2Recipient, tokenId, 0x1, false, 0x0);
         _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId);
 
         // assert token does not exist on L1

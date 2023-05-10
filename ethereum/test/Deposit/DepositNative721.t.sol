@@ -32,6 +32,27 @@ contract TestSetup_721_Native_Deposit is KassTestBase, ERC721Holder {
         vm.prank(_tokenOwner);
         _l1NativeToken.permissionedMint(to, tokenId);
     }
+
+    function _721_basicDepositTest(address sender, uint256 l2Recipient, uint256 tokenId, uint256 nonce) internal {
+        // assert token owner is sender
+        assertEq(_l1NativeToken.ownerOf(tokenId), sender);
+
+        // check if a L2 wrapper request is needed
+        bool createWrapper = _kass.tokenStatus(address(_l1NativeToken)) == TokenStatus.UNKNOWN;
+
+        // approve kass operator
+        _l1NativeToken.approve(address(_kass), tokenId);
+
+        // deposit on L2
+        expectDepositOnL2(_bytes32_l1NativeToken(), sender, l2Recipient, tokenId, 0x1, createWrapper, nonce);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId);
+
+        // check new token status
+        assertEq(_kass.tokenStatus(address(_l1NativeToken)) == TokenStatus.NATIVE, true);
+
+        // assert token has been transfered to Kass
+        assertEq(_l1NativeToken.ownerOf(tokenId), address(_kass));
+    }
 }
 
 contract Test_721_Native_Deposit is TestSetup_721_Native_Deposit {
@@ -44,17 +65,8 @@ contract Test_721_Native_Deposit is TestSetup_721_Native_Deposit {
         // mint Token
         _721_mintTokens(sender, tokenId);
 
-        // approve kass operator
-        _l1NativeToken.approve(address(_kass), tokenId);
-
-        // assert token owner is sender
-        assertEq(_l1NativeToken.ownerOf(tokenId), sender);
-
-        expectDepositOnL2(_bytes32_l1NativeToken(), sender, l2Recipient, tokenId, 0x1, 0x0);
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId);
-
-        // assert token has been transfered to Kass
-        assertEq(_l1NativeToken.ownerOf(tokenId), address(_kass));
+        // test deposit
+        _721_basicDepositTest(sender, l2Recipient, tokenId, 0x0);
     }
 
     function test_721_wrapped_CannotDepositToL2IfNotTokenOwner() public {

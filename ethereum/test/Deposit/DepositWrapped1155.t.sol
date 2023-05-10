@@ -16,13 +16,8 @@ contract TestSetup_1155_Wrapped_Deposit is KassTestBase, ERC1155Holder {
     function setUp() public override {
         super.setUp();
 
-        // request and create L1 wrapper
-        uint256[] memory messagePayload = requestL1WrapperCreation(
-            L2_TOKEN_ADDRESS,
-            L2_TOKEN_URI,
-            TokenStandard.ERC1155
-        );
-        _l1TokenWrapper = KassERC1155(_kass.createL1Wrapper(messagePayload));
+        // create L1 wrapper
+        _l1TokenWrapper = KassERC1155(_createL1Wrapper(TokenStandard.ERC1155));
     }
 
     function _1155_mintTokens(address to, uint256 tokenId, uint256 amount) internal {
@@ -41,8 +36,13 @@ contract TestSetup_1155_Wrapped_Deposit is KassTestBase, ERC1155Holder {
         uint256 balance = _l1TokenWrapper.balanceOf(sender, tokenId);
 
         // deposit on L2
-        expectDepositOnL2(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amountToDepositOnL2, 0x0);
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(l2TokenAddress), l2Recipient, tokenId, amountToDepositOnL2);
+        expectDepositOnL2(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amountToDepositOnL2, false, 0x0);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(
+            bytes32(l2TokenAddress),
+            l2Recipient,
+            tokenId,
+            amountToDepositOnL2
+        );
 
         // check if balance was updated
         assertEq(_l1TokenWrapper.balanceOf(sender, tokenId), balance - amountToDepositOnL2);
@@ -55,13 +55,14 @@ contract Test_1155_Wrapped_Deposit is TestSetup_1155_Wrapped_Deposit {
         address sender = address(this);
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
-        uint256 amountToMintOnL1 = uint256(keccak256("huge amount"));
-        uint256 amountToDepositOnL2 = uint256(keccak256("huge amount")) - 0x42;
+        uint256 amountToMintOnL1 = uint256(keccak256("huge amount")) + 1;
+        uint256 amountToDepositOnL2 = uint256(keccak256("huge amount")) / 2;
 
         // mint some tokens
         _1155_mintTokens(sender, tokenId, amountToMintOnL1);
 
         // test deposit
+        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountToDepositOnL2);
         _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountToDepositOnL2);
     }
 
@@ -77,9 +78,10 @@ contract Test_1155_Wrapped_Deposit is TestSetup_1155_Wrapped_Deposit {
 
         // test deposit
         _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountToDepositOnL2);
+        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountToDepositOnL2);
     }
 
-    function tes_1155_wrapped_MultipleDepositToL2() public {
+    function tes_1155_wrapped_MultipleDifferentDepositToL2() public {
         address sender = address(this);
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
@@ -106,7 +108,12 @@ contract Test_1155_Wrapped_Deposit is TestSetup_1155_Wrapped_Deposit {
 
         // deposit on L2
         vm.expectRevert("ERC1155: burn amount exceeds balance");
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, amountToDepositOnL2);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(
+            bytes32(L2_TOKEN_ADDRESS),
+            l2Recipient,
+            tokenId,
+            amountToDepositOnL2
+        );
     }
 
     function test_1155_wrapped_CannotDepositZeroToL2() public {
@@ -116,6 +123,11 @@ contract Test_1155_Wrapped_Deposit is TestSetup_1155_Wrapped_Deposit {
 
         // deposit on L2
         vm.expectRevert("Cannot deposit null amount");
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, amountToDepositOnL1);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(
+            bytes32(L2_TOKEN_ADDRESS),
+            l2Recipient,
+            tokenId,
+            amountToDepositOnL1
+        );
     }
 }

@@ -124,6 +124,10 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         return _state.l2KassAddress;
     }
 
+    function tokenStatus(address token) public view returns (TokenStatus) {
+        return _state.tokenStatus[token];
+    }
+
     function isInitialized(address implementation) private view returns (bool) {
         return _state.initializedImplementations[implementation];
     }
@@ -219,7 +223,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         // get l1 token address (native or wrapper)
         (address l1TokenAddress, bool isNative) = getL1TokenAddres(depositRequest.tokenAddress);
 
-        if (!isNative && _state.tokenStatus[l1TokenAddress] != TokenStatus.UNKOWN) {
+        if (!isNative && _state.tokenStatus[l1TokenAddress] == TokenStatus.UNKNOWN) {
             // parse message payload
             WrapperRequest memory wrapperRequest = _parseWrapperRequestMessagePayload(messagePayload);
 
@@ -229,7 +233,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
             } else if (wrapperRequest.tokenStandard == TokenStandard.ERC1155) {
                 cloneKassERC1155(wrapperRequest.tokenAddress, wrapperRequest._calldata);
             } else {
-                revert("Kass: Unkown token standard");
+                revert("Kass: Unknown token standard");
             }
 
             // save wrapper status
@@ -273,16 +277,23 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         uint256 recipient,
         uint256 tokenId,
         uint256 amount,
+        bool createWrapper,
         uint256 nonce
     ) public onlyDepositor(nonce) {
         // start token deposit message cancellation
-        _startL1ToL2TokenDepositMessageCancellation(tokenAddress, recipient, tokenId, amount, nonce);
+        _startL1ToL2TokenDepositMessageCancellation(tokenAddress, recipient, tokenId, amount, createWrapper, nonce);
 
         emit LogDepositCancelRequest(tokenAddress, _msgSender(), recipient, tokenId, amount, nonce);
     }
 
-    function requestDepositCancel(bytes32 tokenAddress, uint256 recipient, uint256 tokenId, uint256 nonce) public {
-        requestDepositCancel(tokenAddress, recipient, tokenId, 0x1, nonce);
+    function requestDepositCancel(
+        bytes32 tokenAddress,
+        uint256 recipient,
+        uint256 tokenId,
+        bool createWrapper,
+        uint256 nonce
+    ) public {
+        requestDepositCancel(tokenAddress, recipient, tokenId, 0x1, createWrapper, nonce);
     }
 
     // CANCEL DEPOSIT
@@ -292,10 +303,11 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         uint256 recipient,
         uint256 tokenId,
         uint256 amount,
+        bool createWrapper,
         uint256 nonce
     ) public onlyDepositor(nonce) {
         // cancel token deposit message
-        _cancelL1ToL2TokenDepositMessage(tokenAddress, recipient, tokenId, amount, nonce);
+        _cancelL1ToL2TokenDepositMessage(tokenAddress, recipient, tokenId, amount, createWrapper, nonce);
 
         (address l1TokenAddress, bool isNative) = getL1TokenAddres(tokenAddress);
 
@@ -305,8 +317,14 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         emit LogDepositCancel(tokenAddress, _msgSender(), recipient, tokenId, amount, nonce);
     }
 
-    function cancelDeposit(bytes32 tokenAddress, uint256 recipient, uint256 tokenId, uint256 nonce) public {
-        cancelDeposit(tokenAddress, recipient, tokenId, 0x1, nonce);
+    function cancelDeposit(
+        bytes32 tokenAddress,
+        uint256 recipient,
+        uint256 tokenId,
+        bool createWrapper,
+        uint256 nonce
+    ) public {
+        cancelDeposit(tokenAddress, recipient, tokenId, 0x1, createWrapper, nonce);
     }
 
     // SAFE TRANSFERS CHECK
@@ -337,7 +355,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
                 KassERC1155(tokenAddress).permissionedBurn(_msgSender(), tokenId, amount);
             }
         } else {
-            revert("Kass: Unkown token standard");
+            revert("Kass: Unknown token standard");
         }
     }
 
@@ -364,7 +382,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
                 KassERC1155(tokenAddress).permissionedMint(recipient, tokenId, amount);
             }
         } else {
-            revert("Kass: Unkown token standard");
+            revert("Kass: Unknown token standard");
         }
     }
 

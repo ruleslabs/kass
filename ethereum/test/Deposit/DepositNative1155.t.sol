@@ -37,13 +37,35 @@ contract TestSetup_1155_Native_Deposit is KassTestBase, ERC1155Holder {
         address sender,
         uint256 l2Recipient,
         uint256 tokenId,
-        uint256 amountToDepositOnL2
+        uint256 amountToDepositOnL2,
+        uint256 nonce
     ) internal {
         uint256 balance = _l1NativeToken.balanceOf(sender, tokenId);
 
+        // check if a L2 wrapper request is needed
+        bool createWrapper = _kass.tokenStatus(address(_l1NativeToken)) == TokenStatus.UNKNOWN;
+
+        _l1NativeToken.setApprovalForAll(address(_kass), true);
+
         // deposit on L2
-        expectDepositOnL2(_bytes32_l1NativeToken(), sender, l2Recipient, tokenId, amountToDepositOnL2, 0x0);
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId, amountToDepositOnL2);
+        expectDepositOnL2(
+            _bytes32_l1NativeToken(),
+            sender,
+            l2Recipient,
+            tokenId,
+            amountToDepositOnL2,
+            createWrapper,
+            nonce
+        );
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(
+            _bytes32_l1NativeToken(),
+            l2Recipient,
+            tokenId,
+            amountToDepositOnL2
+        );
+
+        // check new token status
+        assertEq(_kass.tokenStatus(address(_l1NativeToken)) == TokenStatus.NATIVE, true);
 
         // check if balance was updated
         assertEq(_l1NativeToken.balanceOf(sender, tokenId), balance - amountToDepositOnL2);
@@ -56,8 +78,8 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
         address sender = address(this);
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
-        uint256 amountToMintOnL1 = uint256(keccak256("huge amount"));
-        uint256 amountToDepositOnL2 = uint256(keccak256("huge amount")) - 0x42;
+        uint256 amountToMintOnL1 = uint256(keccak256("huge amount")) + 1;
+        uint256 amountToDepositOnL2 = uint256(keccak256("huge amount")) / 2;
 
         // mint some tokens
         _1155_mintTokens(sender, tokenId, amountToMintOnL1);
@@ -66,7 +88,8 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
         _l1NativeToken.setApprovalForAll(address(_kass), true);
 
         // test deposit
-        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountToDepositOnL2);
+        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountToDepositOnL2, 0x0);
+        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountToDepositOnL2, 0x0);
     }
 
     function test_1155_native_DepositToL2_2() public {
@@ -83,10 +106,11 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
         _l1NativeToken.setApprovalForAll(address(_kass), true);
 
         // test deposit
-        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountToDepositOnL2);
+        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountToDepositOnL2, 0x0);
+        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountToDepositOnL2, 0x0);
     }
 
-    function tes_1155_native_MultipleDepositToL2() public {
+    function tes_1155_native_MultipleDifferentDepositToL2() public {
         address sender = address(this);
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
@@ -100,8 +124,8 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
         _l1NativeToken.setApprovalForAll(address(_kass), true);
 
         // test deposits
-        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountsToDepositOnL2[0]);
-        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountsToDepositOnL2[1]);
+        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountsToDepositOnL2[0], 0x0);
+        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountsToDepositOnL2[1], 0x0);
     }
 
     function test_1155_native_CannotDepositToL2MoreThanBalance() public {
@@ -119,7 +143,12 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
 
         // deposit on L2
         vm.expectRevert("ERC1155: insufficient balance for transfer");
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId, amountToDepositOnL2);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(
+            _bytes32_l1NativeToken(),
+            l2Recipient,
+            tokenId,
+            amountToDepositOnL2
+        );
     }
 
     function test_1155_native_CannotDepositToL2Zero() public {
@@ -129,7 +158,12 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
 
         // deposit on L2
         vm.expectRevert("Cannot deposit null amount");
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId, amountToDepositOnL1);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(
+            _bytes32_l1NativeToken(),
+            l2Recipient,
+            tokenId,
+            amountToDepositOnL1
+        );
     }
 
     function test_1155_native_CannotDepositToL2IfNotTokenOwner() public {

@@ -7,30 +7,21 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "../../src/KassUtils.sol";
 import "../KassTestBase.sol";
 
+import "../Deposit/DepositNative721.t.sol";
+
 // solhint-disable contract-name-camelcase
 
-contract TestSetup_721_KassWrapperRequest is KassTestBase {
-    ERC721 public _l1TokenWrapper = new ERC721(L2_TOKEN_NAME, L2_TOKEN_SYMBOL);
-}
-
-contract Test_721_KassWrapperRequest is TestSetup_721_KassWrapperRequest {
+contract Test_721_KassWrapperRequest is TestSetup_721_Native_Deposit {
 
     function test_721_L2TokenWrapperRequest() public {
-        expectL2WrapperRequest(address(_l1TokenWrapper));
-        _kass.requestL2Wrapper{ value: L1_TO_L2_MESSAGE_FEE }(address(_l1TokenWrapper));
-    }
+        address sender = address(this);
+        uint256 tokenId = 0x1;
 
-    function test_721_CannotDoubleWrap() public {
-        // create L1 wrapper
-        requestL1WrapperCreation(L2_TOKEN_ADDRESS, L2_TOKEN_NAME_AND_SYMBOL, TokenStandard.ERC721);
-        uint256[] memory messagePayload = expectL1WrapperCreation(
-            L2_TOKEN_ADDRESS,
-            L2_TOKEN_NAME_AND_SYMBOL,
-            TokenStandard.ERC721
-        );
-        address l1TokenWrapper = _kass.createL1Wrapper(messagePayload);
+        _721_mintTokens(sender, tokenId);
 
-        vm.expectRevert("Kass: Double wrap not allowed");
-        _kass.requestL2Wrapper{ value: L1_TO_L2_MESSAGE_FEE }(l1TokenWrapper);
+        _l1NativeToken.approve(address(_kass), tokenId);
+
+        expectDepositOnL2(_bytes32_l1NativeToken(), sender, 0x1, tokenId, 0x1, true, 0x1);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), 0x1, tokenId);
     }
 }

@@ -12,7 +12,7 @@ enum TokenStandard {
 }
 
 enum TokenStatus {
-    UNKOWN,
+    UNKNOWN,
     WRAPPER,
     NATIVE
 }

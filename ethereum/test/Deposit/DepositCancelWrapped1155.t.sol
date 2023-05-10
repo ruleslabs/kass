@@ -29,7 +29,7 @@ contract TestSetup_1155_Wrapped_DepositCancel is TestSetup_1155_Wrapped_Deposit 
         _1155_mintTokens(sender, tokenId, amount);
 
         // deposit tokens on L2
-        expectDepositOnL2(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amount, nonce);
+        expectDepositOnL2(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amount, false, nonce);
         _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(l2TokenAddress), l2Recipient, tokenId, amount);
 
         // check if balance is correct
@@ -51,15 +51,15 @@ contract TestSetup_1155_Wrapped_DepositCancel is TestSetup_1155_Wrapped_Deposit 
         _1155_mintAndDepositBackOnL2(l2TokenAddress, l2Recipient, tokenId, amount, nonce);
 
         // deposit cancel request
-        expectDepositCancelRequest(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amount, nonce);
-        _kass.requestDepositCancel(bytes32(l2TokenAddress), l2Recipient, tokenId, amount, nonce);
+        expectDepositCancelRequest(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amount, false, nonce);
+        _kass.requestDepositCancel(bytes32(l2TokenAddress), l2Recipient, tokenId, amount, false, nonce);
 
         // check if balance still the same
         assertEq(_l1TokenWrapper.balanceOf(sender, tokenId), balance);
 
         // deposit cancel request
-        expectDepositCancel(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amount, nonce);
-        _kass.cancelDeposit(bytes32(l2TokenAddress), l2Recipient, tokenId, amount, nonce);
+        expectDepositCancel(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amount, false, nonce);
+        _kass.cancelDeposit(bytes32(l2TokenAddress), l2Recipient, tokenId, amount, false, nonce);
 
         // check if balance was updated
         assertEq(_l1TokenWrapper.balanceOf(sender, tokenId), balance + amount);
@@ -97,7 +97,7 @@ contract Test_1155_Wrapped_DepositCancel is TestSetup_1155_Wrapped_DepositCancel
 
         vm.startPrank(fakeSender);
         vm.expectRevert("Caller is not the depositor");
-        _kass.requestDepositCancel(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, amount, nonce);
+        _kass.requestDepositCancel(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, amount, false, nonce);
     }
 
     function test_1155_wrapped_CannotRequestDepositCancelForUnknownDeposit() public {
@@ -107,6 +107,6 @@ contract Test_1155_Wrapped_DepositCancel is TestSetup_1155_Wrapped_DepositCancel
         uint256 nonce = 0x0;
 
         vm.expectRevert("Deposit not found");
-        _kass.cancelDeposit(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, amount, nonce);
+        _kass.cancelDeposit(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, amount, false, nonce);
     }
 }

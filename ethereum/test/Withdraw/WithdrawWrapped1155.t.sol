@@ -14,13 +14,8 @@ contract TestSetup_1155_Wrapped_Withdraw is KassTestBase {
     function setUp() public override {
         super.setUp();
 
-        // request and create L1 wrapper
-        uint256[] memory messagePayload = requestL1WrapperCreation(
-            L2_TOKEN_ADDRESS,
-            L2_TOKEN_URI,
-            TokenStandard.ERC1155
-        );
-        _l1TokenWrapper = KassERC1155(_kass.createL1Wrapper(messagePayload));
+        // create L1 wrapper
+        _l1TokenWrapper = KassERC1155(_createL1Wrapper(TokenStandard.ERC1155));
     }
 
     function _1155_basicWithdrawTest(
