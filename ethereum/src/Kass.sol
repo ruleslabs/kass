@@ -138,41 +138,6 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         _state.initializedImplementations[implementation] = true;
     }
 
-    // WRAPPER CREATION
-
-    function createL1Wrapper(uint256[] calldata messagePayload) public returns (address l1TokenAddress) {
-        // consume L1 wrapper request message
-        _consumeL1WrapperRequestMessage(messagePayload);
-
-        // parse message payload
-        WrapperRequest memory wrapperRequest = _parseWrapperRequestMessagePayload(messagePayload);
-
-        // deploy Kass ERC-721/1155
-        if (wrapperRequest.tokenStandard == TokenStandard.ERC721) {
-            l1TokenAddress = cloneKassERC721(wrapperRequest.tokenAddress, wrapperRequest._calldata);
-        } else if (wrapperRequest.tokenStandard == TokenStandard.ERC1155) {
-            l1TokenAddress = cloneKassERC1155(wrapperRequest.tokenAddress, wrapperRequest._calldata);
-        } else {
-            revert("Kass: Unkown token standard");
-        }
-
-        // emit event
-        emit LogL1WrapperCreated(wrapperRequest.tokenAddress, l1TokenAddress);
-    }
-
-    // WRAPPER REQUEST
-
-    function requestL2Wrapper(address tokenAddress) public payable {
-        // assert tokenAddress is not a wrapper
-        require(isNativeToken(tokenAddress), "Kass: Double wrap not allowed");
-
-        // send L2 Wrapper Creation message
-        _sendL2WrapperRequestMessage(tokenAddress, msg.value);
-
-        // emit event
-        emit LogL2WrapperRequested(tokenAddress);
-    }
-
     // OWNERSHIP CLAIM
 
     function claimL1Ownership(uint256 l2TokenAddress) public {
@@ -218,12 +183,23 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         _lockTokens(l1TokenAddress, tokenId, amount, isNative);
 
         // send l2 Wrapper Creation message
-        uint256 nonce = _sendTokenDepositMessage(tokenAddress, recipient, tokenId, amount, msg.value);
+        (uint256 nonce, bool createWrapper) = _sendTokenDepositMessage(
+            tokenAddress,
+            recipient,
+            tokenId,
+            amount,
+            msg.value
+        );
 
         // save depositor
         _state.depositors[nonce] = _msgSender();
 
-        // emit event
+        // emit events and save native status
+        if (createWrapper) {
+            _state.tokenStatus[l1TokenAddress] = TokenStatus.NATIVE;
+
+            emit LogL2WrapperRequested(l1TokenAddress);
+        }
         emit LogDeposit(tokenAddress, _msgSender(), recipient, tokenId, amount);
     }
 
@@ -234,14 +210,34 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
     // WITHDRAW
 
     function withdraw(uint256[] calldata messagePayload) public {
-        // consume L1 withdraw request message
-        _consumeWithdrawMessage(messagePayload);
+        // consume L1 wrapper request message
+        _consumeL1WrapperRequestMessage(messagePayload);
 
         // parse message payload
         DepositRequest memory depositRequest = _parseDepositRequestMessagePayload(messagePayload);
 
         // get l1 token address (native or wrapper)
         (address l1TokenAddress, bool isNative) = getL1TokenAddres(depositRequest.tokenAddress);
+
+        if (!isNative && _state.tokenStatus[l1TokenAddress] != TokenStatus.UNKOWN) {
+            // parse message payload
+            WrapperRequest memory wrapperRequest = _parseWrapperRequestMessagePayload(messagePayload);
+
+            // deploy Kass ERC-721/1155
+            if (wrapperRequest.tokenStandard == TokenStandard.ERC721) {
+                cloneKassERC721(wrapperRequest.tokenAddress, wrapperRequest._calldata);
+            } else if (wrapperRequest.tokenStandard == TokenStandard.ERC1155) {
+                cloneKassERC1155(wrapperRequest.tokenAddress, wrapperRequest._calldata);
+            } else {
+                revert("Kass: Unkown token standard");
+            }
+
+            // save wrapper status
+            _state.tokenStatus[l1TokenAddress] = TokenStatus.WRAPPER;
+
+            // emit event
+            emit LogL1WrapperCreated(wrapperRequest.tokenAddress, l1TokenAddress);
+        }
 
         // mint or tranfer tokens
         _unlockTokens(

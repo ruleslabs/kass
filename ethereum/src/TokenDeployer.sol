@@ -22,23 +22,6 @@ abstract contract TokenDeployer is KassStorage {
         _state.proxyImplementationAddress = proxyImplementationAddress_;
         _state.erc721ImplementationAddress = erc721ImplementationAddress_;
         _state.erc1155ImplementationAddress = erc1155ImplementationAddress_;
-        // if (_state.proxyImplementationAddress == address(0x0)) {
-        //     _state.proxyImplementationAddress = address(
-        //         new KassERC1967Proxy{ salt: keccak256("KassERC1967Proxy") }()
-        //     );
-        // }
-
-        // if (_state.erc721ImplementationAddress == address(0x0)) {
-        //     _state.erc721ImplementationAddress = address(
-        //         new KassERC721{ salt: keccak256("KassERC721") }()
-        //     );
-        // }
-
-        // if (_state.erc1155ImplementationAddress == address(0x0)) {
-        //     _state.erc1155ImplementationAddress = address(
-        //         new KassERC1155{ salt: keccak256("KassERC1155") }()
-        //     );
-        // }
     }
 
     // GETTERS
@@ -63,10 +46,6 @@ abstract contract TokenDeployer is KassStorage {
 
             addr := keccak256(ptr, 0x55)
         }
-    }
-
-    function isNativeToken(address tokenAddress) internal view returns (bool) {
-        return !_state.isWrapper[tokenAddress];
     }
 
     function getL1TokenAddres(

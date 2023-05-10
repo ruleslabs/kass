@@ -21,20 +21,20 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
     ) internal pure returns (WrapperRequest memory wrapperRequest) {
         wrapperRequest.tokenAddress = bytes32(payload[1]);
 
-        if (payload[0] == REQUEST_L1_721_INSTANCE) {
+        if (payload[0] == DEPOSIT_AND_REQUEST_721_WRAPPER_TO_L1) {
             wrapperRequest.tokenStandard = TokenStandard.ERC721;
 
             wrapperRequest._calldata = abi.encode(
-                KassUtils.felt252ToStr(payload[2]),
-                KassUtils.felt252ToStr(payload[3])
+                KassUtils.felt252ToStr(payload[7]),
+                KassUtils.felt252ToStr(payload[8])
             );
-        } else if (payload[0] == REQUEST_L1_1155_INSTANCE) {
+        } else if (payload[0] == DEPOSIT_AND_REQUEST_1155_WRAPPER_TO_L1) {
             wrapperRequest.tokenStandard = TokenStandard.ERC1155;
 
-            // erase payload for payload[2:]
+            // erase payload for payload[7:]
             assembly {
-                payload.length := sub(payload.length, 0x2)
-                payload.offset := add(payload.offset, 0x40)
+                payload.length := sub(payload.length, 0x7)
+                payload.offset := add(payload.offset, 0xe0) // 7 * 0x20
             }
 
             wrapperRequest._calldata = abi.encode(KassUtils.felt252WordsToStr(payload));
@@ -46,7 +46,12 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
     function _parseDepositRequestMessagePayload(
         uint256[] calldata payload
     ) internal pure returns (DepositRequest memory depositRequest) {
-        require(payload[0] == TRANSFER_FROM_STARKNET, "Invalid message payload");
+        require(
+            payload[0] == DEPOSIT_TO_L1 ||
+            payload[0] == DEPOSIT_AND_REQUEST_721_WRAPPER_TO_L1 ||
+            payload[0] == DEPOSIT_AND_REQUEST_1155_WRAPPER_TO_L1,
+            "Invalid message payload"
+        );
 
         depositRequest.tokenAddress = bytes32(payload[1]);
 
@@ -63,42 +68,6 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
 
     function _consumeL1WrapperRequestMessage(uint256[] calldata payload) internal {
         _state.starknetMessaging.consumeMessageFromL2(_state.l2KassAddress, payload);
-    }
-
-    // L2 WRAPPER REQUEST
-
-    function _computeL2WrapperRequestMessage(
-        address tokenAddress
-    ) internal view returns (uint256[] memory payload, uint256 handlerSelector) {
-        if (KassUtils.isERC721(tokenAddress)) {
-            payload = new uint256[](3); // token address + name + symbol
-
-            payload[1] = KassUtils.strToFelt252(ERC721(tokenAddress).name());
-            payload[2] = KassUtils.strToFelt252(ERC721(tokenAddress).symbol());
-
-            handlerSelector = INSTANCE_CREATION_721_HANDLER_SELECTOR;
-        } else if (KassUtils.isERC1155(tokenAddress)) {
-            uint256[] memory data = KassUtils.strToFelt252Words(ERC1155(tokenAddress).uri(0x0));
-
-            payload = new uint256[](data.length + 1); // token address + uri
-
-            for (uint8 i = 0; i < data.length; ++i) {
-                payload[i + 1] = data[i];
-            }
-
-            handlerSelector = INSTANCE_CREATION_1155_HANDLER_SELECTOR;
-        } else {
-            revert("Kass: Unkown token standard");
-        }
-
-        // store L2 token address
-        payload[0] = uint160(tokenAddress);
-    }
-
-    function _sendL2WrapperRequestMessage(address tokenAddress, uint256 fee) internal {
-        (uint256[] memory payload, uint256 handlerSelector) = _computeL2WrapperRequestMessage(tokenAddress);
-
-        _sendMessage(handlerSelector, payload, fee);
     }
 
     // L1 OWNERSHIP CLAIM
@@ -153,9 +122,48 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
         uint256 recipient,
         uint256 tokenId,
         uint256 amount
-    ) internal pure returns (uint256[] memory payload, uint256 handlerSelector) {
-        payload = new uint256[](6);
+    ) internal view returns (uint256[] memory payload, uint256 handlerSelector, bool createWrapper) {
+        address l1TokenAddress = address(uint160(uint256(tokenAddress)));
 
+        if (
+            uint256(uint160(l1TokenAddress)) == uint256(tokenAddress) &&
+            _state.tokenStatus[l1TokenAddress] != TokenStatus.UNKOWN
+        ) {
+
+            // already have/is a wrapper
+
+            payload = new uint256[](6);
+
+            createWrapper = false;
+        } else {
+
+            // needs a L2 wrapper
+
+            if (KassUtils.isERC721(l1TokenAddress)) {
+                payload = new uint256[](8); // token address + deposit data + name + symbol
+
+                payload[1] = KassUtils.strToFelt252(ERC721(l1TokenAddress).name());
+                payload[2] = KassUtils.strToFelt252(ERC721(l1TokenAddress).symbol());
+
+                handlerSelector = WRAPPER_CREATION_AND_WITHDRAW_721_HANDLER_SELECTOR;
+            } else if (KassUtils.isERC1155(l1TokenAddress)) {
+                uint256[] memory data = KassUtils.strToFelt252Words(ERC1155(l1TokenAddress).uri(0x0));
+
+                payload = new uint256[](data.length + 1); // token address + deposit data + uri
+
+                for (uint8 i = 0; i < data.length; ++i) {
+                    payload[i + 1] = data[i];
+                }
+
+                handlerSelector = WRAPPER_CREATION_AND_WITHDRAW_1155_HANDLER_SELECTOR;
+            } else {
+                revert("Kass: Unkown token standard");
+            }
+
+            createWrapper = true;
+        }
+
+        // store L2 token address
         payload[0] = uint256(tokenAddress);
 
         payload[1] = recipient;
@@ -175,15 +183,15 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
         uint256 tokenId,
         uint256 amount,
         uint256 fee
-    ) internal returns (uint256) {
-        (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
+    ) internal returns (uint256, bool) {
+        (uint256[] memory payload, uint256 handlerSelector, bool createWrapper) = _computeTokenDepositOnL2Message(
             tokenAddress,
             recipient,
             tokenId,
             amount
         );
 
-        return _sendMessage(handlerSelector, payload, fee);
+        return (_sendMessage(handlerSelector, payload, fee), createWrapper);
     }
 
     function _startL1ToL2TokenDepositMessageCancellation(
@@ -193,7 +201,7 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
         uint256 amount,
         uint256 nonce
     ) internal {
-        (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
+        (uint256[] memory payload, uint256 handlerSelector,) = _computeTokenDepositOnL2Message(
             tokenAddress,
             recipient,
             tokenId,
@@ -209,7 +217,7 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
         uint256 amount,
         uint256 nonce
     ) internal {
-        (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
+        (uint256[] memory payload, uint256 handlerSelector,) = _computeTokenDepositOnL2Message(
             tokenAddress,
             recipient,
             tokenId,

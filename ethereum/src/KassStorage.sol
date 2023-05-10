@@ -4,6 +4,8 @@ pragma solidity ^0.8.19;
 
 import "./interfaces/IStarknetMessaging.sol";
 
+import "./KassUtils.sol";
+
 contract KassStorage {
 
     struct State {
@@ -28,8 +30,8 @@ contract KassStorage {
         // (nonce => depositors) mapping
         mapping(uint256 nonce => address depositor) depositors;
 
-        // (wrapper address => bool) mapping
-        mapping(address wrapperAddress => bool isWrapper) isWrapper;
+        // (token address => wrapper status) mapping
+        mapping(address token => TokenStatus status) tokenStatus;
     }
 
     State internal _state;

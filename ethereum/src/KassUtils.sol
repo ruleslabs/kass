@@ -11,6 +11,12 @@ enum TokenStandard {
     ERC1155
 }
 
+enum TokenStatus {
+    UNKOWN,
+    WRAPPER,
+    NATIVE
+}
+
 library KassUtils {
 
     // 0x00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
