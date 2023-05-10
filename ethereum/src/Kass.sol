@@ -124,10 +124,6 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         return _state.l2KassAddress;
     }
 
-    function tokenStatus(address token) public view returns (TokenStatus) {
-        return _state.tokenStatus[token];
-    }
-
     function isInitialized(address implementation) private view returns (bool) {
         return _state.initializedImplementations[implementation];
     }
@@ -178,37 +174,40 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         bytes32 tokenAddress,
         uint256 recipient,
         uint256 tokenId,
-        uint256 amount
+        uint256 amount,
+        bool requestWrapper
     ) public payable {
         // get l1 token address (native or wrapper)
         (address l1TokenAddress, bool isNative) = getL1TokenAddres(tokenAddress);
+
+        // avoid double wrap
+        require(isNative || !requestWrapper, "Kass: Double wrap not allowed");
 
         // burn or tranfer tokens
         _lockTokens(l1TokenAddress, tokenId, amount, isNative);
 
         // send l2 Wrapper Creation message
-        (uint256 nonce, bool createWrapper) = _sendTokenDepositMessage(
+        uint256 nonce = _sendTokenDepositMessage(
             tokenAddress,
             recipient,
             tokenId,
             amount,
+            requestWrapper,
             msg.value
         );
 
         // save depositor
         _state.depositors[nonce] = _msgSender();
 
-        // emit events and save native status
-        if (createWrapper) {
-            _state.tokenStatus[l1TokenAddress] = TokenStatus.NATIVE;
-
+        // emit events
+        if (requestWrapper) {
             emit LogL2WrapperRequested(l1TokenAddress);
         }
         emit LogDeposit(tokenAddress, _msgSender(), recipient, tokenId, amount);
     }
 
-    function deposit(bytes32 tokenAddress, uint256 recipient, uint256 tokenId) public payable {
-        deposit(tokenAddress, recipient, tokenId, 0x1);
+    function deposit(bytes32 tokenAddress, uint256 recipient, uint256 tokenId, bool requestWrapper) public payable {
+        deposit(tokenAddress, recipient, tokenId, 0x1, requestWrapper);
     }
 
     // WITHDRAW
@@ -223,24 +222,18 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         // get l1 token address (native or wrapper)
         (address l1TokenAddress, bool isNative) = getL1TokenAddres(depositRequest.tokenAddress);
 
-        if (!isNative && _state.tokenStatus[l1TokenAddress] == TokenStatus.UNKNOWN) {
-            // parse message payload
-            WrapperRequest memory wrapperRequest = _parseWrapperRequestMessagePayload(messagePayload);
-
+        if (depositRequest.tokenStandard != TokenStandard.UNKNOWN) {
             // deploy Kass ERC-721/1155
-            if (wrapperRequest.tokenStandard == TokenStandard.ERC721) {
-                cloneKassERC721(wrapperRequest.tokenAddress, wrapperRequest._calldata);
-            } else if (wrapperRequest.tokenStandard == TokenStandard.ERC1155) {
-                cloneKassERC1155(wrapperRequest.tokenAddress, wrapperRequest._calldata);
+            if (depositRequest.tokenStandard == TokenStandard.ERC721) {
+                cloneKassERC721(depositRequest.tokenAddress, depositRequest._calldata);
+            } else if (depositRequest.tokenStandard == TokenStandard.ERC1155) {
+                cloneKassERC1155(depositRequest.tokenAddress, depositRequest._calldata);
             } else {
                 revert("Kass: Unknown token standard");
             }
 
-            // save wrapper status
-            _state.tokenStatus[l1TokenAddress] = TokenStatus.WRAPPER;
-
             // emit event
-            emit LogL1WrapperCreated(wrapperRequest.tokenAddress, l1TokenAddress);
+            emit LogL1WrapperCreated(depositRequest.tokenAddress, l1TokenAddress);
         }
 
         // mint or tranfer tokens
@@ -277,11 +270,11 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         uint256 recipient,
         uint256 tokenId,
         uint256 amount,
-        bool createWrapper,
+        bool requestWrapper,
         uint256 nonce
     ) public onlyDepositor(nonce) {
         // start token deposit message cancellation
-        _startL1ToL2TokenDepositMessageCancellation(tokenAddress, recipient, tokenId, amount, createWrapper, nonce);
+        _startL1ToL2TokenDepositMessageCancellation(tokenAddress, recipient, tokenId, amount, requestWrapper, nonce);
 
         emit LogDepositCancelRequest(tokenAddress, _msgSender(), recipient, tokenId, amount, nonce);
     }
@@ -290,10 +283,10 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         bytes32 tokenAddress,
         uint256 recipient,
         uint256 tokenId,
-        bool createWrapper,
+        bool requestWrapper,
         uint256 nonce
     ) public {
-        requestDepositCancel(tokenAddress, recipient, tokenId, 0x1, createWrapper, nonce);
+        requestDepositCancel(tokenAddress, recipient, tokenId, 0x1, requestWrapper, nonce);
     }
 
     // CANCEL DEPOSIT
@@ -303,11 +296,11 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         uint256 recipient,
         uint256 tokenId,
         uint256 amount,
-        bool createWrapper,
+        bool requestWrapper,
         uint256 nonce
     ) public onlyDepositor(nonce) {
         // cancel token deposit message
-        _cancelL1ToL2TokenDepositMessage(tokenAddress, recipient, tokenId, amount, createWrapper, nonce);
+        _cancelL1ToL2TokenDepositMessage(tokenAddress, recipient, tokenId, amount, requestWrapper, nonce);
 
         (address l1TokenAddress, bool isNative) = getL1TokenAddres(tokenAddress);
 
@@ -321,10 +314,10 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         bytes32 tokenAddress,
         uint256 recipient,
         uint256 tokenId,
-        bool createWrapper,
+        bool requestWrapper,
         uint256 nonce
     ) public {
-        cancelDeposit(tokenAddress, recipient, tokenId, 0x1, createWrapper, nonce);
+        cancelDeposit(tokenAddress, recipient, tokenId, 0x1, requestWrapper, nonce);
     }
 
     // SAFE TRANSFERS CHECK

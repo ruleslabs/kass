@@ -33,22 +33,22 @@ contract TestSetup_721_Native_Deposit is KassTestBase, ERC721Holder {
         _l1NativeToken.permissionedMint(to, tokenId);
     }
 
-    function _721_basicDepositTest(address sender, uint256 l2Recipient, uint256 tokenId, uint256 nonce) internal {
+    function _721_basicDepositTest(
+        address sender,
+        uint256 l2Recipient,
+        uint256 tokenId,
+        bool requestWrapper,
+        uint256 nonce
+    ) internal {
         // assert token owner is sender
         assertEq(_l1NativeToken.ownerOf(tokenId), sender);
-
-        // check if a L2 wrapper request is needed
-        bool createWrapper = _kass.tokenStatus(address(_l1NativeToken)) == TokenStatus.UNKNOWN;
 
         // approve kass operator
         _l1NativeToken.approve(address(_kass), tokenId);
 
         // deposit on L2
-        expectDepositOnL2(_bytes32_l1NativeToken(), sender, l2Recipient, tokenId, 0x1, createWrapper, nonce);
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId);
-
-        // check new token status
-        assertEq(_kass.tokenStatus(address(_l1NativeToken)) == TokenStatus.NATIVE, true);
+        expectDepositOnL2(_bytes32_l1NativeToken(), sender, l2Recipient, tokenId, 0x1, requestWrapper, nonce);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId, requestWrapper);
 
         // assert token has been transfered to Kass
         assertEq(_l1NativeToken.ownerOf(tokenId), address(_kass));
@@ -61,25 +61,40 @@ contract Test_721_Native_Deposit is TestSetup_721_Native_Deposit {
         address sender = address(this);
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
+        bool requestWrapper = false;
 
         // mint Token
         _721_mintTokens(sender, tokenId);
 
         // test deposit
-        _721_basicDepositTest(sender, l2Recipient, tokenId, 0x0);
+        _721_basicDepositTest(sender, l2Recipient, tokenId, requestWrapper, 0x0);
+    }
+
+    function test_721_wrapped_DepositToL2_2() public {
+        address sender = address(this);
+        uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
+        uint256 tokenId = uint256(keccak256("token 1"));
+        bool requestWrapper = true;
+
+        // mint Token
+        _721_mintTokens(sender, tokenId);
+
+        // test deposit
+        _721_basicDepositTest(sender, l2Recipient, tokenId, requestWrapper, 0x0);
     }
 
     function test_721_wrapped_CannotDepositToL2IfNotTokenOwner() public {
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
         address l1Rando1 = address(uint160(uint256(keccak256("rando 1"))));
+        bool requestWrapper = false;
 
         // mint Token
         _721_mintTokens(l1Rando1, tokenId);
 
         // try deposit on L2
         vm.expectRevert("ERC721: caller is not token owner or approved");
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId, requestWrapper);
 
         // approve kass operator
         vm.prank(l1Rando1);
@@ -87,6 +102,6 @@ contract Test_721_Native_Deposit is TestSetup_721_Native_Deposit {
 
         // try deposit on L2
         vm.expectRevert("ERC721: transfer from incorrect owner");
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId, requestWrapper);
     }
 }

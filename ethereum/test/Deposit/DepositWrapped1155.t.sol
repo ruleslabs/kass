@@ -31,17 +31,27 @@ contract TestSetup_1155_Wrapped_Deposit is KassTestBase, ERC1155Holder {
         address sender,
         uint256 l2Recipient,
         uint256 tokenId,
-        uint256 amountToDepositOnL2
+        uint256 amountToDepositOnL2,
+        bool requestWrapper
     ) internal {
         uint256 balance = _l1TokenWrapper.balanceOf(sender, tokenId);
 
         // deposit on L2
-        expectDepositOnL2(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amountToDepositOnL2, false, 0x0);
+        expectDepositOnL2(
+            bytes32(l2TokenAddress),
+            sender,
+            l2Recipient,
+            tokenId,
+            amountToDepositOnL2,
+            requestWrapper,
+            0x0
+        );
         _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(
             bytes32(l2TokenAddress),
             l2Recipient,
             tokenId,
-            amountToDepositOnL2
+            amountToDepositOnL2,
+            requestWrapper
         );
 
         // check if balance was updated
@@ -57,13 +67,14 @@ contract Test_1155_Wrapped_Deposit is TestSetup_1155_Wrapped_Deposit {
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amountToMintOnL1 = uint256(keccak256("huge amount")) + 1;
         uint256 amountToDepositOnL2 = uint256(keccak256("huge amount")) / 2;
+        bool requestWrapper = false;
 
         // mint some tokens
         _1155_mintTokens(sender, tokenId, amountToMintOnL1);
 
         // test deposit
-        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountToDepositOnL2);
-        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountToDepositOnL2);
+        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountToDepositOnL2, requestWrapper);
+        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountToDepositOnL2, requestWrapper);
     }
 
     function test_1155_wrapped_DepositToL2_2() public {
@@ -72,13 +83,14 @@ contract Test_1155_Wrapped_Deposit is TestSetup_1155_Wrapped_Deposit {
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amountToMintOnL1 = 0x100;
         uint256 amountToDepositOnL2 = 0x42;
+        bool requestWrapper = false;
 
         // mint some tokens
         _1155_mintTokens(sender, tokenId, amountToMintOnL1);
 
         // test deposit
-        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountToDepositOnL2);
-        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountToDepositOnL2);
+        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountToDepositOnL2, requestWrapper);
+        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountToDepositOnL2, requestWrapper);
     }
 
     function tes_1155_wrapped_MultipleDifferentDepositToL2() public {
@@ -87,13 +99,34 @@ contract Test_1155_Wrapped_Deposit is TestSetup_1155_Wrapped_Deposit {
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amountToMintOnL1 = 0x100;
         uint256[2] memory amountsToDepositOnL2 = [uint256(0x42), uint256(0x18)];
+        bool requestWrapper = false;
 
         // mint some tokens
         _1155_mintTokens(sender, tokenId, amountToMintOnL1);
 
         // test deposits
-        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountsToDepositOnL2[0]);
-        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountsToDepositOnL2[1]);
+        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountsToDepositOnL2[0], requestWrapper);
+        _1155_basicDepositTest(L2_TOKEN_ADDRESS, sender, l2Recipient, tokenId, amountsToDepositOnL2[1], requestWrapper);
+    }
+
+    function test_1155_wrapped_CannotDoubleWrap() public {
+        address sender = address(this);
+        uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
+        uint256 tokenId = uint256(keccak256("token 1"));
+        uint256 amount = 0x42;
+        bool requestWrapper = true;
+
+        // mint Token
+        _1155_mintTokens(sender, tokenId, amount);
+
+        vm.expectRevert("Kass: Double wrap not allowed");
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(
+            bytes32(L2_TOKEN_ADDRESS),
+            l2Recipient,
+            tokenId,
+            amount,
+            requestWrapper
+        );
     }
 
     function test_1155_wrapped_CannotDepositToL2MoreThanBalance() public {
@@ -102,6 +135,7 @@ contract Test_1155_Wrapped_Deposit is TestSetup_1155_Wrapped_Deposit {
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amountToMintOnL1 = 0x100;
         uint256 amountToDepositOnL2 = 0x101;
+        bool requestWrapper = false;
 
         // mint some tokens
         _1155_mintTokens(sender, tokenId, amountToMintOnL1);
@@ -112,7 +146,8 @@ contract Test_1155_Wrapped_Deposit is TestSetup_1155_Wrapped_Deposit {
             bytes32(L2_TOKEN_ADDRESS),
             l2Recipient,
             tokenId,
-            amountToDepositOnL2
+            amountToDepositOnL2,
+            requestWrapper
         );
     }
 
@@ -120,6 +155,7 @@ contract Test_1155_Wrapped_Deposit is TestSetup_1155_Wrapped_Deposit {
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amountToDepositOnL1 = 0x0;
+        bool requestWrapper = false;
 
         // deposit on L2
         vm.expectRevert("Cannot deposit null amount");
@@ -127,7 +163,8 @@ contract Test_1155_Wrapped_Deposit is TestSetup_1155_Wrapped_Deposit {
             bytes32(L2_TOKEN_ADDRESS),
             l2Recipient,
             tokenId,
-            amountToDepositOnL1
+            amountToDepositOnL1,
+            requestWrapper
         );
     }
 }

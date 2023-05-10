@@ -38,12 +38,10 @@ contract TestSetup_1155_Native_Deposit is KassTestBase, ERC1155Holder {
         uint256 l2Recipient,
         uint256 tokenId,
         uint256 amountToDepositOnL2,
+        bool requestWrapper,
         uint256 nonce
     ) internal {
         uint256 balance = _l1NativeToken.balanceOf(sender, tokenId);
-
-        // check if a L2 wrapper request is needed
-        bool createWrapper = _kass.tokenStatus(address(_l1NativeToken)) == TokenStatus.UNKNOWN;
 
         _l1NativeToken.setApprovalForAll(address(_kass), true);
 
@@ -54,18 +52,16 @@ contract TestSetup_1155_Native_Deposit is KassTestBase, ERC1155Holder {
             l2Recipient,
             tokenId,
             amountToDepositOnL2,
-            createWrapper,
+            requestWrapper,
             nonce
         );
         _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(
             _bytes32_l1NativeToken(),
             l2Recipient,
             tokenId,
-            amountToDepositOnL2
+            amountToDepositOnL2,
+            requestWrapper
         );
-
-        // check new token status
-        assertEq(_kass.tokenStatus(address(_l1NativeToken)) == TokenStatus.NATIVE, true);
 
         // check if balance was updated
         assertEq(_l1NativeToken.balanceOf(sender, tokenId), balance - amountToDepositOnL2);
@@ -80,6 +76,7 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amountToMintOnL1 = uint256(keccak256("huge amount")) + 1;
         uint256 amountToDepositOnL2 = uint256(keccak256("huge amount")) / 2;
+        bool requestWrapper = false;
 
         // mint some tokens
         _1155_mintTokens(sender, tokenId, amountToMintOnL1);
@@ -88,8 +85,8 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
         _l1NativeToken.setApprovalForAll(address(_kass), true);
 
         // test deposit
-        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountToDepositOnL2, 0x0);
-        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountToDepositOnL2, 0x0);
+        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountToDepositOnL2, requestWrapper, 0x0);
+        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountToDepositOnL2, requestWrapper, 0x0);
     }
 
     function test_1155_native_DepositToL2_2() public {
@@ -98,6 +95,7 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amountToMintOnL1 = 0x100;
         uint256 amountToDepositOnL2 = 0x42;
+        bool requestWrapper = false;
 
         // mint some tokens
         _1155_mintTokens(sender, tokenId, amountToMintOnL1);
@@ -106,8 +104,27 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
         _l1NativeToken.setApprovalForAll(address(_kass), true);
 
         // test deposit
-        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountToDepositOnL2, 0x0);
-        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountToDepositOnL2, 0x0);
+        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountToDepositOnL2, requestWrapper, 0x0);
+        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountToDepositOnL2, requestWrapper, 0x0);
+    }
+
+    function test_1155_native_DepositToL2_3() public {
+        address sender = address(this);
+        uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
+        uint256 tokenId = uint256(keccak256("token 1"));
+        uint256 amountToMintOnL1 = 0x100;
+        uint256 amountToDepositOnL2 = 0x42;
+        bool requestWrapper = true;
+
+        // mint some tokens
+        _1155_mintTokens(sender, tokenId, amountToMintOnL1);
+
+        // approve token transfer
+        _l1NativeToken.setApprovalForAll(address(_kass), true);
+
+        // test deposit
+        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountToDepositOnL2, requestWrapper, 0x0);
+        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountToDepositOnL2, requestWrapper, 0x0);
     }
 
     function tes_1155_native_MultipleDifferentDepositToL2() public {
@@ -116,6 +133,7 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amountToMintOnL1 = 0x100;
         uint256[2] memory amountsToDepositOnL2 = [uint256(0x42), uint256(0x18)];
+        bool requestWrapper = false;
 
         // mint some tokens
         _1155_mintTokens(sender, tokenId, amountToMintOnL1);
@@ -124,8 +142,8 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
         _l1NativeToken.setApprovalForAll(address(_kass), true);
 
         // test deposits
-        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountsToDepositOnL2[0], 0x0);
-        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountsToDepositOnL2[1], 0x0);
+        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountsToDepositOnL2[0], requestWrapper, 0x0);
+        _1155_basicDepositTest(sender, l2Recipient, tokenId, amountsToDepositOnL2[1], requestWrapper, 0x0);
     }
 
     function test_1155_native_CannotDepositToL2MoreThanBalance() public {
@@ -134,6 +152,7 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amountToMintOnL1 = 0x100;
         uint256 amountToDepositOnL2 = 0x101;
+        bool requestWrapper = false;
 
         // mint some tokens
         _1155_mintTokens(sender, tokenId, amountToMintOnL1);
@@ -147,7 +166,8 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
             _bytes32_l1NativeToken(),
             l2Recipient,
             tokenId,
-            amountToDepositOnL2
+            amountToDepositOnL2,
+            requestWrapper
         );
     }
 
@@ -155,6 +175,7 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amountToDepositOnL1 = 0x0;
+        bool requestWrapper = false;
 
         // deposit on L2
         vm.expectRevert("Cannot deposit null amount");
@@ -162,7 +183,8 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
             _bytes32_l1NativeToken(),
             l2Recipient,
             tokenId,
-            amountToDepositOnL1
+            amountToDepositOnL1,
+            requestWrapper
         );
     }
 
@@ -171,13 +193,20 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
         uint256 tokenId = uint256(keccak256("token 1"));
         address l1Rando1 = address(uint160(uint256(keccak256("rando 1"))));
         uint256 amount = 0x100;
+        bool requestWrapper = false;
 
         // mint Token
         _1155_mintTokens(l1Rando1, tokenId, amount);
 
         // try deposit on L2
         vm.expectRevert("ERC1155: caller is not token owner or approved");
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId, amount);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(
+            _bytes32_l1NativeToken(),
+            l2Recipient,
+            tokenId,
+            amount,
+            requestWrapper
+        );
 
         // approve kass operator
         vm.prank(l1Rando1);
@@ -185,6 +214,12 @@ contract Test_1155_Native_Deposit is TestSetup_1155_Native_Deposit {
 
         // try deposit on L2
         vm.expectRevert("ERC1155: caller is not token owner or approved");
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId, amount);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(
+            _bytes32_l1NativeToken(),
+            l2Recipient,
+            tokenId,
+            amount,
+            requestWrapper
+        );
     }
 }

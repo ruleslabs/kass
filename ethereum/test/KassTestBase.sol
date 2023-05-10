@@ -254,7 +254,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         uint256 recipient,
         uint256 tokenId,
         uint256 amount,
-        bool createWrapper,
+        bool requestWrapper,
         uint256 nonce
     ) internal {
         (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
@@ -262,7 +262,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
             recipient,
             tokenId,
             amount,
-            createWrapper
+            requestWrapper
         );
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.sendMessageToL2.selector,
@@ -282,7 +282,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         );
 
         // expect events
-        if (createWrapper) {
+        if (requestWrapper) {
             vm.expectEmit(true, true, true, true, address(_kass));
             emit LogL2WrapperRequested(address(uint160(uint256(tokenAddress))));
         }
@@ -344,7 +344,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         uint256 recipient,
         uint256 tokenId,
         uint256 amount,
-        bool createWrapper,
+        bool requestWrapper,
         uint256 nonce
     ) internal {
         (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
@@ -352,7 +352,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
             recipient,
             tokenId,
             amount,
-            createWrapper
+            requestWrapper
         );
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.startL1ToL2MessageCancellation.selector,
@@ -377,7 +377,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         uint256 recipient,
         uint256 tokenId,
         uint256 amount,
-        bool createWrapper,
+        bool requestWrapper,
         uint256 nonce
     ) internal {
         (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
@@ -385,7 +385,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
             recipient,
             tokenId,
             amount,
-            createWrapper
+            requestWrapper
         );
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.cancelL1ToL2Message.selector,

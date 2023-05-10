@@ -30,7 +30,7 @@ contract TestSetup_1155_Wrapped_DepositCancel is TestSetup_1155_Wrapped_Deposit 
 
         // deposit tokens on L2
         expectDepositOnL2(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, amount, false, nonce);
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(l2TokenAddress), l2Recipient, tokenId, amount);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(l2TokenAddress), l2Recipient, tokenId, amount, false);
 
         // check if balance is correct
         assertEq(_l1TokenWrapper.balanceOf(sender, tokenId), balance);

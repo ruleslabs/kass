@@ -33,6 +33,7 @@ contract Test_721_Wrapped_Deposit is TestSetup_721_Wrapped_Deposit {
         address sender = address(this);
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
+        bool requestWrapper = false;
 
         // mint Token
         _721_mintTokens(sender, tokenId);
@@ -40,23 +41,37 @@ contract Test_721_Wrapped_Deposit is TestSetup_721_Wrapped_Deposit {
         // assert token owner is sender
         assertEq(_l1TokenWrapper.ownerOf(tokenId), sender);
 
-        expectDepositOnL2(bytes32(L2_TOKEN_ADDRESS), sender, l2Recipient, tokenId, 0x1, false, 0x0);
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId);
+        expectDepositOnL2(bytes32(L2_TOKEN_ADDRESS), sender, l2Recipient, tokenId, 0x1, requestWrapper, 0x0);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, requestWrapper);
 
         // assert token does not exist on L1
         vm.expectRevert("ERC721: invalid token ID");
         _l1TokenWrapper.ownerOf(tokenId);
     }
 
+    function test_721_wrapped_CannotDoubleWrap() public {
+        address sender = address(this);
+        uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
+        uint256 tokenId = uint256(keccak256("token 1"));
+        bool requestWrapper = true;
+
+        // mint Token
+        _721_mintTokens(sender, tokenId);
+
+        vm.expectRevert("Kass: Double wrap not allowed");
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, requestWrapper);
+    }
+
     function test_721_wrapped_CannotDepositToL2IfNotTokenOwner() public {
         uint256 l2Recipient = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
         uint256 tokenId = uint256(keccak256("token 1"));
+        bool requestWrapper = false;
 
         // mint Token to someone else
         _721_mintTokens(address(0x1), tokenId);
 
         // try deposit on L2
         vm.expectRevert("You do not own this token");
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, requestWrapper);
     }
 }

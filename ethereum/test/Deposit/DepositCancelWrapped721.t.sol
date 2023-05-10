@@ -27,7 +27,7 @@ contract TestSetup_721_Wrapped_DepositCancel is TestSetup_721_Wrapped_Deposit {
 
         // deposit tokens on L2
         expectDepositOnL2(bytes32(l2TokenAddress), sender, l2Recipient, tokenId, 0x1, false, nonce);
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(l2TokenAddress), l2Recipient, tokenId);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(l2TokenAddress), l2Recipient, tokenId, false);
 
         // check if there's no owner
         vm.expectRevert("ERC721: invalid token ID");
