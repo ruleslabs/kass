@@ -92,6 +92,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
 
     function initialize(bytes calldata data) public initializer {
         (
+            address owner,
             uint256 l2KassAddress_,
             IStarknetMessaging starknetMessaging_,
             address proxyImplementationAddress_,
@@ -99,7 +100,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
             address erc1155ImplementationAddress_
         ) = abi.decode(
             data,
-            (uint256, IStarknetMessaging, address, address, address)
+            (address, uint256, IStarknetMessaging, address, address, address)
         );
         _state.l2KassAddress = l2KassAddress_;
         _state.starknetMessaging = starknetMessaging_;
@@ -110,7 +111,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
             erc1155ImplementationAddress_
         );
 
-        _transferOwnership(_msgSender());
+        _transferOwnership(owner);
     }
 
     // UPGRADE

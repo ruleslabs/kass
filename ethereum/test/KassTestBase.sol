@@ -113,6 +113,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
                 abi.encodeWithSelector(
                     Kass.initialize.selector,
                     abi.encode(
+                        address(this),
                         L2_KASS_ADDRESS,
                         starknetMessaging,
                         proxyImplementationAddress,

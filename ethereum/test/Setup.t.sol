@@ -38,6 +38,7 @@ contract Test_Setup is KassTestBase {
             abi.encodeWithSelector(
                 Kass.initialize.selector,
                 abi.encode(
+                    address(this),
                     uint256(0x0),
                     address(0x0),
                     erc1155ImplementationAddress,
