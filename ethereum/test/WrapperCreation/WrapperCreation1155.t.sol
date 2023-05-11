@@ -37,4 +37,9 @@ contract Test_1155_KassWrapperCreation is TestSetup_1155_KassWrapperCreation {
 
         assertEq(l1TokenWrapper.uri(0), string(KassUtils.felt252WordsToStr(L2_TOKEN_URI)));
     }
+
+    function test_1155_DoubleL1WrapperRequest() public {
+        _createL1Wrapper(TokenStandard.ERC1155);
+        _createL1Wrapper(TokenStandard.ERC1155);
+    }
 }

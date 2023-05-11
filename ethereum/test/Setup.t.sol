@@ -40,17 +40,17 @@ contract Test_Setup is KassTestBase {
                 abi.encode(
                     uint256(0x0),
                     address(0x0),
-                    address(0x0),
-                    address(0x0),
-                    address(0x0)
+                    erc1155ImplementationAddress,
+                    proxyImplementationAddress,
+                    erc721ImplementationAddress
                 )
             )
         );
 
         assertEq(_kass.l2KassAddress(), 0x0);
-        assertEq(_kass.proxyImplementationAddress(), address(0x0));
-        assertEq(_kass.erc721ImplementationAddress(), address(0x0));
-        assertEq(_kass.erc1155ImplementationAddress(), address(0x0));
+        assertEq(_kass.proxyImplementationAddress(), erc1155ImplementationAddress);
+        assertEq(_kass.erc721ImplementationAddress(), proxyImplementationAddress);
+        assertEq(_kass.erc1155ImplementationAddress(), erc721ImplementationAddress);
     }
 
     function test_CannotUpgradeImplementationIfNotOwner() public {

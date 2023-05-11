@@ -38,4 +38,9 @@ contract Test_721_KassWrapperCreation is TestSetup_721_KassWrapperCreation {
         assertEq(bytes(l1TokenWrapper.name()).length, bytes(L2_TOKEN_NAME).length);
         assertEq(l1TokenWrapper.symbol(), L2_TOKEN_SYMBOL);
     }
+
+    function test_721_DoubleL1WrapperRequest() public {
+        _createL1Wrapper(0x1, TokenStandard.ERC721);
+        _createL1Wrapper(0x2, TokenStandard.ERC721);
+    }
 }

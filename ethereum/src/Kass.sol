@@ -234,7 +234,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         // get l1 token address (native or wrapper)
         (address l1TokenAddress, bool isNative) = getL1TokenAddres(depositRequest.tokenAddress);
 
-        if (depositRequest.tokenStandard != TokenStandard.UNKNOWN) {
+        if (!Address.isContract(l1TokenAddress)) {
+            require(depositRequest.tokenStandard != TokenStandard.UNKNOWN, "Kass: wrapper not deployed");
+
             // deploy Kass ERC-721/1155
             if (depositRequest.tokenStandard == TokenStandard.ERC721) {
                 cloneKassERC721(depositRequest.tokenAddress, depositRequest._calldata);

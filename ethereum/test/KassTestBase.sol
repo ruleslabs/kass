@@ -125,9 +125,9 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         _kass = Kass(kassAddress);
     }
 
-    // UTILS
+    // WRAPPER CREATION
 
-    function _createL1Wrapper(TokenStandard tokenStandard) internal returns (address l1TokenWrapper) {
+    function _createL1Wrapper(uint256 tokenId, TokenStandard tokenStandard) internal returns (address l1TokenWrapper) {
         string[] memory data;
 
         if (tokenStandard == TokenStandard.ERC721) {
@@ -138,8 +138,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
             revert("Kass: Unknown token standard");
         }
 
-        uint256 tokenId = uint256(keccak256("wrapper request token"));
-        uint amount = 0x1;
+        uint256 amount = 0x1;
 
         depositOnL1(bytes32(L2_TOKEN_ADDRESS), address(0x1), tokenId, amount, tokenStandard, data);
         uint256[] memory messagePayload = expectWithdrawOnL1(
@@ -153,6 +152,10 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         _kass.withdraw(messagePayload);
 
         l1TokenWrapper = _kass.computeL1TokenAddress(L2_TOKEN_ADDRESS);
+    }
+
+    function _createL1Wrapper(TokenStandard tokenStandard) internal returns (address) {
+        return _createL1Wrapper(uint256(keccak256("wrapper request token")), tokenStandard);
     }
 
     // MESSAGES
@@ -319,8 +322,12 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
 
         // expect events
         if (data.length > 0) {
-            vm.expectEmit(true, true, true, true, address(_kass));
-            emit LogL1WrapperCreated(tokenAddress, _kass.computeL1TokenAddress(uint256(tokenAddress)));
+            address computedWrapperAddress = _kass.computeL1TokenAddress(uint256(tokenAddress));
+
+            if (!Address.isContract(computedWrapperAddress)) {
+                vm.expectEmit(true, true, true, true, address(_kass));
+                emit LogL1WrapperCreated(tokenAddress, computedWrapperAddress);
+            }
         }
 
         vm.expectEmit(true, true, true, true, address(_kass));
