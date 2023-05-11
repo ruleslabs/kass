@@ -12,6 +12,7 @@ import "./factory/KassERC1967Proxy.sol";
 import "./KassStorage.sol";
 
 abstract contract TokenDeployer is KassStorage {
+
     // CONSTRUCTOR
 
     function _setDeployerImplementations(
@@ -19,6 +20,10 @@ abstract contract TokenDeployer is KassStorage {
         address erc721ImplementationAddress_,
         address erc1155ImplementationAddress_
     ) internal {
+        require(Address.isContract(proxyImplementationAddress_), "Invalid Proxy implementation");
+        require(Address.isContract(proxyImplementationAddress_), "Invalid ERC 721 implementation");
+        require(Address.isContract(proxyImplementationAddress_), "Invalid ERC 1155 implementation");
+
         _state.proxyImplementationAddress = proxyImplementationAddress_;
         _state.erc721ImplementationAddress = erc721ImplementationAddress_;
         _state.erc1155ImplementationAddress = erc1155ImplementationAddress_;

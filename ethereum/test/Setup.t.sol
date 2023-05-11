@@ -29,6 +29,9 @@ contract Test_Setup is KassTestBase {
         address newImplementation = address(new Kass());
 
         assertEq(_kass.l2KassAddress(), L2_KASS_ADDRESS);
+        assertEq(_kass.proxyImplementationAddress(), proxyImplementationAddress);
+        assertEq(_kass.erc721ImplementationAddress(), erc721ImplementationAddress);
+        assertEq(_kass.erc1155ImplementationAddress(), erc1155ImplementationAddress);
 
         _kass.upgradeToAndCall(
             newImplementation,
@@ -45,6 +48,9 @@ contract Test_Setup is KassTestBase {
         );
 
         assertEq(_kass.l2KassAddress(), 0x0);
+        assertEq(_kass.proxyImplementationAddress(), address(0x0));
+        assertEq(_kass.erc721ImplementationAddress(), address(0x0));
+        assertEq(_kass.erc1155ImplementationAddress(), address(0x0));
     }
 
     function test_CannotUpgradeImplementationIfNotOwner() public {

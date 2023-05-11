@@ -16,10 +16,13 @@ contract DeployKass is Script {
     // solhint-disable-next-line no-empty-blocks
     function setUp() public { }
 
+    event Test(address a, address b);
+
     function run() public {
         HelperConfig helperConfig = new HelperConfig();
 
         (
+            address deployer,
             address starknetMessagingAddress,
             uint256 l2KassAddress,
             address proxyAddress,
@@ -28,20 +31,40 @@ contract DeployKass is Script {
             address erc1155ImplementationAddress
         ) = helperConfig.activeNetworkConfig();
 
+        require(deployer != address(0x0), "Deployer address cannot be null");
+
+        address computedProxyImplementationAddress = computeCreate2Address(
+            keccak256("KassERC1967Proxy"),
+            hashInitCode(type(KassERC1967Proxy).creationCode),
+            deployer
+        );
+
+        address computedERC721ImplementationAddress = computeCreate2Address(
+            keccak256("KassERC721"),
+            hashInitCode(type(KassERC721).creationCode),
+            deployer
+        );
+
+        address computedERC1155ImplementationAddress = computeCreate2Address(
+            keccak256("KassERC1155"),
+            hashInitCode(type(KassERC1155).creationCode),
+            deployer
+        );
+
         vm.startBroadcast();
 
         // deploy implementations
         address implementationAddress = address(new Kass());
 
-        if (proxyImplementationAddress == address(0x0)) {
+        if (proxyImplementationAddress != computedProxyImplementationAddress) {
             proxyImplementationAddress = address(new KassERC1967Proxy{ salt: keccak256("KassERC1967Proxy") }());
         }
 
-        if (erc721ImplementationAddress == address(0x0)) {
+        if (erc721ImplementationAddress != computedERC721ImplementationAddress) {
             erc721ImplementationAddress = address(new KassERC721{ salt: keccak256("KassERC721") }());
         }
 
-        if (erc1155ImplementationAddress == address(0x0)) {
+        if (erc1155ImplementationAddress != computedERC1155ImplementationAddress) {
             erc1155ImplementationAddress = address(new KassERC1155{ salt: keccak256("KassERC1155") }());
         }
 

@@ -36,6 +36,10 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
 
     uint256 public constant L1_TO_L2_MESSAGE_FEE = 0x42;
 
+    address public immutable proxyImplementationAddress = address(new KassERC1967Proxy());
+    address public immutable erc721ImplementationAddress = address(new KassERC721());
+    address public immutable erc1155ImplementationAddress = address(new KassERC1155());
+
     event LogL1WrapperCreated(bytes32 indexed l2TokenAddress, address l1TokenAddress);
     event LogL2WrapperRequested(address indexed l1TokenAddress);
 
@@ -101,10 +105,6 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         _starknetMessagingAddress = address(starknetMessaging);
 
         address implementationAddress = address(new Kass());
-
-        address proxyImplementationAddress = address(new KassERC1967Proxy());
-        address erc721ImplementationAddress = address(new KassERC721());
-        address erc1155ImplementationAddress = address(new KassERC1155());
 
         // setup bridge
         address payable kassAddress = payable(
