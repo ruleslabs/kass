@@ -9,6 +9,9 @@ trait IKassERC1155<TContractState> {
 
 #[starknet::interface]
 trait KassERC1155ABI<TContractState> {
+
+  // ERC1155 ABI
+
   fn uri(self: @TContractState, token_id: u256) -> Span<felt252>;
 
   fn balance_of(self: @TContractState, account: starknet::ContractAddress, id: u256) -> u256;
@@ -40,6 +43,10 @@ trait KassERC1155ABI<TContractState> {
     data: Span<felt252>
   );
 
+  fn supports_interface(self: @TContractState, interface_id: u32) -> bool;
+
+  // Kass
+
   fn permissioned_mint(ref self: TContractState, to: starknet::ContractAddress, id: u256, amount: u256);
 
   fn permissioned_burn(ref self: TContractState, from: starknet::ContractAddress, id: u256, amount: u256);
@@ -48,10 +55,11 @@ trait KassERC1155ABI<TContractState> {
 #[starknet::contract]
 mod KassERC1155 {
   use array::{ SpanSerde, ArrayTrait };
-  use rules_erc1155::erc1155;
+  use rules_erc1155::erc1155::erc1155;
   use rules_erc1155::erc1155::erc1155::ERC1155;
   use rules_erc1155::erc1155::erc1155::ERC1155::{ HelperTrait as ERC1155HelperTrait };
   use rules_erc1155::erc1155::interface::IERC1155;
+  use rules_erc1155::introspection::erc165::{ IERC165 as rules_erc1155_IERC165 };
 
   //
   // Storage
@@ -85,11 +93,14 @@ mod KassERC1155 {
   }
 
   //
-  // IERC1155 impl
+  // ERC1155 ABI impl
   //
 
   #[external(v0)]
-  impl IERC1155Impl of erc1155::interface::IERC1155<ContractState> {
+  impl IERC1155Impl of erc1155::ERC1155ABI<ContractState> {
+
+    // IERC1155
+
     fn uri(self: @ContractState, token_id: u256) -> Span<felt252> {
       let erc1155_self = ERC1155::unsafe_new_contract_state();
 
@@ -151,6 +162,14 @@ mod KassERC1155 {
       let mut erc1155_self = ERC1155::unsafe_new_contract_state();
 
       erc1155_self.safe_batch_transfer_from(:from, :to, :ids, :amounts, :data);
+    }
+
+    // IERC165
+
+    fn supports_interface(self: @ContractState, interface_id: u32) -> bool {
+      let erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      erc1155_self.supports_interface(:interface_id)
     }
   }
 
