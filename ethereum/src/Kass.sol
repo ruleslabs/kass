@@ -19,7 +19,9 @@ import "./KassStorage.sol";
 
 contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgradeable {
 
+    //
     // EVENTS
+    //
 
     // L1 token address can be computed offchain from L2 token address
     // it does not need to be indexed
@@ -67,7 +69,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         uint256 nonce
     );
 
+    //
     // MODIFIERS
+    //
 
     modifier initializer() {
         address implementation = _getImplementation();
@@ -88,7 +92,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         _;
     }
 
+    //
     // INIT
+    //
 
     function initialize(bytes calldata data) public initializer {
         (
@@ -114,12 +120,16 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         _transferOwnership(owner);
     }
 
+    //
     // UPGRADE
+    //
 
     // solhint-disable-next-line no-empty-blocks
     function _authorizeUpgrade(address) internal override onlyOwner { }
 
+    //
     // GETTERS
+    //
 
     function l2KassAddress() public view returns (uint256) {
         return _state.l2KassAddress;
@@ -141,7 +151,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         return _state.initializedImplementations[implementation];
     }
 
+    //
     // SETTERS
+    //
 
     function setL2KassAddress(uint256 l2KassAddress_) public onlyOwner {
         _state.l2KassAddress = l2KassAddress_;
@@ -151,7 +163,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         _state.initializedImplementations[implementation] = true;
     }
 
+    //
     // OWNERSHIP CLAIM
+    //
 
     function claimL1Ownership(uint256 l2TokenAddress) public {
         // consume ownership claim message
@@ -167,7 +181,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         emit LogL1OwnershipClaimed(l2TokenAddress, l1TokenAddress, _msgSender());
     }
 
+    //
     // OWNERSHIP REQUEST
+    //
 
     function requestL2Ownership(address l1TokenAddress, uint256 l2Owner) public payable {
         // assert L1 token owner is sender
@@ -181,7 +197,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         emit LogL2OwnershipClaimed(l1TokenAddress, l2Owner);
     }
 
+    //
     // DEPOSIT
+    //
 
     function deposit(
         bytes32 tokenAddress,
@@ -223,7 +241,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         deposit(tokenAddress, recipient, tokenId, 0x1, requestWrapper);
     }
 
+    //
     // WITHDRAW
+    //
 
     function withdraw(uint256[] calldata messagePayload) public {
         // consume L1 wrapper request message
@@ -269,7 +289,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         );
     }
 
+    //
     // REQUEST DEPOSIT CANCEL
+    //
 
     /**
      * If previous deposit on L2 fails to be handled by the L2 Kass bridge, tokens could be lost.
@@ -304,7 +326,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         requestDepositCancel(tokenAddress, recipient, tokenId, 0x1, requestWrapper, nonce);
     }
 
+    //
     // CANCEL DEPOSIT
+    //
 
     function cancelDeposit(
         bytes32 tokenAddress,
@@ -335,13 +359,17 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         cancelDeposit(tokenAddress, recipient, tokenId, 0x1, requestWrapper, nonce);
     }
 
+    //
     // SAFE TRANSFERS CHECK
+    //
 
     function onERC1155Received(address operator, address, uint256, uint256, bytes memory) public view returns (bytes4) {
         return operator == address(this) ? this.onERC1155Received.selector : bytes4(0);
     }
 
+    //
     // INTERNALS
+    //
 
     function _lockTokens(address tokenAddress, uint256 tokenId, uint256 amount, bool isNative) private {
         // burn or tranfer tokens

@@ -1,14 +1,7 @@
-mod kass;
-use kass::Kass;
-use kass::IKassDispatcher;
-use kass::IKassDispatcherTrait;
+mod bridge;
+mod access;
+mod introspection;
+mod token;
 
-use kass::TokenDeployer;
-use kass::Messaging;
-
-mod interfaces;
-mod libraries;
-mod utils;
-mod constants;
-
+#[cfg(test)]
 mod tests;

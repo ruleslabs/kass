@@ -28,67 +28,70 @@ use kass::tests::mocks::IMockUpgradedContractDispatcherTrait;
 #[test]
 #[available_gas(2000000)]
 fn test_Initialize() {
-    let Kass = KassTestBase::deployKass();
-    Kass::initialize(L1_KASS_ADDRESS.try_into().unwrap());
+    let KassContract = KassTestBase::deployKass();
+    KassContract.initialize(L1_KASS_ADDRESS.try_into().unwrap());
 
-    assert(Kass::l1KassAddress().into() == L1_KASS_ADDRESS, 'Bad L1 kass addr after init');
+    assert(KassContract.l1KassAddress().into() == L1_KASS_ADDRESS, 'Bad L1 kass addr after init');
 }
 
 #[test]
 #[available_gas(2000000)]
 fn test_UpdateL1KassAddress() {
-    let Kass = KassTestBase::deployKass();
-    Kass::initialize(L1_KASS_ADDRESS.try_into().unwrap());
+    let KassContract = KassTestBase::deployKass();
+    KassContract.initialize(L1_KASS_ADDRESS.try_into().unwrap());
 
-    Kass::setL1KassAddress(0xdead.try_into().unwrap());
+    KassContract.setL1KassAddress(0xdead.try_into().unwrap());
 
-    assert(Kass::l1KassAddress().into() == 0xdead, 'Bad L1 kass addr after update');
+    assert(KassContract.l1KassAddress().into() == 0xdead, 'Bad L1 kass addr after update');
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('Caller is not the owner', ))]
 fn test_CannotUpdateL1KassAddressIfNotOwner() {
-    let owner = starknet::contract_address_const::<1>();
-    let rando1 = starknet::contract_address_const::<2>();
+    let owner = starknet::contract_address_const::<'owner'>();
+    let rando1 = starknet::contract_address_const::<'rando1'>();
 
-    // deploy as owner
-    let Kass = KassTestBase::deployKass();
-    Kass::initialize(L1_KASS_ADDRESS.try_into().unwrap());
-    Kass::setL1KassAddress(0x4242.try_into().unwrap());
+    // deploy Kass as owner
+    starknet::testing::set_caller_address(owner);
 
-    // calls as random
+    let KassContract = KassTestBase::deployKass();
+    KassContract.initialize(L1_KASS_ADDRESS.try_into().unwrap());
+    KassContract.setL1KassAddress(0x4242.try_into().unwrap());
+
+    // update L1 Kass address as rando1
     starknet::testing::set_caller_address(rando1);
-    Kass::setL1KassAddress(0xdead.try_into().unwrap());
+
+    KassContract.setL1KassAddress(0xdead.try_into().unwrap());
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('Already initialized', ))]
 fn test_CannotInitializeTwice() {
-    let Kass = KassTestBase::deployKass();
-    Kass::initialize(L1_KASS_ADDRESS.try_into().unwrap());
-    Kass::initialize(0xdead.try_into().unwrap());
+    let KassContract = KassTestBase::deployKass();
+    KassContract.initialize(L1_KASS_ADDRESS.try_into().unwrap());
+    KassContract.initialize(L1_KASS_ADDRESS.try_into().unwrap());
 }
 
-// #[test]
-// #[available_gas(2000000)]
-// fn testUpgradeImplementation() {
-    // let Kass = KassTestBase::deployKass();
+#[test]
+#[available_gas(2000000)]
+fn testUpgradeImplementation() {
+    let KassContract = KassTestBase::deployKass();
 
-//     // upgrade
-//     let mut calldata = ArrayTrait::<felt252>::new();
-//     calldata.append(0x42);
+    // upgrade
+    let mut calldata = ArrayTrait::<felt252>::new();
+    calldata.append(0x42);
 
-//     Kass::upgradeToAndCall(
-//         MockUpgradedContract::TEST_CLASS_HASH.try_into().unwrap(),
-//         Upgradeable::Call { selector: INITIALIZE_SELECTOR, calldata: calldata }
-//     );
+    KassContract.upgradeToAndCall(
+        MockUpgradedContract::TEST_CLASS_HASH.try_into().unwrap(),
+        Upgradeable::Call { selector: INITIALIZE_SELECTOR, calldata: calldata }
+    );
 
-//     let MockUpgradedContract = IMockUpgradedContractDispatcher { contract_address: kass_address };
+    let MockUpgradedContract = IMockUpgradedContractDispatcher { contract_address: KassContract.contract_address };
 
-//     assert(MockUpgradedContract.foo() == 0x42, '');
-// }
+    assert(MockUpgradedContract.foo() == 0x42, '');
+}
 
 #[test]
 #[available_gas(2000000)]
@@ -99,25 +102,25 @@ fn test_CannotUpgradeImplementationIfNotOwner() {
 
     // calls as owner
     starknet::testing::set_caller_address(owner);
-    let Kass = KassTestBase::deployKass();
+    let KassContract = KassTestBase::deployKass();
 
     // upgrade as random
     starknet::testing::set_caller_address(rando1);
-    Kass::upgradeToAndCall(
+    KassContract.upgradeToAndCall(
         starknet::class_hash_const::<0xdead>(),
         Upgradeable::Call { selector: INITIALIZE_SELECTOR, calldata: ArrayTrait::<felt252>::new() }
     );
 }
 
-// #[test]
-// #[available_gas(2000000)]
-// #[should_panic(expected: ('ENTRYPOINT_FAILED', ))]
-// fn testCannotUpgradeToInvalidImplementation() {
-    // let Kass = KassTestBase::deployKass();
+#[test]
+#[available_gas(2000000)]
+#[should_panic(expected: ('ENTRYPOINT_FAILED', ))]
+fn testCannotUpgradeToInvalidImplementation() {
+    let KassContract = KassTestBase::deployKass();
 
-//     // upgrade
-//     Kass::upgradeToAndCall(
-//         starknet::class_hash_const::<0xdead>(),
-//         Upgradeable::Call { selector: INITIALIZE_SELECTOR, calldata: ArrayTrait::<felt252>::new() }
-//     );
-// }
+    // upgrade
+    KassContract.upgradeToAndCall(
+        starknet::class_hash_const::<0xdead>(),
+        Upgradeable::Call { selector: INITIALIZE_SELECTOR, calldata: ArrayTrait::<felt252>::new() }
+    );
+}

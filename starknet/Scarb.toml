@@ -2,7 +2,20 @@
 name = "kass"
 version = "0.1.0"
 
-[[target.starknet-contract]]
+[lib]
+name = "kass"
 
-[scripts]
-test = "cairo-test . --starknet"
+# See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest
+
+[dependencies]
+rules_utils = { git = "https://github.com/ruleslabs/starknet-utils.git" }
+rules_erc721 = { git = "https://github.com/ruleslabs/starknet-erc-721.git" }
+rules_erc1155 = { git = "https://github.com/ruleslabs/starknet-erc-1155.git" }
+starknet = "2.0.0-rc3"
+
+[[target.starknet-contract]]
+# Enable Sierra codegen.
+sierra = true
+
+# Enable CASM codegen.
+casm = true
