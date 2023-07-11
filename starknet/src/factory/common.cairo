@@ -58,8 +58,7 @@ mod KassToken {
 
       starknet::library_call_syscall(
         class_hash: implementation,
-        function_selector:
-        INITIALIZE_SELECTOR,
+        function_selector: INITIALIZE_SELECTOR,
         calldata: calldata.snapshot.concat(@singleton_bridge).span()
       ).unwrap_syscall();
     }

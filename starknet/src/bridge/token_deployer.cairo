@@ -107,12 +107,15 @@ mod KassTokenDeployer {
       salt: felt252,
       calldata: Span<felt252>
     ) -> starknet::ContractAddress {
-      let mut token_calldata = ArrayTrait::new();
+      let mut singleton_caller = ArrayTrait::new();
+
+      let caller = starknet::get_caller_address();
+      singleton_caller.append(caller.into());
 
       let (kass_contract_address, _) = starknet::syscalls::deploy_syscall(
         class_hash: self._token_implementation_address.read(),
         contract_address_salt: salt,
-        calldata: token_calldata.span(),
+        calldata: singleton_caller.span(),
         deploy_from_zero: true
       ).unwrap_syscall();
 

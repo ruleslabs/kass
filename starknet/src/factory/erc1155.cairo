@@ -103,6 +103,7 @@ mod KassERC1155 {
   // IKassERC1155
   //
 
+  #[external(v0)]
   impl IKassERC1155Impl of super::IKassERC1155<ContractState> {
     fn initialize(ref self: ContractState, uri_: Span<felt252>, bridge_: starknet::ContractAddress) {
       // Modifiers

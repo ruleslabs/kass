@@ -114,6 +114,7 @@ mod KassERC721 {
   // IKassERC721
   //
 
+  #[external(v0)]
   impl IKassERC721Impl of super::IKassERC721<ContractState> {
     fn initialize(ref self: ContractState, name_: felt252, symbol_: felt252, bridge_: starknet::ContractAddress) {
       // Modifiers
