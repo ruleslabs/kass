@@ -23,6 +23,7 @@ trait IKassBridge<TContractState> {
 trait IKassTokenDeployer<TContractState> {
   fn set_deployer_class_hashes(
     ref self: TContractState,
+    token_implementation_address_: starknet::ClassHash,
     erc721_implementation_address_: starknet::ClassHash,
     erc1155_implementation_address_: starknet::ClassHash
   );

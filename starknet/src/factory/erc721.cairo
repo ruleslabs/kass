@@ -1,4 +1,14 @@
+use core::zeroable::Zeroable;
 use array::SpanSerde;
+
+#[starknet::interface]
+trait IKassERC721<TContractState> {
+  fn initialize(ref self: TContractState, name_: felt252, symbol_: felt252, bridge_: starknet::ContractAddress);
+
+  fn permissioned_mint(ref self: TContractState, to: starknet::ContractAddress, token_id: u256);
+
+  fn permissioned_burn(ref self: TContractState, token_id: u256);
+}
 
 #[starknet::interface]
 trait KassERC721ABI<TContractState> {
@@ -46,6 +56,8 @@ trait KassERC721ABI<TContractState> {
 
   // Kass
 
+  fn initialize(ref self: TContractState, name_: felt252, symbol_: felt252);
+
   fn permissioned_mint(ref self: TContractState, to: starknet::ContractAddress, token_id: u256);
 
   fn permissioned_burn(ref self: TContractState, token_id: u256);
@@ -54,6 +66,7 @@ trait KassERC721ABI<TContractState> {
 #[starknet::contract]
 mod KassERC721 {
   use array::{ SpanSerde, ArrayTrait };
+  use zeroable::Zeroable;
   use rules_erc721::erc721::erc721;
   use rules_erc721::erc721::erc721::ERC721;
   use rules_erc721::erc721::erc721::ERC721::{ HelperTrait as ERC721HelperTrait };
@@ -66,7 +79,7 @@ mod KassERC721 {
 
   #[storage]
   struct Storage {
-    _deployer: starknet::ContractAddress,
+    _bridge: starknet::ContractAddress,
   }
 
   //
@@ -75,10 +88,18 @@ mod KassERC721 {
 
   #[generate_trait]
   impl ModifierImpl of ModifierTrait {
-    fn _only_deployer(self: @ContractState) {
+    fn _initializer(ref self: ContractState, bridge_: starknet::ContractAddress) {
+      assert(self._bridge.read().is_zero(), 'Kass721: Already initialized');
+
+      self._bridge.write(bridge_);
+    }
+
+    fn _only_bridge(self: @ContractState) {
+      let bridge_ = self._bridge.read();
       let caller = starknet::get_caller_address();
 
-      assert(caller == self._deployer.read(), 'Kass721: Not deployer');
+      assert(caller.is_non_zero(), 'Caller is the zero address');
+      assert(caller == bridge_, 'Caller is not the bridge');
     }
   }
 
@@ -87,8 +108,42 @@ mod KassERC721 {
   //
 
   #[constructor]
-  fn constructor(ref self: ContractState, name_: felt252, symbol_: felt252) {
-    self.initializer(:name_, :symbol_);
+  fn constructor(ref self: ContractState) { }
+
+  //
+  // IKassERC721
+  //
+
+  impl IKassERC721Impl of super::IKassERC721<ContractState> {
+    fn initialize(ref self: ContractState, name_: felt252, symbol_: felt252, bridge_: starknet::ContractAddress) {
+      // Modifiers
+      self._initializer(:bridge_);
+
+      // Body
+      let mut erc721_self = ERC721::unsafe_new_contract_state();
+
+      erc721_self.initializer(:name_, :symbol_);
+    }
+
+    fn permissioned_mint(ref self: ContractState, to: starknet::ContractAddress, token_id: u256) {
+      // Modifiers
+      self._only_bridge();
+
+      // Body
+      let mut erc721_self = ERC721::unsafe_new_contract_state();
+
+      erc721_self._mint(:to, :token_id);
+    }
+
+    fn permissioned_burn(ref self: ContractState, token_id: u256) {
+      // Modifiers
+      self._only_bridge();
+
+      // Body
+      let mut erc721_self = ERC721::unsafe_new_contract_state();
+
+      erc721_self._burn(:token_id);
+    }
   }
 
   //
@@ -202,7 +257,7 @@ mod KassERC721 {
       erc721_self.initializer(:name_, :symbol_);
 
       let caller = starknet::get_caller_address();
-      self._deployer.write(caller);
+      self._bridge.write(caller);
     }
   }
 }

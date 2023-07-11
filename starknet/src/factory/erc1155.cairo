@@ -2,6 +2,8 @@ use array::SpanSerde;
 
 #[starknet::interface]
 trait IKassERC1155<TContractState> {
+  fn initialize(ref self: TContractState, uri_: Span<felt252>, bridge_: starknet::ContractAddress);
+
   fn permissioned_mint(ref self: TContractState, to: starknet::ContractAddress, id: u256, amount: u256);
 
   fn permissioned_burn(ref self: TContractState, from: starknet::ContractAddress, id: u256, amount: u256);
@@ -55,6 +57,7 @@ trait KassERC1155ABI<TContractState> {
 #[starknet::contract]
 mod KassERC1155 {
   use array::{ SpanSerde, ArrayTrait };
+  use zeroable::Zeroable;
   use rules_erc1155::erc1155::erc1155;
   use rules_erc1155::erc1155::erc1155::ERC1155;
   use rules_erc1155::erc1155::erc1155::ERC1155::{ HelperTrait as ERC1155HelperTrait };
@@ -67,7 +70,7 @@ mod KassERC1155 {
 
   #[storage]
   struct Storage {
-    _deployer: starknet::ContractAddress,
+    _bridge: starknet::ContractAddress,
   }
 
   //
@@ -76,10 +79,16 @@ mod KassERC1155 {
 
   #[generate_trait]
   impl ModifierImpl of ModifierTrait {
-    fn _only_deployer(self: @ContractState) {
+    fn _initializer(ref self: ContractState, bridge_: starknet::ContractAddress) {
+      assert(self._bridge.read().is_zero(), 'Kass721: Already initialized');
+
+      self._bridge.write(bridge_);
+    }
+
+    fn _only_bridge(self: @ContractState) {
       let caller = starknet::get_caller_address();
 
-      assert(caller == self._deployer.read(), 'Kass1155: Not deployer');
+      assert(caller == self._bridge.read(), 'Kass1155: Not bridge');
     }
   }
 
@@ -88,8 +97,42 @@ mod KassERC1155 {
   //
 
   #[constructor]
-  fn constructor(ref self: ContractState, uri_: Span<felt252>) {
-    self.initializer(:uri_);
+  fn constructor(ref self: ContractState) { }
+
+  //
+  // IKassERC1155
+  //
+
+  impl IKassERC1155Impl of super::IKassERC1155<ContractState> {
+    fn initialize(ref self: ContractState, uri_: Span<felt252>, bridge_: starknet::ContractAddress) {
+      // Modifiers
+      self._initializer(:bridge_);
+
+      // Body
+      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      erc1155_self.initializer(:uri_);
+    }
+
+    fn permissioned_mint(ref self: ContractState, to: starknet::ContractAddress, id: u256, amount: u256) {
+      // Modifiers
+      self._only_bridge();
+
+      // Body
+      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      erc1155_self._mint(:to, :id, :amount, data: ArrayTrait::new().span());
+    }
+
+    fn permissioned_burn(ref self: ContractState, from: starknet::ContractAddress, id: u256, amount: u256) {
+      // Modifiers
+      self._only_bridge();
+
+      // Body
+      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      erc1155_self._burn(:from, :id, :amount);
+    }
   }
 
   //
@@ -174,32 +217,6 @@ mod KassERC1155 {
   }
 
   //
-  // IKassERC1155
-  //
-
-  impl IKassERC1155Impl of super::IKassERC1155<ContractState> {
-    fn permissioned_mint(ref self: ContractState, to: starknet::ContractAddress, id: u256, amount: u256) {
-      // Modifiers
-      self._only_deployer();
-
-      // Body
-      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
-
-      erc1155_self._mint(:to, :id, :amount, data: ArrayTrait::new().span());
-    }
-
-    fn permissioned_burn(ref self: ContractState, from: starknet::ContractAddress, id: u256, amount: u256) {
-      // Modifiers
-      self._only_deployer();
-
-      // Body
-      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
-
-      erc1155_self._burn(:from, :id, :amount);
-    }
-  }
-
-  //
   // Helpers
   //
 
@@ -211,7 +228,7 @@ mod KassERC1155 {
       erc1155_self.initializer(:uri_);
 
       let caller = starknet::get_caller_address();
-      self._deployer.write(caller);
+      self._bridge.write(caller);
     }
   }
 }

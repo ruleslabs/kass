@@ -27,8 +27,8 @@ mod Kass {
 
   // Dispatchers
   use kass::access::ownable::{ IOwnableDispatcher, IOwnableDispatcherTrait };
-  use kass::token::erc721::{ KassERC721ABIDispatcher, KassERC721ABIDispatcherTrait };
-  use kass::token::erc1155::{ KassERC1155ABIDispatcher, KassERC1155ABIDispatcherTrait };
+  use kass::factory::erc721::{ KassERC721ABIDispatcher, KassERC721ABIDispatcherTrait };
+  use kass::factory::erc1155::{ KassERC1155ABIDispatcher, KassERC1155ABIDispatcherTrait };
 
   const CONTRACT_IDENTITY: felt252 = 'Kass';
   const CONTRACT_VERSION: felt252 = '1.0.0';
@@ -68,10 +68,17 @@ mod Kass {
       ref self: ContractState,
       owner_: starknet::ContractAddress,
       l1_kass_address_: starknet::EthAddress,
+      token_implementation_address_: starknet::ClassHash,
       erc721_implementation_address_: starknet::ClassHash,
       erc1155_implementation_address_: starknet::ClassHash
     ) {
-      self.initializer(:owner_, :l1_kass_address_, :erc721_implementation_address_, :erc1155_implementation_address_);
+      self.initializer(
+        :owner_,
+        :l1_kass_address_,
+        :token_implementation_address_,
+        :erc721_implementation_address_,
+        :erc1155_implementation_address_
+      );
     }
 
   //
@@ -290,6 +297,7 @@ mod Kass {
       ref self: ContractState,
       owner_: starknet::ContractAddress,
       l1_kass_address_: starknet::EthAddress,
+      token_implementation_address_: starknet::ClassHash,
       erc721_implementation_address_: starknet::ClassHash,
       erc1155_implementation_address_: starknet::ClassHash
     ) {
@@ -300,6 +308,7 @@ mod Kass {
       kass_messaging_self.set_l1_kass_address(:l1_kass_address_);
 
       kass_token_deployer_self.set_deployer_class_hashes(
+        :token_implementation_address_,
         :erc721_implementation_address_,
         :erc1155_implementation_address_
       );

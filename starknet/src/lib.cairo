@@ -1,7 +1,7 @@
 mod bridge;
 mod access;
 mod introspection;
-mod token;
+mod factory;
 
 #[cfg(test)]
 mod tests;
