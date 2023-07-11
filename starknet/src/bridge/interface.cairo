@@ -21,16 +21,28 @@ trait IKassBridge<TContractState> {
 
 #[starknet::interface]
 trait IKassTokenDeployer<TContractState> {
+  fn token_implementation(self: @TContractState) -> starknet::ClassHash;
+
+  fn erc721_implementation(self: @TContractState) -> starknet::ClassHash;
+
+  fn erc1155_implementation(self: @TContractState) -> starknet::ClassHash;
+
+  fn l2_kass_token_address(
+    self: @TContractState,
+    l1_token_address: starknet::EthAddress
+  ) -> starknet::ContractAddress;
+
+  fn compute_l2_kass_token_address(
+    self: @TContractState,
+    l1_token_address: starknet::EthAddress
+  ) -> starknet::ContractAddress;
+
   fn set_deployer_class_hashes(
     ref self: TContractState,
-    token_implementation_address_: starknet::ClassHash,
-    erc721_implementation_address_: starknet::ClassHash,
-    erc1155_implementation_address_: starknet::ClassHash
+    token_implementation_: starknet::ClassHash,
+    erc721_implementation_: starknet::ClassHash,
+    erc1155_implementation_: starknet::ClassHash
   );
-
-  fn deploy_kass_erc721(ref self: TContractState, salt: felt252, calldata: Span<felt252>) -> starknet::ContractAddress;
-
-  fn deploy_kass_erc1155(ref self: TContractState, salt: felt252, calldata: Span<felt252>) -> starknet::ContractAddress;
 }
 
 #[starknet::interface]

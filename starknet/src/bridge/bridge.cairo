@@ -15,8 +15,10 @@ mod Kass {
   // locals
   use kass::bridge;
   use kass::bridge::interface::{ IKassMessaging, IKassTokenDeployer };
+
   use kass::bridge::token_standard::{ TokenStandard, ContractAddressInterfacesTrait };
   use kass::bridge::token_deployer::KassTokenDeployer;
+  use kass::bridge::token_deployer::KassTokenDeployer::{ HelperTrait as KassTokenDeployerHelperTrait };
 
   use kass::bridge::messaging::KassMessaging;
   use kass::bridge::messaging::KassMessaging::{ HelperTrait as KassMessagingHelperTrait };
@@ -68,16 +70,16 @@ mod Kass {
       ref self: ContractState,
       owner_: starknet::ContractAddress,
       l1_kass_address_: starknet::EthAddress,
-      token_implementation_address_: starknet::ClassHash,
-      erc721_implementation_address_: starknet::ClassHash,
-      erc1155_implementation_address_: starknet::ClassHash
+      token_implementation_: starknet::ClassHash,
+      erc721_implementation_: starknet::ClassHash,
+      erc1155_implementation_: starknet::ClassHash
     ) {
       self.initializer(
         :owner_,
         :l1_kass_address_,
-        :token_implementation_address_,
-        :erc721_implementation_address_,
-        :erc1155_implementation_address_
+        :token_implementation_,
+        :erc721_implementation_,
+        :erc1155_implementation_
       );
     }
 
@@ -142,6 +144,63 @@ mod Kass {
   }
 
   //
+  // IKassTokenDeployer impl
+  //
+
+  impl IKassTokenDeployerImpl of bridge::interface::IKassTokenDeployer<ContractState> {
+    fn token_implementation(self: @ContractState) -> starknet::ClassHash {
+      let kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
+
+      kass_token_deployer_self.token_implementation()
+    }
+
+    fn erc721_implementation(self: @ContractState) -> starknet::ClassHash {
+      let kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
+
+      kass_token_deployer_self.erc721_implementation()
+    }
+
+    fn erc1155_implementation(self: @ContractState) -> starknet::ClassHash {
+      let kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
+
+      kass_token_deployer_self.erc1155_implementation()
+    }
+
+    fn l2_kass_token_address(
+      self: @ContractState,
+      l1_token_address: starknet::EthAddress
+    ) -> starknet::ContractAddress {
+      let kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
+
+      kass_token_deployer_self.l2_kass_token_address(:l1_token_address)
+    }
+
+    fn compute_l2_kass_token_address(
+      self: @ContractState,
+      l1_token_address: starknet::EthAddress
+    ) -> starknet::ContractAddress {
+      let kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
+
+      kass_token_deployer_self.compute_l2_kass_token_address(:l1_token_address)
+    }
+
+    fn set_deployer_class_hashes(
+      ref self: ContractState,
+      token_implementation_: starknet::ClassHash,
+      erc721_implementation_: starknet::ClassHash,
+      erc1155_implementation_: starknet::ClassHash
+    ) {
+      let mut kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
+
+      kass_token_deployer_self.set_deployer_class_hashes(
+        :token_implementation_,
+        :erc721_implementation_,
+        :erc1155_implementation_
+      );
+    }
+  }
+
+  //
   // Handlers
   //
 
@@ -163,7 +222,7 @@ mod Kass {
       let mut kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
 
       // deploy Kass ERC 721
-      kass_token_deployer_self.deploy_kass_erc721(salt: l1_token_address.into(), calldata: data.span());
+      kass_token_deployer_self._deploy_kass_erc721(:l1_token_address, calldata: data.span());
     }
 
     fn createL2Wrapper1155(
@@ -179,7 +238,7 @@ mod Kass {
       let mut kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
 
       // deploy Kass ERC 1155
-      kass_token_deployer_self.deploy_kass_erc1155(salt: l1_token_address.into(), calldata: data.span());
+      kass_token_deployer_self._deploy_kass_erc1155(:l1_token_address, calldata: data.span());
     }
 
     // Ownership claim
@@ -297,9 +356,9 @@ mod Kass {
       ref self: ContractState,
       owner_: starknet::ContractAddress,
       l1_kass_address_: starknet::EthAddress,
-      token_implementation_address_: starknet::ClassHash,
-      erc721_implementation_address_: starknet::ClassHash,
-      erc1155_implementation_address_: starknet::ClassHash
+      token_implementation_: starknet::ClassHash,
+      erc721_implementation_: starknet::ClassHash,
+      erc1155_implementation_: starknet::ClassHash
     ) {
       let mut kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
       let mut kass_messaging_self = KassMessaging::unsafe_new_contract_state();
@@ -308,9 +367,9 @@ mod Kass {
       kass_messaging_self.set_l1_kass_address(:l1_kass_address_);
 
       kass_token_deployer_self.set_deployer_class_hashes(
-        :token_implementation_address_,
-        :erc721_implementation_address_,
-        :erc1155_implementation_address_
+        :token_implementation_,
+        :erc721_implementation_,
+        :erc1155_implementation_
       );
 
       ownable_self._transfer_ownership(new_owner: owner_);
