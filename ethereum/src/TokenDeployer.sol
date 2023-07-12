@@ -13,23 +13,9 @@ import "./KassStorage.sol";
 
 abstract contract TokenDeployer is KassStorage {
 
-    // CONSTRUCTOR
-
-    function _setDeployerImplementations(
-        address proxyImplementationAddress_,
-        address erc721ImplementationAddress_,
-        address erc1155ImplementationAddress_
-    ) internal {
-        require(Address.isContract(proxyImplementationAddress_), "Invalid Proxy implementation");
-        require(Address.isContract(proxyImplementationAddress_), "Invalid ERC 721 implementation");
-        require(Address.isContract(proxyImplementationAddress_), "Invalid ERC 1155 implementation");
-
-        _state.proxyImplementationAddress = proxyImplementationAddress_;
-        _state.erc721ImplementationAddress = erc721ImplementationAddress_;
-        _state.erc1155ImplementationAddress = erc1155ImplementationAddress_;
+    function getL1TokenAddress(uint256 l2TokenAddress) public view returns (address) {
+        return _state.wrappers[l2TokenAddress];
     }
-
-    // GETTERS
 
     function computeL1TokenAddress(uint256 l2TokenAddress) public view returns (address addr) {
         bytes20 baseAddressBytes = bytes20(_state.proxyImplementationAddress);
@@ -53,27 +39,32 @@ abstract contract TokenDeployer is KassStorage {
         }
     }
 
-    function getL1TokenAddres(
-        bytes32 nativeTokenAddress
-    ) internal view returns (address l1TokenAddress, bool isNative) {
-        if (Address.isContract(address(uint160(uint256(nativeTokenAddress))))) {
-            l1TokenAddress = address(uint160(uint256(nativeTokenAddress)));
-            isNative = true;
-        } else {
-            l1TokenAddress = computeL1TokenAddress(uint256(nativeTokenAddress));
-            isNative = false;
-        }
+    function setDeployerImplementations(
+        address proxyImplementationAddress_,
+        address erc721ImplementationAddress_,
+        address erc1155ImplementationAddress_
+    ) public virtual {
+        require(Address.isContract(proxyImplementationAddress_), "Invalid Proxy implementation");
+        require(KassUtils.isERC721(erc721ImplementationAddress_), "Invalid ERC 721 implementation");
+        require(KassUtils.isERC1155(erc1155ImplementationAddress_), "Invalid ERC 1155 implementation");
+
+        _state.proxyImplementationAddress = proxyImplementationAddress_;
+        _state.erc721ImplementationAddress = erc721ImplementationAddress_;
+        _state.erc1155ImplementationAddress = erc1155ImplementationAddress_;
     }
 
-    // INTERNALS
+    //
+    // Internals
+    //
 
     /**
      * Modified https://github.com/optionality/clone-factory/blob/master/contracts/CloneFactory.sol#L30
      * to support Create2.
-     * @param salt Salt for CREATE2
+     * @param l2TokenAddress Salt for CREATE2
      */
-    function cloneProxy(bytes32 salt) private returns (address payable result) {
+    function _cloneProxy(uint256 l2TokenAddress) private returns (address payable result) {
         bytes20 targetBytes = bytes20(_state.proxyImplementationAddress);
+        bytes32 salt = bytes32(l2TokenAddress);
 
         assembly {
             let clone := mload(0x40)
@@ -82,10 +73,15 @@ abstract contract TokenDeployer is KassStorage {
             mstore(add(clone, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
             result := create2(0, clone, 0x37, salt)
         }
+
+        _state.wrappers[l2TokenAddress] = result;
     }
 
-    function cloneKassERC1155(bytes32 salt, bytes memory _calldata) internal returns (address payable result) {
-        result = cloneProxy(salt);
+    function _cloneKassERC1155(
+        uint256 l2TokenAddress,
+        bytes memory _calldata
+    ) internal returns (address payable result) {
+        result = _cloneProxy(l2TokenAddress);
 
         KassERC1967Proxy(result).initializeKassERC1967Proxy(
             _state.erc1155ImplementationAddress,
@@ -93,8 +89,11 @@ abstract contract TokenDeployer is KassStorage {
         );
     }
 
-    function cloneKassERC721(bytes32 salt, bytes memory _calldata) internal returns (address payable result) {
-        result = cloneProxy(salt);
+    function _cloneKassERC721(
+        uint256 l2TokenAddress,
+        bytes memory _calldata
+    ) internal returns (address payable result) {
+        result = _cloneProxy(l2TokenAddress);
 
         KassERC1967Proxy(result).initializeKassERC1967Proxy(
             _state.erc721ImplementationAddress,

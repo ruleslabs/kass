@@ -46,7 +46,7 @@ contract Test_KassERC721 is TestSetup_KassERC721 {
 
     function test_721_CannotMintIfNotDeployer() public {
         vm.prank(address(0x1));
-        vm.expectRevert("Kass721: Not deployer");
+        vm.expectRevert("Kass721: Not bridge");
         _kassERC721.permissionedMint(address(0x1), 0x1);
     }
 }

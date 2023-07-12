@@ -8,7 +8,7 @@ contract KassStructs {
 
     struct DepositRequest {
         // native token address
-        bytes32 tokenAddress;
+        bytes32 nativeTokenAddress;
 
         uint256 tokenId;
 

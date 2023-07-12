@@ -18,12 +18,11 @@ contract KassERC721 is Context, ERC721, Ownable, UUPSUpgradeable {
     // Token symbol
     string private _symbol;
 
-    address private _deployer;
+    address private _bridge;
 
-    // solhint-disable-next-line no-empty-blocks
-    constructor() ERC721("", "") { }
-
-    // MODIFIERS
+    //
+    // Modifiers
+    //
 
     modifier initializer() {
         address implementation = _getImplementation();
@@ -34,13 +33,18 @@ contract KassERC721 is Context, ERC721, Ownable, UUPSUpgradeable {
         _;
     }
 
-    modifier onlyDeployer() {
-        require(_deployer == _msgSender(), "Kass721: Not deployer");
+    modifier onlyBridge() {
+        require(_bridge == _msgSender(), "Kass721: Not bridge");
 
         _;
     }
 
-    // INIT
+    //
+    // Constructor
+    //
+
+    // solhint-disable-next-line no-empty-blocks
+    constructor() ERC721("", "") { }
 
     function initialize(bytes calldata data) public initializer {
         (string memory name_, string memory symbol_) = abi.decode(data, (string, string));
@@ -48,16 +52,39 @@ contract KassERC721 is Context, ERC721, Ownable, UUPSUpgradeable {
         _name = name_;
         _symbol = symbol_;
 
-        _setDeployer();
+        _setBridge();
         _transferOwnership(_msgSender());
     }
 
-    // UPGRADE
+    //
+    // Upgrade
+    //
 
     // solhint-disable-next-line no-empty-blocks
     function _authorizeUpgrade(address) internal override onlyOwner { }
 
-    // GETTERS
+    //
+    // Kass ERC 721
+    //
+
+    // upgrade
+    function permissionedUpgradeTo(address newImplementation) public onlyBridge {
+        _upgradeTo(newImplementation);
+    }
+
+    // mint
+    function permissionedMint(address to, uint256 tokenId) public onlyBridge {
+        _mint(to, tokenId);
+    }
+
+    // burn
+    function permissionedBurn(uint256 id) public onlyBridge {
+        _burn(id);
+    }
+
+    //
+    // ERC721 Metadata
+    //
 
     /**
      * @dev See {IERC721Metadata-name}.
@@ -73,21 +100,11 @@ contract KassERC721 is Context, ERC721, Ownable, UUPSUpgradeable {
         return _symbol;
     }
 
-    // MINT & BURN
+    //
+    // Internals
+    //
 
-    // mint
-    function permissionedMint(address to, uint256 tokenId) public onlyDeployer {
-        _mint(to, tokenId);
-    }
-
-    // burn
-    function permissionedBurn(uint256 id) public onlyDeployer {
-        _burn(id);
-    }
-
-    // INTERNALS
-
-    function _setDeployer() private {
-        _deployer = _msgSender();
+    function _setBridge() private {
+        _bridge = _msgSender();
     }
 }

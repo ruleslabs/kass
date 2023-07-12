@@ -6,6 +6,7 @@ import "./KassTestBase.sol";
 import "../src/Kass.sol";
 
 // solhint-disable contract-name-camelcase
+// solhint-disable func-name-mixedcase
 
 contract Test_Setup is KassTestBase {
 
@@ -42,16 +43,16 @@ contract Test_Setup is KassTestBase {
                     uint256(0x0),
                     address(0x0),
                     erc1155ImplementationAddress,
-                    proxyImplementationAddress,
-                    erc721ImplementationAddress
+                    erc721ImplementationAddress,
+                    erc1155ImplementationAddress
                 )
             )
         );
 
         assertEq(_kass.l2KassAddress(), 0x0);
         assertEq(_kass.proxyImplementationAddress(), erc1155ImplementationAddress);
-        assertEq(_kass.erc721ImplementationAddress(), proxyImplementationAddress);
-        assertEq(_kass.erc1155ImplementationAddress(), erc721ImplementationAddress);
+        assertEq(_kass.erc721ImplementationAddress(), erc721ImplementationAddress);
+        assertEq(_kass.erc1155ImplementationAddress(), erc1155ImplementationAddress);
     }
 
     function test_CannotUpgradeImplementationIfNotOwner() public {

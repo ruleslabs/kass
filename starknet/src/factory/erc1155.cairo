@@ -4,6 +4,8 @@ use array::SpanSerde;
 trait IKassERC1155<TContractState> {
   fn initialize(ref self: TContractState, uri_: Span<felt252>, bridge_: starknet::ContractAddress);
 
+  fn permissioned_upgrade(ref self: TContractState, new_implementation: starknet::ClassHash);
+
   fn permissioned_mint(ref self: TContractState, to: starknet::ContractAddress, id: u256, amount: u256);
 
   fn permissioned_burn(ref self: TContractState, from: starknet::ContractAddress, id: u256, amount: u256);
@@ -49,6 +51,10 @@ trait KassERC1155ABI<TContractState> {
 
   // Kass
 
+  fn initialize(ref self: TContractState, uri_: Span<felt252>, bridge_: starknet::ContractAddress);
+
+  fn permissioned_upgrade(ref self: TContractState, new_implementation: starknet::ClassHash);
+
   fn permissioned_mint(ref self: TContractState, to: starknet::ContractAddress, id: u256, amount: u256);
 
   fn permissioned_burn(ref self: TContractState, from: starknet::ContractAddress, id: u256, amount: u256);
@@ -63,6 +69,11 @@ mod KassERC1155 {
   use rules_erc1155::erc1155::erc1155::ERC1155::{ HelperTrait as ERC1155HelperTrait };
   use rules_erc1155::erc1155::interface::IERC1155;
   use rules_erc1155::introspection::erc165::{ IERC165 as rules_erc1155_IERC165 };
+
+  // locals
+  use kass::access::ownable;
+  use kass::access::ownable::{ Ownable, IOwnable };
+  use kass::access::ownable::Ownable::{ HelperTrait as OwnableHelperTrait, ModifierTrait as OwnableModifierTrait };
 
   //
   // Storage
@@ -90,6 +101,12 @@ mod KassERC1155 {
 
       assert(caller == self._bridge.read(), 'Kass1155: Not bridge');
     }
+
+    fn _only_owner(self: @ContractState) {
+      let ownable_self = Ownable::unsafe_new_contract_state();
+
+      ownable_self.assert_only_owner();
+    }
   }
 
   //
@@ -98,6 +115,21 @@ mod KassERC1155 {
 
   #[constructor]
   fn constructor(ref self: ContractState) { }
+
+  //
+  // Upgrade impl
+  //
+
+  #[generate_trait]
+  impl UpgradeImpl of UpgradeTrait {
+    fn upgrade(ref self: ContractState, new_implementation: starknet::ClassHash) {
+      // Modifiers
+      self._only_owner();
+
+      // Body
+      self._upgrade(:new_implementation);
+    }
+  }
 
   //
   // IKassERC1155
@@ -113,6 +145,14 @@ mod KassERC1155 {
       let mut erc1155_self = ERC1155::unsafe_new_contract_state();
 
       erc1155_self.initializer(:uri_);
+    }
+
+    fn permissioned_upgrade(ref self: ContractState, new_implementation: starknet::ClassHash) {
+      // Modifiers
+      self._only_bridge();
+
+      // Body
+      self._upgrade(:new_implementation);
     }
 
     fn permissioned_mint(ref self: ContractState, to: starknet::ContractAddress, id: u256, amount: u256) {
@@ -218,6 +258,31 @@ mod KassERC1155 {
   }
 
   //
+  // Ownable impl
+  //
+
+  #[external(v0)]
+  impl IOwnableImpl of ownable::IOwnable<ContractState> {
+    fn owner(self: @ContractState) -> starknet::ContractAddress {
+      let ownable_self = Ownable::unsafe_new_contract_state();
+
+      ownable_self.owner()
+    }
+
+    fn transfer_ownership(ref self: ContractState, new_owner: starknet::ContractAddress) {
+      let mut ownable_self = Ownable::unsafe_new_contract_state();
+
+      ownable_self.transfer_ownership(:new_owner);
+    }
+
+    fn renounce_ownership(ref self: ContractState) {
+      let mut ownable_self = Ownable::unsafe_new_contract_state();
+
+      ownable_self.renounce_ownership();
+    }
+  }
+
+  //
   // Helpers
   //
 
@@ -230,6 +295,10 @@ mod KassERC1155 {
 
       let caller = starknet::get_caller_address();
       self._bridge.write(caller);
+    }
+
+    fn _upgrade(ref self: ContractState, new_implementation: starknet::ClassHash) {
+      starknet::replace_class_syscall(new_implementation);
     }
   }
 }

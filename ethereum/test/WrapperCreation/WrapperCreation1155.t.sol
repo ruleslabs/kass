@@ -7,6 +7,7 @@ import "../../src/factory/KassERC1155.sol";
 import "../KassTestBase.sol";
 
 // solhint-disable contract-name-camelcase
+// solhint-disable func-name-mixedcase
 
 contract TestSetup_1155_KassWrapperCreation is KassTestBase {
     KassERC1155 public _l1TokenWrapper;

@@ -49,13 +49,13 @@ mod Kass {
   #[generate_trait]
   impl ModifierImpl of ModifierTrait {
     fn _l1_handler(self: @ContractState, from_address: starknet::EthAddress) {
-      let mut kass_messaging_self = KassMessaging::unsafe_new_contract_state();
+      let kass_messaging_self = KassMessaging::unsafe_new_contract_state();
 
       assert(from_address == kass_messaging_self.l1_kass_address(), 'EXPECTED_FROM_L1_KASS_ONLY');
     }
 
     fn _only_owner(self: @ContractState) {
-      let mut ownable_self = Ownable::unsafe_new_contract_state();
+      let ownable_self = Ownable::unsafe_new_contract_state();
 
       ownable_self.assert_only_owner();
     }

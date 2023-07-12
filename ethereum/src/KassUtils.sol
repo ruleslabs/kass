@@ -15,10 +15,10 @@ enum TokenStandard {
 library KassUtils {
 
     // 0x00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-    uint256 private constant BYTES_31_MASK = 2 ** (8 * 31) - 1;
+    uint256 private constant _BYTES_31_MASK = 2 ** (8 * 31) - 1;
 
     // 0xff00000000000000000000000000000000000000000000000000000000000000
-    uint256 private constant BYTE_32_MASK = 0xff << (8 * 31);
+    uint256 private constant _BYTE_32_MASK = 0xff << (8 * 31);
 
     function strToFelt252(string memory str) public pure returns (uint256 res) {
         assembly {
@@ -55,7 +55,7 @@ library KassUtils {
             let strLen := 32
 
             // solhint-disable-next-line no-empty-blocks
-            for { } iszero(and(felt, BYTE_32_MASK)) { strLen := sub(strLen, 1) } {
+            for { } iszero(and(felt, _BYTE_32_MASK)) { strLen := sub(strLen, 1) } {
                 felt := shl(8, felt)
             }
 
@@ -107,7 +107,7 @@ library KassUtils {
                     resIndex := add(resIndex, 1)
                 }
             {
-                temp := and(mload(add(str, strIndex)), BYTES_31_MASK)
+                temp := and(mload(add(str, strIndex)), _BYTES_31_MASK)
                 if and(eq(add(resIndex, 1), resLen), needsFinalWordShift) {
                     temp := shr(sub(248, mul(8, mod(strLen, 0x1f))), temp)
                 }
@@ -126,5 +126,9 @@ library KassUtils {
 
     function isERC1155(address tokenAddress) public view returns (bool) {
         return ERC165(tokenAddress).supportsInterface(type(IERC1155).interfaceId);
+    }
+
+    function isEthereumAddress(bytes32 contractAddress) public pure returns (bool) {
+        return uint256(uint160(uint256(contractAddress))) == uint256(contractAddress);
     }
 }

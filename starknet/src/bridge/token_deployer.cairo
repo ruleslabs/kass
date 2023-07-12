@@ -36,7 +36,7 @@ mod KassTokenDeployer {
     _erc1155_implementation: starknet::ClassHash,
 
     // l1 token address -> l2 kass token address
-    _kass_token_addresses: LegacyMap<starknet::EthAddress, starknet::ContractAddress>,
+    _wrappers: LegacyMap<starknet::EthAddress, starknet::ContractAddress>,
   }
 
   //
@@ -68,7 +68,7 @@ mod KassTokenDeployer {
       self: @ContractState,
       l1_token_address: starknet::EthAddress
     ) -> starknet::ContractAddress {
-      self._kass_token_addresses.read(l1_token_address)
+      self._wrappers.read(l1_token_address)
     }
 
     fn compute_l2_kass_token_address(
@@ -189,7 +189,7 @@ mod KassTokenDeployer {
       token_contract.initialize(:implementation, :calldata);
 
       // save token address
-      self._kass_token_addresses.write(l1_token_address, kass_contract_address);
+      self._wrappers.write(l1_token_address, kass_contract_address);
 
       kass_contract_address
     }

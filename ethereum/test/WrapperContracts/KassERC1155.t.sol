@@ -46,7 +46,7 @@ contract Test_KassERC1155 is TestSetup_KassERC1155 {
 
     function test_1155_CannotMintIfNotDeployer() public {
         vm.prank(address(0x1));
-        vm.expectRevert("Kass1155: Not deployer");
+        vm.expectRevert("Kass1155: Not bridge");
         _kassERC1155.permissionedMint(address(0x1), 0x1, 0x1);
     }
 }

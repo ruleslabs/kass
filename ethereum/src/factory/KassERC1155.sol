@@ -12,12 +12,11 @@ contract KassERC1155 is Context, ERC1155, Ownable, UUPSUpgradeable {
 
     bool private _initialized = false;
 
-    address private _deployer;
+    address private _bridge;
 
-    // solhint-disable-next-line no-empty-blocks
-    constructor() ERC1155("") { }
-
-    // MODIFIERS
+    //
+    // Modifiers
+    //
 
     modifier initializer() {
         address implementation = _getImplementation();
@@ -28,43 +27,59 @@ contract KassERC1155 is Context, ERC1155, Ownable, UUPSUpgradeable {
         _;
     }
 
-    modifier onlyDeployer() {
-        require(_deployer == _msgSender(), "Kass1155: Not deployer");
+    modifier onlyBridge() {
+        require(_bridge == _msgSender(), "Kass1155: Not bridge");
 
         _;
     }
 
-    // INIT
+    //
+    // Constructor
+    //
+
+    // solhint-disable-next-line no-empty-blocks
+    constructor() ERC1155("") { }
 
     function initialize(bytes calldata data) public initializer {
         (string memory uri_) = abi.decode(data, (string));
 
         _setURI(uri_);
 
-        _setDeployer();
+        _setBridge();
         _transferOwnership(_msgSender());
     }
 
-    // UPGRADE
+    //
+    // Upgrade
+    //
 
     // solhint-disable-next-line no-empty-blocks
     function _authorizeUpgrade(address) internal override onlyOwner { }
 
-    // MINT & BURN
+    //
+    // Kass ERC 1155
+    //
+
+    // upgrade
+    function permissionedUpgradeTo(address newImplementation) public onlyBridge {
+        _upgradeTo(newImplementation);
+    }
 
     // mint
-    function permissionedMint(address to, uint256 id, uint256 amount) public onlyDeployer {
+    function permissionedMint(address to, uint256 id, uint256 amount) public onlyBridge {
         _mint(to, id, amount, "");
     }
 
     // burn
-    function permissionedBurn(address from, uint256 id, uint256 amount) public onlyDeployer {
+    function permissionedBurn(address from, uint256 id, uint256 amount) public onlyBridge {
         _burn(from, id, amount);
     }
 
-    // INTERNALS
+    //
+    // Internals
+    //
 
-    function _setDeployer() private {
-        _deployer = _msgSender();
+    function _setBridge() private {
+        _bridge = _msgSender();
     }
 }

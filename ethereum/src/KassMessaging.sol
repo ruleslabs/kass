@@ -19,7 +19,7 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
     function _parseDepositRequestMessagePayload(
         uint256[] calldata payload
     ) internal pure returns (DepositRequest memory depositRequest) {
-        depositRequest.tokenAddress = bytes32(payload[1]);
+        depositRequest.nativeTokenAddress = bytes32(payload[1]);
 
         depositRequest.recipient = address(uint160(payload[2]));
 
@@ -114,7 +114,7 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
     // DEPOSIT ON L2
 
     function _computeTokenDepositOnL2Message(
-        bytes32 tokenAddress,
+        bytes32 nativeTokenAddress,
         uint256 recipient,
         uint256 tokenId,
         uint256 amount,
@@ -124,7 +124,7 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
 
             // needs a L2 wrapper
 
-            address l1TokenAddress = address(uint160(uint256(tokenAddress)));
+            address l1TokenAddress = address(uint160(uint256(nativeTokenAddress)));
 
             if (KassUtils.isERC721(l1TokenAddress)) {
                 payload = new uint256[](8); // token address + deposit data + name + symbol
@@ -154,7 +154,7 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
         }
 
         // store L2 token address
-        payload[0] = uint256(tokenAddress);
+        payload[0] = uint256(nativeTokenAddress);
 
         payload[1] = recipient;
 
@@ -168,7 +168,7 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
     }
 
     function _sendTokenDepositMessage(
-        bytes32 tokenAddress,
+        bytes32 nativeTokenAddress,
         uint256 recipient,
         uint256 tokenId,
         uint256 amount,
@@ -176,7 +176,7 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
         uint256 fee
     ) internal returns (uint256) {
         (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
-            tokenAddress,
+            nativeTokenAddress,
             recipient,
             tokenId,
             amount,
@@ -187,7 +187,7 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
     }
 
     function _startL1ToL2TokenDepositMessageCancellation(
-        bytes32 tokenAddress,
+        bytes32 nativeTokenAddress,
         uint256 recipient,
         uint256 tokenId,
         uint256 amount,
@@ -195,7 +195,7 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
         uint256 nonce
     ) internal {
         (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
-            tokenAddress,
+            nativeTokenAddress,
             recipient,
             tokenId,
             amount,
@@ -205,7 +205,7 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
     }
 
     function _cancelL1ToL2TokenDepositMessage(
-        bytes32 tokenAddress,
+        bytes32 nativeTokenAddress,
         uint256 recipient,
         uint256 tokenId,
         uint256 amount,
@@ -213,7 +213,7 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
         uint256 nonce
     ) internal {
         (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
-            tokenAddress,
+            nativeTokenAddress,
             recipient,
             tokenId,
             amount,

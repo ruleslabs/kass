@@ -24,6 +24,9 @@ contract KassStorage {
         // Address of the Kass ERC1155 implementation
         address erc1155ImplementationAddress;
 
+        // (native L2 address => wrapper L1 address) mapping
+        mapping(uint256 l2TokenAddress => address l1TokenAddress) wrappers;
+
         // (implementation address => initialization status) mapping
         mapping(address implementation => bool initialized) initializedImplementations;
 
