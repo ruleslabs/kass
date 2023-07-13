@@ -16,7 +16,7 @@ contract TestSetup_1155_KassRequestOwnership is KassTestBase {
 
         // create ownable L1 native token
         _l1TokenWrapper = new KassERC1155();
-        _l1TokenWrapper.initialize(abi.encode(L2_TOKEN_FLAT_URI));
+        _l1TokenWrapper.initialize(abi.encode(_L2_TOKEN_FLAT_URI));
     }
 }
 
@@ -26,7 +26,7 @@ contract Test_1155_KassRequestOwnership is TestSetup_1155_KassRequestOwnership {
         uint256 l2Owner = uint256(keccak256("rando 1")) % CAIRO_FIELD_PRIME;
 
         // request ownership on L2
-        expectL2OwnershipRequest(address(_l1TokenWrapper), l2Owner);
+        _expectL2OwnershipRequest(address(_l1TokenWrapper), l2Owner);
         _kass.requestL2Ownership{ value: L1_TO_L2_MESSAGE_FEE }(address(_l1TokenWrapper), l2Owner);
     }
 

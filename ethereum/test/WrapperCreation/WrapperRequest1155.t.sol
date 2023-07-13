@@ -22,7 +22,7 @@ contract Test_1155_KassWrapperRequest is TestSetup_1155_Native_Deposit {
 
         _l1NativeToken.setApprovalForAll(address(_kass), true);
 
-        expectDepositOnL2(_bytes32_l1NativeToken(), sender, 0x1, tokenId, amount, true, 0x1);
+        _expectDepositOnL2(_bytes32_l1NativeToken(), sender, 0x1, tokenId, amount, true, 0x1);
         _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), 0x1, tokenId, amount, true);
     }
 }

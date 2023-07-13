@@ -14,7 +14,17 @@ import "./KassStorage.sol";
 
 abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
 
-    // PARSE
+    function l2KassAddress() public view returns (uint256) {
+        return _state.l2KassAddress;
+    }
+
+    function setL2KassAddress(uint256 l2KassAddress_) public virtual {
+        _state.l2KassAddress = l2KassAddress_;
+    }
+
+    //
+    // Internals
+    //
 
     function _parseDepositRequestMessagePayload(
         uint256[] calldata payload

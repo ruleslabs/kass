@@ -13,6 +13,18 @@ import "./KassStorage.sol";
 
 abstract contract TokenDeployer is KassStorage {
 
+    function proxyImplementationAddress() public view returns (address) {
+        return _state.proxyImplementationAddress;
+    }
+
+    function erc721ImplementationAddress() public view returns (address) {
+        return _state.erc721ImplementationAddress;
+    }
+
+    function erc1155ImplementationAddress() public view returns (address) {
+        return _state.erc1155ImplementationAddress;
+    }
+
     function getL1TokenAddress(uint256 l2TokenAddress) public view returns (address) {
         return _state.wrappers[l2TokenAddress];
     }

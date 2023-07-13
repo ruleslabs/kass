@@ -28,14 +28,14 @@ contract TestSetup_1155_Wrapped_Withdraw is KassTestBase {
         assertEq(_l1TokenWrapper.balanceOf(l1Recipient, tokenId), 0);
 
         // deposit from L2 and withdraw to L1
-       uint256[] memory messagePayload = depositOnL1(
+       uint256[] memory messagePayload = _depositOnL1(
             bytes32(l2TokenAddress),
             l1Recipient,
             tokenId,
             amount,
             TokenStandard.ERC1155
         );
-        expectWithdrawOnL1(bytes32(l2TokenAddress), l1Recipient, tokenId, amount, TokenStandard.ERC1155);
+        _expectWithdrawOnL1(bytes32(l2TokenAddress), l1Recipient, tokenId, amount, TokenStandard.ERC1155);
         _kass.withdraw(messagePayload);
 
         // assert balance was updated
@@ -50,7 +50,7 @@ contract Test_1155_Wrapped_Withdraw is TestSetup_1155_Wrapped_Withdraw {
         uint256 tokenId = uint256(keccak256("token 1"));
         uint256 amount = uint256(keccak256("huge amount"));
 
-        _1155_basicWithdrawTest(L2_TOKEN_ADDRESS, l1Recipient, tokenId, amount);
+        _1155_basicWithdrawTest(_L2_TOKEN_ADDRESS, l1Recipient, tokenId, amount);
     }
 
     function test_1155_wrapped_BasicWithdrawFromL2_2() public {
@@ -58,7 +58,7 @@ contract Test_1155_Wrapped_Withdraw is TestSetup_1155_Wrapped_Withdraw {
         uint256 tokenId = 0x2;
         uint256 amount = 0x3;
 
-        _1155_basicWithdrawTest(L2_TOKEN_ADDRESS, l1Recipient, tokenId, amount);
+        _1155_basicWithdrawTest(_L2_TOKEN_ADDRESS, l1Recipient, tokenId, amount);
     }
 
     function test_1155_wrapped_BasicWithdrawFromL2_3() public {
@@ -66,7 +66,7 @@ contract Test_1155_Wrapped_Withdraw is TestSetup_1155_Wrapped_Withdraw {
         uint256 tokenId = 0x2 << UINT256_PART_SIZE_BITS;
         uint256 amount = 0x3 << UINT256_PART_SIZE_BITS;
 
-        _1155_basicWithdrawTest(L2_TOKEN_ADDRESS, l1Recipient, tokenId, amount);
+        _1155_basicWithdrawTest(_L2_TOKEN_ADDRESS, l1Recipient, tokenId, amount);
     }
 
     function test_1155_wrapped_CannotWithdrawFromL2Twice() public {
@@ -75,8 +75,8 @@ contract Test_1155_Wrapped_Withdraw is TestSetup_1155_Wrapped_Withdraw {
         uint256 amount = 0x10;
 
         // deposit from L2
-        uint256[] memory messagePayload = depositOnL1(
-            bytes32(L2_TOKEN_ADDRESS),
+        uint256[] memory messagePayload = _depositOnL1(
+            bytes32(_L2_TOKEN_ADDRESS),
             l1Recipient,
             tokenId,
             amount,
@@ -84,7 +84,7 @@ contract Test_1155_Wrapped_Withdraw is TestSetup_1155_Wrapped_Withdraw {
         );
 
         // withdraw
-        expectWithdrawOnL1(bytes32(L2_TOKEN_ADDRESS), l1Recipient, tokenId, amount, TokenStandard.ERC1155);
+        _expectWithdrawOnL1(bytes32(_L2_TOKEN_ADDRESS), l1Recipient, tokenId, amount, TokenStandard.ERC1155);
         _kass.withdraw(messagePayload);
 
         vm.clearMockedCalls();
@@ -98,8 +98,8 @@ contract Test_1155_Wrapped_Withdraw is TestSetup_1155_Wrapped_Withdraw {
         uint256 amount = 0x0;
 
         // deposit from L2
-        uint256[] memory messagePayload = depositOnL1(
-            bytes32(L2_TOKEN_ADDRESS),
+        uint256[] memory messagePayload = _depositOnL1(
+            bytes32(_L2_TOKEN_ADDRESS),
             l1Recipient,
             tokenId,
             amount,

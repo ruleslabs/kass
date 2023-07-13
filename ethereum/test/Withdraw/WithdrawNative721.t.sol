@@ -26,14 +26,14 @@ contract TestSetup_721_Native_Withdraw is TestSetup_721_Native_Deposit {
         _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), 0x1, tokenId, false);
 
         // deposit from L2 and withdraw to L1
-        uint256[] memory messagePayload = depositOnL1(
+        uint256[] memory messagePayload = _depositOnL1(
             _bytes32_l1NativeToken(),
             l1Recipient,
             tokenId,
             0,
             TokenStandard.ERC721
         );
-        expectWithdrawOnL1(_bytes32_l1NativeToken(), l1Recipient, tokenId, 0, TokenStandard.ERC721);
+        _expectWithdrawOnL1(_bytes32_l1NativeToken(), l1Recipient, tokenId, 0, TokenStandard.ERC721);
         _kass.withdraw(messagePayload);
 
         // assert token owner is l1Recipient
@@ -78,7 +78,7 @@ contract Test_721_Native_Withdraw is TestSetup_721_Native_Withdraw {
         _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), 0x1, tokenId, false);
 
         // deposit from L2
-        uint256[] memory messagePayload = depositOnL1(
+        uint256[] memory messagePayload = _depositOnL1(
             _bytes32_l1NativeToken(),
             l1Recipient,
             tokenId,
@@ -87,7 +87,7 @@ contract Test_721_Native_Withdraw is TestSetup_721_Native_Withdraw {
         );
 
         // withdraw
-        expectWithdrawOnL1(_bytes32_l1NativeToken(), l1Recipient, tokenId, 0, TokenStandard.ERC721);
+        _expectWithdrawOnL1(_bytes32_l1NativeToken(), l1Recipient, tokenId, 0, TokenStandard.ERC721);
         _kass.withdraw(messagePayload);
 
         vm.clearMockedCalls();

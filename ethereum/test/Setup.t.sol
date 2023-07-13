@@ -29,7 +29,7 @@ contract Test_Setup is KassTestBase {
     function test_UpgradeImplementation() public {
         address newImplementation = address(new Kass());
 
-        assertEq(_kass.l2KassAddress(), L2_KASS_ADDRESS);
+        assertEq(_kass.l2KassAddress(), _L2_KASS_ADDRESS);
         assertEq(_kass.proxyImplementationAddress(), proxyImplementationAddress);
         assertEq(_kass.erc721ImplementationAddress(), erc721ImplementationAddress);
         assertEq(_kass.erc1155ImplementationAddress(), erc1155ImplementationAddress);

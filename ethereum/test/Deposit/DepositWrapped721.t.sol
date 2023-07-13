@@ -41,8 +41,8 @@ contract Test_721_Wrapped_Deposit is TestSetup_721_Wrapped_Deposit {
         // assert token owner is sender
         assertEq(_l1TokenWrapper.ownerOf(tokenId), sender);
 
-        expectDepositOnL2(bytes32(L2_TOKEN_ADDRESS), sender, l2Recipient, tokenId, 0x1, requestWrapper, 0x0);
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, requestWrapper);
+        _expectDepositOnL2(bytes32(_L2_TOKEN_ADDRESS), sender, l2Recipient, tokenId, 0x1, requestWrapper, 0x0);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(_L2_TOKEN_ADDRESS), l2Recipient, tokenId, requestWrapper);
 
         // assert token does not exist on L1
         vm.expectRevert("ERC721: invalid token ID");
@@ -59,7 +59,7 @@ contract Test_721_Wrapped_Deposit is TestSetup_721_Wrapped_Deposit {
         _721_mintTokens(sender, tokenId);
 
         vm.expectRevert("Kass: Double wrap not allowed");
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, requestWrapper);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(_L2_TOKEN_ADDRESS), l2Recipient, tokenId, requestWrapper);
     }
 
     function test_721_wrapped_CannotDepositToL2IfNotTokenOwner() public {
@@ -72,6 +72,6 @@ contract Test_721_Wrapped_Deposit is TestSetup_721_Wrapped_Deposit {
 
         // try deposit on L2
         vm.expectRevert("You do not own this token");
-        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(L2_TOKEN_ADDRESS), l2Recipient, tokenId, requestWrapper);
+        _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(bytes32(_L2_TOKEN_ADDRESS), l2Recipient, tokenId, requestWrapper);
     }
 }

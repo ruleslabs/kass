@@ -16,21 +16,13 @@ import "../src/factory/KassERC1155.sol";
 import "../src/factory/KassERC1967Proxy.sol";
 
 abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
-    Kass internal _kass;
-    address internal _starknetMessagingAddress;
+    string internal constant _L2_TOKEN_FLAT_URI = "https://api.rules.art/metadata/{id}.json";
+    string internal constant _L2_TOKEN_NAME = "L2 Kass Token";
+    string internal constant _L2_TOKEN_SYMBOL = "L2KT";
 
-    string internal constant L2_TOKEN_FLAT_URI = "https://api.rules.art/metadata/{id}.json";
-    string internal constant L2_TOKEN_NAME = "L2 Kass Token";
-    string internal constant L2_TOKEN_SYMBOL = "L2KT";
-
-    // solhint-disable-next-line var-name-mixedcase
-    string[] internal L2_TOKEN_URI;
-    // solhint-disable-next-line var-name-mixedcase
-    string[] internal L2_TOKEN_NAME_AND_SYMBOL;
-
-    address internal constant STARKNET_MESSAGNING_ADDRESS = address(uint160(uint256(keccak256("starknet messaging"))));
-    uint256 internal constant L2_KASS_ADDRESS = uint256(keccak256("L2 Kass"));
-    uint256 internal constant L2_TOKEN_ADDRESS = uint256(keccak256("L2 token"));
+    address internal constant _STARKNET_MESSAGNING_ADDRESS = address(uint160(uint256(keccak256("starknet messaging"))));
+    uint256 internal constant _L2_KASS_ADDRESS = uint256(keccak256("L2 Kass"));
+    uint256 internal constant _L2_TOKEN_ADDRESS = uint256(keccak256("L2 token"));
 
     uint256 public constant CAIRO_FIELD_PRIME = 0x800000000000011000000000000000000000000000000000000000000000001;
 
@@ -40,7 +32,23 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
     address public immutable erc721ImplementationAddress = address(new KassERC721());
     address public immutable erc1155ImplementationAddress = address(new KassERC1155());
 
-    event LogL1WrapperCreated(bytes32 indexed l2TokenAddress, address l1TokenAddress);
+    //
+    // Storage
+    //
+
+    Kass internal _kass;
+    address internal _starknetMessagingAddress;
+
+    // solhint-disable-next-line var-name-mixedcase
+    string[] internal _L2_TOKEN_URI;
+    // solhint-disable-next-line var-name-mixedcase
+    string[] internal _L2_TOKEN_NAME_AND_SYMBOL;
+
+    //
+    // Events
+    //
+
+    event LogL1WrapperCreated(uint256 indexed l2TokenAddress, address indexed l1TokenAddress);
     event LogL2WrapperRequested(address indexed l1TokenAddress);
 
     event LogL1OwnershipClaimed(
@@ -86,15 +94,15 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
 
     constructor () {
         // L2 token uri
-        L2_TOKEN_URI = new string[](3);
-        L2_TOKEN_URI[0] = "https://api.rule";
-        L2_TOKEN_URI[1] = "s.art/metadata/{";
-        L2_TOKEN_URI[2] = "id}.json";
+        _L2_TOKEN_URI = new string[](3);
+        _L2_TOKEN_URI[0] = "https://api.rule";
+        _L2_TOKEN_URI[1] = "s.art/metadata/{";
+        _L2_TOKEN_URI[2] = "id}.json";
 
         // L2 token name & symbol
-        L2_TOKEN_NAME_AND_SYMBOL = new string[](2);
-        L2_TOKEN_NAME_AND_SYMBOL[0] = L2_TOKEN_NAME;
-        L2_TOKEN_NAME_AND_SYMBOL[1] = L2_TOKEN_SYMBOL;
+        _L2_TOKEN_NAME_AND_SYMBOL = new string[](2);
+        _L2_TOKEN_NAME_AND_SYMBOL[0] = _L2_TOKEN_NAME;
+        _L2_TOKEN_NAME_AND_SYMBOL[1] = _L2_TOKEN_SYMBOL;
     }
 
     // SETUP
@@ -114,7 +122,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
                     Kass.initialize.selector,
                     abi.encode(
                         address(this),
-                        L2_KASS_ADDRESS,
+                        _L2_KASS_ADDRESS,
                         starknetMessaging,
                         proxyImplementationAddress,
                         erc721ImplementationAddress,
@@ -132,18 +140,18 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         string[] memory data;
 
         if (tokenStandard == TokenStandard.ERC721) {
-            data = L2_TOKEN_NAME_AND_SYMBOL;
+            data = _L2_TOKEN_NAME_AND_SYMBOL;
         } else if (tokenStandard == TokenStandard.ERC1155) {
-            data = L2_TOKEN_URI;
+            data = _L2_TOKEN_URI;
         } else {
             revert("Kass: Unknown token standard");
         }
 
         uint256 amount = 0x1;
 
-        depositOnL1(bytes32(L2_TOKEN_ADDRESS), address(0x1), tokenId, amount, tokenStandard, data);
-        uint256[] memory messagePayload = expectWithdrawOnL1(
-            bytes32(L2_TOKEN_ADDRESS),
+        _depositOnL1(bytes32(_L2_TOKEN_ADDRESS), address(0x1), tokenId, amount, tokenStandard, data);
+        uint256[] memory messagePayload = _expectWithdrawOnL1(
+            bytes32(_L2_TOKEN_ADDRESS),
             address(0x1),
             tokenId,
             amount,
@@ -152,7 +160,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         );
         _kass.withdraw(messagePayload);
 
-        l1TokenWrapper = _kass.computeL1TokenAddress(L2_TOKEN_ADDRESS);
+        l1TokenWrapper = _kass.computeL1TokenAddress(_L2_TOKEN_ADDRESS);
     }
 
     function _createL1Wrapper(TokenStandard tokenStandard) internal returns (address) {
@@ -161,20 +169,20 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
 
     // MESSAGES
 
-    function claimOwnershipOnL1(uint256 l2TokenAddress, address l1Owner) internal {
+    function _claimOwnershipOnL1(uint256 l2TokenAddress, address l1Owner) internal {
         // prepare L1 instance creation message from L2
         vm.mockCall(
             _starknetMessagingAddress,
             abi.encodeWithSelector(
                 IStarknetMessaging.consumeMessageFromL2.selector,
-                L2_KASS_ADDRESS,
+                _L2_KASS_ADDRESS,
                 _computeL1OwnershipClaimMessage(l2TokenAddress, l1Owner)
             ),
             abi.encode(bytes32(0x0))
         );
     }
 
-    function depositOnL1(
+    function _depositOnL1(
         bytes32 tokenAddress,
         address recipient,
         uint256 tokenId,
@@ -196,29 +204,29 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
             _starknetMessagingAddress,
             abi.encodeWithSelector(
                 IStarknetMessaging.consumeMessageFromL2.selector,
-                L2_KASS_ADDRESS,
+                _L2_KASS_ADDRESS,
                 messagePayload
             ),
             abi.encode(bytes32(0x0))
         );
     }
 
-    function depositOnL1(
+    function _depositOnL1(
         bytes32 tokenAddress,
         address recipient,
         uint256 tokenId,
         uint256 amount,
         TokenStandard tokenStandard
     ) internal returns (uint256[] memory messagePayload) {
-        return depositOnL1(tokenAddress, recipient, tokenId, amount, tokenStandard, new string[](0));
+        return _depositOnL1(tokenAddress, recipient, tokenId, amount, tokenStandard, new string[](0));
     }
 
     // EXPECTS
 
-    function expectL1OwnershipClaim(uint256 l2TokenAddress, address l1Owner) internal {
+    function _expectL1OwnershipClaim(uint256 l2TokenAddress, address l1Owner) internal {
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.consumeMessageFromL2.selector,
-            L2_KASS_ADDRESS,
+            _L2_KASS_ADDRESS,
             _computeL1OwnershipClaimMessage(l2TokenAddress, l1Owner)
         );
 
@@ -232,14 +240,14 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         emit LogL1OwnershipClaimed(l2TokenAddress, l1TokenAddress, l1Owner);
     }
 
-    function expectL2OwnershipRequest(address l1TokenAddress, uint256 l2Owner) internal {
+    function _expectL2OwnershipRequest(address l1TokenAddress, uint256 l2Owner) internal {
         (uint256[] memory payload, uint256 handlerSelector) = _computeL2OwnershipClaimMessage(
             l1TokenAddress,
             l2Owner
         );
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.sendMessageToL2.selector,
-            L2_KASS_ADDRESS,
+            _L2_KASS_ADDRESS,
             handlerSelector,
             payload
         );
@@ -252,7 +260,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         emit LogL2OwnershipClaimed(l1TokenAddress, l2Owner);
     }
 
-    function expectDepositOnL2(
+    function _expectDepositOnL2(
         bytes32 tokenAddress,
         address sender,
         uint256 recipient,
@@ -270,7 +278,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         );
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.sendMessageToL2.selector,
-            L2_KASS_ADDRESS,
+            _L2_KASS_ADDRESS,
             handlerSelector,
             payload
         );
@@ -295,8 +303,8 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         emit LogDeposit(tokenAddress, sender, recipient, tokenId, amount);
     }
 
-    function expectWithdrawOnL1(
-        bytes32 tokenAddress,
+    function _expectWithdrawOnL1(
+        bytes32 nativeTokenAddress,
         address recipient,
         uint256 tokenId,
         uint256 amount,
@@ -304,7 +312,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         string[] memory data
     ) internal returns (uint256[] memory messagePayload) {
         messagePayload = _computeTokenDepositOnL1Message(
-            tokenAddress,
+            nativeTokenAddress,
             recipient,
             tokenId,
             amount,
@@ -314,7 +322,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
 
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.consumeMessageFromL2.selector,
-            L2_KASS_ADDRESS,
+            _L2_KASS_ADDRESS,
             messagePayload
         );
 
@@ -323,30 +331,30 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
 
         // expect events
         if (data.length > 0) {
-            address computedWrapperAddress = _kass.computeL1TokenAddress(uint256(tokenAddress));
+            address computedWrapperAddress = _kass.computeL1TokenAddress(uint256(nativeTokenAddress));
 
             if (!Address.isContract(computedWrapperAddress)) {
                 vm.expectEmit(true, true, true, true, address(_kass));
-                emit LogL1WrapperCreated(tokenAddress, computedWrapperAddress);
+                emit LogL1WrapperCreated(uint256(nativeTokenAddress), computedWrapperAddress);
             }
         }
 
         vm.expectEmit(true, true, true, true, address(_kass));
-        emit LogWithdrawal(tokenAddress, recipient, tokenId, amount);
+        emit LogWithdrawal(nativeTokenAddress, recipient, tokenId, amount);
     }
 
-    function expectWithdrawOnL1(
+    function _expectWithdrawOnL1(
         bytes32 tokenAddress,
         address recipient,
         uint256 tokenId,
         uint256 amount,
         TokenStandard tokenStandard
     ) internal returns (uint256[] memory messagePayload) {
-        return expectWithdrawOnL1(tokenAddress, recipient, tokenId, amount, tokenStandard, new string[](0));
+        return _expectWithdrawOnL1(tokenAddress, recipient, tokenId, amount, tokenStandard, new string[](0));
     }
 
     // cannot test nonce logic since it's handled by the starknet messaging contract.
-    function expectDepositCancelRequest(
+    function __expectDepositCancelRequest(
         bytes32 tokenAddress,
         address sender,
         uint256 recipient,
@@ -364,7 +372,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         );
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.startL1ToL2MessageCancellation.selector,
-            L2_KASS_ADDRESS,
+            _L2_KASS_ADDRESS,
             handlerSelector,
             payload,
             nonce
@@ -379,7 +387,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
     }
 
     // cannot test nonce logic since it's handled by the starknet messaging contract.
-    function expectDepositCancel(
+    function _expectDepositCancel(
         bytes32 tokenAddress,
         address sender,
         uint256 recipient,
@@ -397,7 +405,7 @@ abstract contract KassTestBase is Test, StarknetConstants, KassMessaging {
         );
         bytes memory messageCalldata = abi.encodeWithSelector(
             IStarknetMessaging.cancelL1ToL2Message.selector,
-            L2_KASS_ADDRESS,
+            _L2_KASS_ADDRESS,
             handlerSelector,
             payload,
             nonce

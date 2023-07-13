@@ -23,7 +23,7 @@ contract TestSetup_721_Native_Deposit is KassTestBase, ERC721Holder {
 
         vm.startPrank(_tokenOwner);
         _l1NativeToken = new KassERC721();
-        _l1NativeToken.initialize(abi.encode(L2_TOKEN_NAME, L2_TOKEN_SYMBOL));
+        _l1NativeToken.initialize(abi.encode(_L2_TOKEN_NAME, _L2_TOKEN_SYMBOL));
         vm.stopPrank();
     }
 
@@ -47,7 +47,7 @@ contract TestSetup_721_Native_Deposit is KassTestBase, ERC721Holder {
         _l1NativeToken.approve(address(_kass), tokenId);
 
         // deposit on L2
-        expectDepositOnL2(_bytes32_l1NativeToken(), sender, l2Recipient, tokenId, 0x1, requestWrapper, nonce);
+        _expectDepositOnL2(_bytes32_l1NativeToken(), sender, l2Recipient, tokenId, 0x1, requestWrapper, nonce);
         _kass.deposit{ value: L1_TO_L2_MESSAGE_FEE }(_bytes32_l1NativeToken(), l2Recipient, tokenId, requestWrapper);
 
         // assert token has been transfered to Kass

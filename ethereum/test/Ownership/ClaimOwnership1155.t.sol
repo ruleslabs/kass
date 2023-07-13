@@ -21,13 +21,13 @@ contract TestSetup_1155_KassClaimOwnership is KassTestBase {
 
 contract Test_1155_KassClaimOwnership is TestSetup_1155_KassClaimOwnership {
 
-    function test_1155_claimOwnershipOnL1() public {
+    function test_1155__claimOwnershipOnL1() public {
         address l1Owner = address(this);
 
         // claim ownership on L2
-        claimOwnershipOnL1(L2_TOKEN_ADDRESS, l1Owner);
-        expectL1OwnershipClaim(L2_TOKEN_ADDRESS, l1Owner);
-        _kass.claimL1Ownership(L2_TOKEN_ADDRESS);
+        _claimOwnershipOnL1(_L2_TOKEN_ADDRESS, l1Owner);
+        _expectL1OwnershipClaim(_L2_TOKEN_ADDRESS, l1Owner);
+        _kass.claimL1Ownership(_L2_TOKEN_ADDRESS);
 
         assertEq(_l1TokenWrapper.owner(), l1Owner);
     }

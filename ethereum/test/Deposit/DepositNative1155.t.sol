@@ -23,7 +23,7 @@ contract TestSetup_1155_Native_Deposit is KassTestBase, ERC1155Holder {
 
         vm.startPrank(_tokenOwner);
         _l1NativeToken = new KassERC1155();
-        _l1NativeToken.initialize(abi.encode(KassUtils.felt252WordsToStr(L2_TOKEN_URI)));
+        _l1NativeToken.initialize(abi.encode(KassUtils.felt252WordsToStr(_L2_TOKEN_URI)));
         vm.stopPrank();
     }
 
@@ -46,7 +46,7 @@ contract TestSetup_1155_Native_Deposit is KassTestBase, ERC1155Holder {
         _l1NativeToken.setApprovalForAll(address(_kass), true);
 
         // deposit on L2
-        expectDepositOnL2(
+        _expectDepositOnL2(
             _bytes32_l1NativeToken(),
             sender,
             l2Recipient,

@@ -47,14 +47,14 @@ contract TestSetup_1155_Native_DepositCancel is TestSetup_1155_Native_Deposit {
         _1155_mintAndDepositOnL2(l2Recipient, tokenId, amount, requestWrapper, nonce);
 
         // deposit cancel request
-        expectDepositCancelRequest(tokenAddress, sender, l2Recipient, tokenId, amount, requestWrapper, nonce);
+        __expectDepositCancelRequest(tokenAddress, sender, l2Recipient, tokenId, amount, requestWrapper, nonce);
         _kass.requestDepositCancel(tokenAddress, l2Recipient, tokenId, amount, requestWrapper, nonce);
 
         // check if balance still the same
         assertEq(_l1NativeToken.balanceOf(sender, tokenId), balance);
 
         // deposit cancel request
-        expectDepositCancel(tokenAddress, sender, l2Recipient, tokenId, amount, requestWrapper, nonce);
+        _expectDepositCancel(tokenAddress, sender, l2Recipient, tokenId, amount, requestWrapper, nonce);
         _kass.cancelDeposit(tokenAddress, l2Recipient, tokenId, amount, requestWrapper, nonce);
 
         // check if balance was updated

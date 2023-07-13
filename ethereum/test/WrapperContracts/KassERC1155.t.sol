@@ -16,7 +16,7 @@ contract TestSetup_KassERC1155 is KassTestBase {
     UpgradedContractMock public _upgradedContractMock = new UpgradedContractMock();
 
     function setUp() public override {
-        _kassERC1155.initialize(abi.encode(KassUtils.felt252WordsToStr(L2_TOKEN_URI)));
+        _kassERC1155.initialize(abi.encode(KassUtils.felt252WordsToStr(_L2_TOKEN_URI)));
         _kassERC1967Proxy.initializeKassERC1967Proxy(
             address(_kassERC1155),
             abi.encodeWithSelector(KassERC1155.initialize.selector, abi.encode(""))
@@ -41,7 +41,7 @@ contract Test_KassERC1155 is TestSetup_KassERC1155 {
         // create L1 wrapper
         vm.expectRevert("Kass1155: Already initialized");
         _kassERC1155.initialize(abi.encode("bar"));
-        assertEq(_kassERC1155.uri(0), string(KassUtils.felt252WordsToStr(L2_TOKEN_URI)));
+        assertEq(_kassERC1155.uri(0), string(KassUtils.felt252WordsToStr(_L2_TOKEN_URI)));
     }
 
     function test_1155_CannotMintIfNotDeployer() public {

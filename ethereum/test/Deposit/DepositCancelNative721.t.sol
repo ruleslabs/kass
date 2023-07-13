@@ -41,14 +41,14 @@ contract TestSetup_721_Native_DepositCancel is TestSetup_721_Native_Deposit {
         _721_mintAndDepositOnL2(l2Recipient, tokenId, requestWrapper, nonce);
 
         // deposit cancel request
-        expectDepositCancelRequest(_bytes32_l1NativeToken(), sender, l2Recipient, tokenId, 0x1, requestWrapper, nonce);
+        __expectDepositCancelRequest(_bytes32_l1NativeToken(), sender, l2Recipient, tokenId, 0x1, requestWrapper, nonce);
         _kass.requestDepositCancel(_bytes32_l1NativeToken(), l2Recipient, tokenId, requestWrapper, nonce);
 
         // assert token has been transfered to Kass
         assertEq(_l1NativeToken.ownerOf(tokenId), address(_kass));
 
         // deposit cancel request
-        expectDepositCancel(_bytes32_l1NativeToken(), sender, l2Recipient, tokenId, 0x1, requestWrapper, nonce);
+        _expectDepositCancel(_bytes32_l1NativeToken(), sender, l2Recipient, tokenId, 0x1, requestWrapper, nonce);
         _kass.cancelDeposit(_bytes32_l1NativeToken(), l2Recipient, tokenId, requestWrapper, nonce);
 
         // check if owner is correct

@@ -20,12 +20,11 @@ import "./KassStorage.sol";
 contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgradeable {
 
     //
-    // EVENTS
+    // Events
     //
 
-    // L1 token address can be computed offchain from L2 token address
-    // it does not need to be indexed
-    event LogL1WrapperCreated(bytes32 indexed l2TokenAddress, address l1TokenAddress);
+    event LogL1WrapperCreated(uint256 indexed l2TokenAddress, address indexed l1TokenAddress);
+
     event LogL2WrapperRequested(address indexed l1TokenAddress);
 
     event LogL1OwnershipClaimed(
@@ -71,7 +70,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
     );
 
     //
-    // MODIFIERS
+    // Modifiers
     //
 
     modifier initializer() {
@@ -94,7 +93,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
     }
 
     //
-    // INIT
+    // Initialize
     //
 
     function initialize(bytes calldata data) public initializer {
@@ -122,39 +121,23 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
     }
 
     //
-    // UPGRADE
+    // Upgrade
     //
 
     // solhint-disable-next-line no-empty-blocks
     function _authorizeUpgrade(address) internal override onlyOwner { }
 
     //
-    // GETTERS
+    // Kass Messaging
     //
 
-    function l2KassAddress() public view returns (uint256) {
-        return _state.l2KassAddress;
-    }
-
-    function proxyImplementationAddress() public view returns (address) {
-        return _state.proxyImplementationAddress;
-    }
-
-    function erc721ImplementationAddress() public view returns (address) {
-        return _state.erc721ImplementationAddress;
-    }
-
-    function erc1155ImplementationAddress() public view returns (address) {
-        return _state.erc1155ImplementationAddress;
+    function setL2KassAddress(uint256 l2KassAddress_) public override onlyOwner() {
+        super.setL2KassAddress(l2KassAddress_);
     }
 
     //
-    // SETTERS
+    // Kass Token Deployer
     //
-
-    function setL2KassAddress(uint256 l2KassAddress_) public onlyOwner {
-        _state.l2KassAddress = l2KassAddress_;
-    }
 
     function setDeployerImplementations(
         address proxyImplementationAddress_,
@@ -169,9 +152,10 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
     }
 
     //
-    // OWNERSHIP CLAIM
+    // Kass Bridge
     //
 
+    // Ownership claim
     function claimL1Ownership(uint256 l2TokenAddress) public {
         // consume ownership claim message
         _consumeL1OwnershipClaimMessage(l2TokenAddress, _msgSender());
@@ -186,10 +170,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         emit LogL1OwnershipClaimed(l2TokenAddress, l1TokenAddress, _msgSender());
     }
 
-    //
-    // OWNERSHIP REQUEST
-    //
-
+    // Ownership request
     function requestL2Ownership(address l1TokenAddress, uint256 l2Owner) public payable {
         // assert L1 token owner is sender
         address l1Owner = Ownable(l1TokenAddress).owner();
@@ -202,10 +183,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         emit LogL2OwnershipClaimed(l1TokenAddress, l2Owner);
     }
 
-    //
-    // DEPOSIT
-    //
-
+    // Deposit
     function deposit(
         bytes32 nativeTokenAddress,
         uint256 recipient,
@@ -213,33 +191,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         uint256 amount,
         bool requestWrapper
     ) public payable {
-        // get l1 token address (native or wrapper)
-        (address l1TokenAddress, bool isL1Native) = _parseNativeTokenAddress(nativeTokenAddress);
-
-        // avoid double wrap
-        require(isL1Native || !requestWrapper, "Kass: Double wrap not allowed");
-
-        // burn or tranfer tokens
-        _lockTokens(l1TokenAddress, tokenId, amount, isL1Native);
-
-        // send l2 Wrapper Creation message
-        uint256 nonce = _sendTokenDepositMessage(
-            nativeTokenAddress,
-            recipient,
-            tokenId,
-            amount,
-            requestWrapper,
-            msg.value
-        );
-
-        // save depositor
-        _state.depositors[nonce] = _msgSender();
-
-        // emit events
-        if (requestWrapper) {
-            emit LogL2WrapperRequested(l1TokenAddress);
-        }
-        emit LogDeposit(nativeTokenAddress, _msgSender(), recipient, tokenId, amount);
+        _deposit(nativeTokenAddress, recipient, tokenId, amount, requestWrapper);
     }
 
     function deposit(
@@ -248,13 +200,10 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         uint256 tokenId,
         bool requestWrapper
     ) public payable {
-        deposit(nativeTokenAddress, recipient, tokenId, 0x1, requestWrapper);
+        _deposit(nativeTokenAddress, recipient, tokenId, 0x1, requestWrapper);
     }
 
-    //
-    // WITHDRAW
-    //
-
+    // Withdraw
     function withdraw(uint256[] calldata messagePayload) public {
         // consume L1 wrapper request message
         _consumeL1WrapperRequestMessage(messagePayload);
@@ -281,7 +230,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
             }
 
             // emit event
-            emit LogL1WrapperCreated(depositRequest.nativeTokenAddress, l1TokenAddress);
+            emit LogL1WrapperCreated(uint256(depositRequest.nativeTokenAddress), l1TokenAddress);
         }
 
         // mint or tranfer tokens
@@ -302,11 +251,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         );
     }
 
-    //
-    // REQUEST DEPOSIT CANCEL
-    //
-
     /**
+     * Request deposit cancel:
+     *
      * If previous deposit on L2 fails to be handled by the L2 Kass bridge, tokens could be lost.
      * To mitigate this risk, L1 Kass bridge can cancel the deposit and after a security delay (5 days atm),
      * reclaim the tokens back on the L1.
@@ -346,10 +293,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         requestDepositCancel(nativeTokenAddress, recipient, tokenId, 0x1, requestWrapper, nonce);
     }
 
-    //
-    // CANCEL DEPOSIT
-    //
-
+    // Cancel deposit
     function cancelDeposit(
         bytes32 nativeTokenAddress,
         uint256 recipient,
@@ -381,7 +325,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
     }
 
     //
-    // SAFE TRANSFERS CHECK
+    // ERC1155 receiver
     //
 
     function onERC1155Received(address operator, address, uint256, uint256, bytes memory) public view returns (bytes4) {
@@ -392,6 +336,16 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
     // Internals
     //
 
+    // Init
+    function _isInitialized(address implementation) private view returns (bool) {
+        return _state.initializedImplementations[implementation];
+    }
+
+    function _setInitialized(address implementation) private {
+        _state.initializedImplementations[implementation] = true;
+    }
+
+    // Native/wrapper mgmt
     function _parseNativeTokenAddress(
         bytes32 nativeTokenAddress
     ) private view returns (address l1TokenAddress, bool isL1Native) {
@@ -406,14 +360,44 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         }
     }
 
-    function _isInitialized(address implementation) private view returns (bool) {
-        return _state.initializedImplementations[implementation];
+    // Deposit
+    function _deposit(
+        bytes32 nativeTokenAddress,
+        uint256 recipient,
+        uint256 tokenId,
+        uint256 amount,
+        bool requestWrapper
+    ) private {
+        // get l1 token address (native or wrapper)
+        (address l1TokenAddress, bool isL1Native) = _parseNativeTokenAddress(nativeTokenAddress);
+
+        // avoid double wrap
+        require(isL1Native || !requestWrapper, "Kass: Double wrap not allowed");
+
+        // burn or tranfer tokens
+        _lockTokens(l1TokenAddress, tokenId, amount, isL1Native);
+
+        // send l2 Wrapper Creation message
+        uint256 nonce = _sendTokenDepositMessage(
+            nativeTokenAddress,
+            recipient,
+            tokenId,
+            amount,
+            requestWrapper,
+            msg.value
+        );
+
+        // save depositor
+        _state.depositors[nonce] = _msgSender();
+
+        // emit events
+        if (requestWrapper) {
+            emit LogL2WrapperRequested(l1TokenAddress);
+        }
+        emit LogDeposit(nativeTokenAddress, _msgSender(), recipient, tokenId, amount);
     }
 
-    function _setInitialized(address implementation) private {
-        _state.initializedImplementations[implementation] = true;
-    }
-
+    // Tokens lock
     function _lockTokens(address tokenAddress, uint256 tokenId, uint256 amount, bool isNative) private {
         // burn or tranfer tokens
         if (KassUtils.isERC721(tokenAddress)) {
@@ -465,6 +449,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         }
     }
 
+    // Misc
     fallback() external payable { revert("unsupported"); }
     receive() external payable { revert("Kass does not accept assets"); }
 }

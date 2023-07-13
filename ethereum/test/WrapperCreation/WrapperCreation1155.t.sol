@@ -16,7 +16,7 @@ contract TestSetup_1155_KassWrapperCreation is KassTestBase {
         super.setUp();
 
         // request L1 wrapper
-        depositOnL1(bytes32(L2_TOKEN_ADDRESS), address(0x1), 0x1, 0x1, TokenStandard.ERC1155, L2_TOKEN_URI);
+        _depositOnL1(bytes32(_L2_TOKEN_ADDRESS), address(0x1), 0x1, 0x1, TokenStandard.ERC1155, _L2_TOKEN_URI);
     }
 }
 
@@ -24,19 +24,19 @@ contract Test_1155_KassWrapperCreation is TestSetup_1155_KassWrapperCreation {
 
     function test_1155_L1TokenWrapperUri() public {
         // create L1 wrapper
-        uint256[] memory messagePayload = expectWithdrawOnL1(
-            bytes32(L2_TOKEN_ADDRESS),
+        uint256[] memory messagePayload = _expectWithdrawOnL1(
+            bytes32(_L2_TOKEN_ADDRESS),
             address(0x1),
             0x1,
             0x1,
             TokenStandard.ERC1155,
-            L2_TOKEN_URI
+            _L2_TOKEN_URI
         );
         _kass.withdraw(messagePayload);
 
-        KassERC1155 l1TokenWrapper = KassERC1155(_kass.computeL1TokenAddress(L2_TOKEN_ADDRESS));
+        KassERC1155 l1TokenWrapper = KassERC1155(_kass.computeL1TokenAddress(_L2_TOKEN_ADDRESS));
 
-        assertEq(l1TokenWrapper.uri(0), string(KassUtils.felt252WordsToStr(L2_TOKEN_URI)));
+        assertEq(l1TokenWrapper.uri(0), string(KassUtils.felt252WordsToStr(_L2_TOKEN_URI)));
     }
 
     function test_1155_DoubleL1WrapperRequest() public {
