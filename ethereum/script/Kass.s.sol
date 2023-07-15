@@ -7,10 +7,10 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "./HelperConfig.s.sol";
 
-import "../src/Kass.sol";
-import "../src/factory/KassERC721.sol";
-import "../src/factory/KassERC1155.sol";
-import "../src/factory/KassERC1967Proxy.sol";
+import "../src/Bridge.sol";
+import "../src/factory/ERC721.sol";
+import "../src/factory/ERC1155.sol";
+import "../src/factory/ERC1967Proxy.sol";
 
 contract DeployKass is Script {
     // solhint-disable-next-line no-empty-blocks
@@ -50,7 +50,7 @@ contract DeployKass is Script {
         address deployer = tx.origin;
 
         // deploy implementations
-        address implementationAddress = address(new Kass());
+        address implementationAddress = address(new KassBridge());
 
         if (proxyImplementationAddress != computedProxyImplementationAddress) {
             proxyImplementationAddress = address(new KassERC1967Proxy{ salt: keccak256("KassERC1967Proxy") }());
@@ -65,7 +65,7 @@ contract DeployKass is Script {
         }
 
         bytes memory initData = abi.encodeWithSelector(
-            Kass.initialize.selector,
+            KassBridge.initialize.selector,
             abi.encode(
                 deployer,
                 l2KassAddress,
@@ -80,7 +80,7 @@ contract DeployKass is Script {
         if (proxyAddress == address(0x0))
             new ERC1967Proxy{ salt: keccak256("Kass") }(implementationAddress, initData);
         else {
-            Kass(payable(proxyAddress)).upgradeToAndCall(implementationAddress, initData);
+            KassBridge(payable(proxyAddress)).upgradeToAndCall(implementationAddress, initData);
         }
 
         vm.stopBroadcast();

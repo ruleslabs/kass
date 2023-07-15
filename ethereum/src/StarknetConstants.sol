@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 
 abstract contract StarknetConstants {
     // HANDLER SELECTORS
+
     uint256 internal constant WRAPPER_CREATION_AND_WITHDRAW_721_HANDLER_SELECTOR = 0x0;
     uint256 internal constant WRAPPER_CREATION_AND_WITHDRAW_1155_HANDLER_SELECTOR = 0x0;
 

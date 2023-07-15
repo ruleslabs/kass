@@ -4,15 +4,13 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 
-import "../src/KassUtils.sol";
+import "../src/Utils.sol";
 
-// solhint-disable contract-name-camelcase
-
-contract Test_KassUtils is Test {
+contract TestKassUtils is Test {
 
     // FELT 252 WORDS TO STR
 
-    function test_ConcatMulitpleStrings() public {
+    function testConcatMulitpleStrings() public {
         string[] memory arr = new string[](4);
         arr[0] = "Hello";
         arr[1] = " w";
@@ -22,7 +20,7 @@ contract Test_KassUtils is Test {
         assertEq(string(KassUtils.felt252WordsToStr(arr)), "Hello world !");
     }
 
-    function test_ConcatSingleString() public {
+    function testConcatSingleString() public {
         string[] memory arr;
 
         arr = new string[](1);
@@ -31,7 +29,7 @@ contract Test_KassUtils is Test {
         assertEq(string(KassUtils.felt252WordsToStr(arr)), "42");
     }
 
-    function test_ConcatNothing() public {
+    function testConcatNothing() public {
         string[] memory arr = new string[](0);
 
         assertEq(string(KassUtils.felt252WordsToStr(arr)), "");
@@ -39,13 +37,13 @@ contract Test_KassUtils is Test {
 
     // FELT252 TO STR
 
-    function test_BasicFelt252ToStr() public {
+    function testBasicFelt252ToStr() public {
         string memory res = KassUtils.felt252ToStr(0x48656C6C6F20776F726C642021);
 
         assertEq(res, "Hello world !");
     }
 
-    function test_ZeroFelt252ToStr() public {
+    function testZeroFelt252ToStr() public {
         string memory res = KassUtils.felt252ToStr(0x0);
 
         assertEq(res, "");
@@ -53,28 +51,28 @@ contract Test_KassUtils is Test {
 
     // STR TO FELT252
 
-    function test_BasicStrToUint256() public {
+    function testBasicStrToUint256() public {
         uint256 res;
 
         res = KassUtils.strToFelt252("Hello world !");
         assertEq(res, 0x48656C6C6F20776F726C642021);
     }
 
-    function test_EmptyStrToUint256() public {
+    function testEmptyStrToUint256() public {
         uint256 res;
 
         res = KassUtils.strToFelt252("");
         assertEq(res, 0);
     }
 
-    function test_TooLongStrToUint256() public {
+    function testTooLongStrToUint256() public {
         vm.expectRevert(bytes("String cannot be longer than 31"));
         KassUtils.strToFelt252("12345678901234567890123456789012");
     }
 
     // STR TO FELT252 WORDS
 
-    function test_BasicStrToStr32Words_1() public {
+    function testBasicStrToStr32Words_1() public {
         uint256[] memory res = KassUtils.strToFelt252Words(
             "123456789012345678901234567890-098765432109876543210987654321-1234567890"
         );
@@ -85,20 +83,20 @@ contract Test_KassUtils is Test {
         assertEq(res[2], KassUtils.strToFelt252("1234567890"));
     }
 
-    function test_BasicStrToStr32Words_2() public {
+    function testBasicStrToStr32Words_2() public {
         uint256[] memory res = KassUtils.strToFelt252Words("123456789012345678901234567890-");
 
         assertEq(res.length, 1);
         assertEq(res[0], KassUtils.strToFelt252("123456789012345678901234567890-"));
     }
 
-    function test_BasicStrToStr32Words_3() public {
+    function testBasicStrToStr32Words_3() public {
         uint256[] memory res = KassUtils.strToFelt252Words("");
 
         assertEq(res.length, 0);
     }
 
-    function test_BasicStrToStr32Words_4() public {
+    function testBasicStrToStr32Words_4() public {
         uint256[] memory res = KassUtils.strToFelt252Words("123456789012345678901234567890-a");
 
         assertEq(res.length, 2);
@@ -106,20 +104,20 @@ contract Test_KassUtils is Test {
         assertEq(res[1], KassUtils.strToFelt252("a"));
     }
 
-    function test_BasicStrToStr32Words_5() public {
+    function testBasicStrToStr32Words_5() public {
         uint256[] memory res = KassUtils.strToFelt252Words("123456789012345678901234567890");
 
         assertEq(res.length, 1);
         assertEq(res[0], KassUtils.strToFelt252("123456789012345678901234567890"));
     }
 
-    function test_BasicStrToStr32Words_6() public {
+    function testBasicStrToStr32Words_6() public {
         uint256[] memory res = KassUtils.strToFelt252Words("1");
 
         assertEq(res.length, 1);
         assertEq(res[0], KassUtils.strToFelt252("1"));
     }
-    function test_BasicStrToStr32Words_7() public {
+    function testBasicStrToStr32Words_7() public {
         uint256[] memory res = KassUtils.strToFelt252Words(
             "123456789012345678901234567890-098765432109876543210987654321-"
         );

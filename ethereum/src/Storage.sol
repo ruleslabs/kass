@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 
 import "./interfaces/IStarknetMessaging.sol";
 
-import "./KassUtils.sol";
+import "./Utils.sol";
 
 contract KassStorage {
 

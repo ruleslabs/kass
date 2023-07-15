@@ -5,13 +5,13 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./interfaces/IStarknetMessaging.sol";
-import "./KassUtils.sol";
-import "./factory/KassERC721.sol";
-import "./factory/KassERC1155.sol";
-import "./factory/KassERC1967Proxy.sol";
-import "./KassStorage.sol";
+import "./Utils.sol";
+import "./factory/ERC721.sol";
+import "./factory/ERC1155.sol";
+import "./factory/ERC1967Proxy.sol";
+import "./Storage.sol";
 
-abstract contract TokenDeployer is KassStorage {
+abstract contract KassTokenDeployer is KassStorage {
 
     function proxyImplementationAddress() public view returns (address) {
         return _state.proxyImplementationAddress;

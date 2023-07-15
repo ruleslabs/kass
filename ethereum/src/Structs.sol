@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.19;
 
-import "./KassUtils.sol";
+import "./Utils.sol";
 
 contract KassStructs {
 

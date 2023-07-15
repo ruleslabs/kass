@@ -8,9 +8,9 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
 import "./StarknetConstants.sol";
-import "./KassStructs.sol";
-import "./KassUtils.sol";
-import "./KassStorage.sol";
+import "./Structs.sol";
+import "./Utils.sol";
+import "./Storage.sol";
 
 abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
 

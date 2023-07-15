@@ -8,66 +8,17 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-import "./factory/KassERC721.sol";
-import "./factory/KassERC1155.sol";
+import "./factory/ERC721.sol";
+import "./factory/ERC1155.sol";
 import "./interfaces/IStarknetMessaging.sol";
-import "./KassUtils.sol";
+import "./Utils.sol";
 import "./TokenDeployer.sol";
 import "./StarknetConstants.sol";
-import "./KassMessaging.sol";
-import "./KassStorage.sol";
+import "./Messaging.sol";
+import "./Storage.sol";
+import "./Events.sol";
 
-contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgradeable {
-
-    //
-    // Events
-    //
-
-    event LogL1WrapperCreated(uint256 indexed l2TokenAddress, address indexed l1TokenAddress);
-
-    event LogL2WrapperRequested(address indexed l1TokenAddress);
-
-    event LogL1OwnershipClaimed(
-        uint256 indexed l2TokenAddress,
-        address l1TokenAddress,
-        address l1Owner
-    );
-
-    event LogL2OwnershipClaimed(
-        address indexed l1TokenAddress,
-        uint256 l2Owner
-    );
-
-    event LogDeposit(
-        bytes32 indexed nativeTokenAddress,
-        address indexed sender,
-        uint256 indexed recipient,
-        uint256 tokenId,
-        uint256 amount
-    );
-    event LogWithdrawal(
-        bytes32 indexed nativeTokenAddress,
-        address indexed recipient,
-        uint256 tokenId,
-        uint256 amount
-    );
-
-    event LogDepositCancelRequest(
-        bytes32 indexed nativeTokenAddress,
-        address indexed sender,
-        uint256 indexed recipient,
-        uint256 tokenId,
-        uint256 amount,
-        uint256 nonce
-    );
-    event LogDepositCancel(
-        bytes32 indexed nativeTokenAddress,
-        address indexed sender,
-        uint256 indexed recipient,
-        uint256 tokenId,
-        uint256 amount,
-        uint256 nonce
-    );
+contract KassBridge is Ownable, KassStorage, KassTokenDeployer, KassMessaging, KassEvents, UUPSUpgradeable {
 
     //
     // Modifiers
@@ -155,8 +106,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
     // Kass Bridge
     //
 
-    // Ownership claim
-    function claimL1Ownership(uint256 l2TokenAddress) public {
+    // Ownership
+
+    function claimOwnership(uint256 l2TokenAddress) public {
         // consume ownership claim message
         _consumeL1OwnershipClaimMessage(l2TokenAddress, _msgSender());
 
@@ -170,8 +122,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         emit LogL1OwnershipClaimed(l2TokenAddress, l1TokenAddress, _msgSender());
     }
 
-    // Ownership request
-    function requestL2Ownership(address l1TokenAddress, uint256 l2Owner) public payable {
+    function requestOwnership(address l1TokenAddress, uint256 l2Owner) public payable {
         // assert L1 token owner is sender
         address l1Owner = Ownable(l1TokenAddress).owner();
         require(l1Owner == _msgSender(), "Sender is not the owner");
@@ -184,6 +135,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
     }
 
     // Deposit
+
     function deposit(
         bytes32 nativeTokenAddress,
         uint256 recipient,
@@ -204,6 +156,7 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
     }
 
     // Withdraw
+
     function withdraw(uint256[] calldata messagePayload) public {
         // consume L1 wrapper request message
         _consumeL1WrapperRequestMessage(messagePayload);
@@ -251,9 +204,9 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         );
     }
 
+    // Deposit cancel
+
     /**
-     * Request deposit cancel:
-     *
      * If previous deposit on L2 fails to be handled by the L2 Kass bridge, tokens could be lost.
      * To mitigate this risk, L1 Kass bridge can cancel the deposit and after a security delay (5 days atm),
      * reclaim the tokens back on the L1.
@@ -293,7 +246,6 @@ contract Kass is Ownable, KassStorage, TokenDeployer, KassMessaging, UUPSUpgrade
         requestDepositCancel(nativeTokenAddress, recipient, tokenId, 0x1, requestWrapper, nonce);
     }
 
-    // Cancel deposit
     function cancelDeposit(
         bytes32 nativeTokenAddress,
         uint256 recipient,

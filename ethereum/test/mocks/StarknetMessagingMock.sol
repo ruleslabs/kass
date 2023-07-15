@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.19;
 
-import "../interfaces/IStarknetMessaging.sol";
+import "../../src/interfaces/IStarknetMessaging.sol";
 
 // solhint-disable no-empty-blocks
 contract StarknetMessagingMock is IStarknetMessaging {
