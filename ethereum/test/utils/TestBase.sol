@@ -133,7 +133,7 @@ abstract contract KassTestBase is Test, KassEvents, KassMessaging, ERC721Holder,
         address l1TokenAddress = _kassBridge.computeL1TokenAddress(l2TokenAddress);
 
         vm.expectEmit(true, true, true, true, address(_kassBridge));
-        emit LogL1OwnershipClaimed(l2TokenAddress, l1TokenAddress, l1Owner);
+        emit LogOwnershipClaim(l2TokenAddress, l1TokenAddress, l1Owner);
     }
 
     function _expectOwnershipRequest(address l1TokenAddress, uint256 l2Owner) internal {
@@ -153,7 +153,7 @@ abstract contract KassTestBase is Test, KassEvents, KassMessaging, ERC721Holder,
 
         // expect event
         vm.expectEmit(true, true, true, true, address(_kassBridge));
-        emit LogL2OwnershipClaimed(l1TokenAddress, l2Owner);
+        emit LogOwnershipRequest(l1TokenAddress, l2Owner);
     }
 
     // Deposit
@@ -240,7 +240,7 @@ abstract contract KassTestBase is Test, KassEvents, KassMessaging, ERC721Holder,
         }
 
         vm.expectEmit(true, true, true, true, address(_kassBridge));
-        emit LogWithdrawal(nativeTokenAddress, recipient, tokenId, amount);
+        emit LogWithdraw(nativeTokenAddress, recipient, tokenId, amount);
     }
 
     function _expectWithdraw(

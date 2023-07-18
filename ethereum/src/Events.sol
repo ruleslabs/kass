@@ -8,13 +8,13 @@ contract KassEvents {
 
     event LogL2WrapperRequested(address indexed l1TokenAddress);
 
-    event LogL1OwnershipClaimed(
+    event LogOwnershipClaim(
         uint256 indexed l2TokenAddress,
         address l1TokenAddress,
         address l1Owner
     );
 
-    event LogL2OwnershipClaimed(
+    event LogOwnershipRequest(
         address indexed l1TokenAddress,
         uint256 l2Owner
     );
@@ -26,7 +26,7 @@ contract KassEvents {
         uint256 tokenId,
         uint256 amount
     );
-    event LogWithdrawal(
+    event LogWithdraw(
         bytes32 indexed nativeTokenAddress,
         address indexed recipient,
         uint256 tokenId,

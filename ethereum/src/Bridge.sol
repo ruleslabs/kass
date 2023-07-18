@@ -119,7 +119,7 @@ contract KassBridge is Ownable, KassStorage, KassTokenDeployer, KassMessaging, K
         Ownable(l1TokenAddress).transferOwnership(_msgSender());
 
         // emit event
-        emit LogL1OwnershipClaimed(l2TokenAddress, l1TokenAddress, _msgSender());
+        emit LogOwnershipClaim(l2TokenAddress, l1TokenAddress, _msgSender());
     }
 
     function requestOwnership(address l1TokenAddress, uint256 l2Owner) public payable {
@@ -131,7 +131,7 @@ contract KassBridge is Ownable, KassStorage, KassTokenDeployer, KassMessaging, K
         _sendL2OwnershipClaimMessage(l1TokenAddress, l2Owner, msg.value);
 
         // emit event
-        emit LogL2OwnershipClaimed(l1TokenAddress, l2Owner);
+        emit LogOwnershipRequest(l1TokenAddress, l2Owner);
     }
 
     // Deposit
@@ -196,7 +196,7 @@ contract KassBridge is Ownable, KassStorage, KassTokenDeployer, KassMessaging, K
         );
 
         // emit event
-        emit LogWithdrawal(
+        emit LogWithdraw(
             depositRequest.nativeTokenAddress,
             depositRequest.recipient,
             depositRequest.tokenId,
