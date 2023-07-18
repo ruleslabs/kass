@@ -1,16 +1,17 @@
 #[starknet::interface]
-trait KassABI<TContractState> {
+trait KassBridgeABI<TContractState> {
 
 }
 
 #[starknet::contract]
-mod Kass {
+mod KassBridge {
   use array::ArrayTrait;
   use traits::{ Into, TryInto };
   use option::OptionTrait;
   use zeroable::Zeroable;
   use starknet::{ EthAddressZeroable, Felt252TryIntoEthAddress, EthAddressIntoFelt252, ContractAddressIntoFelt252 };
   use rules_erc1155::erc1155;
+  use rules_utils::utils::contract_address::ContractAddressTraitExt;
 
   // locals
   use kass::bridge;
@@ -41,6 +42,71 @@ mod Kass {
 
   #[storage]
   struct Storage { }
+
+  //
+  // Events
+  //
+
+  #[event]
+  #[derive(Drop, starknet::Event)]
+  enum Event {
+    WrapperCreation: WrapperCreation,
+    WrapperRequest: WrapperRequest,
+    OwnershipClaim: OwnershipClaim,
+    OwnershipRequest: OwnershipRequest,
+    Deposit: Deposit,
+    Withdraw: Withdraw,
+  }
+
+  // Wrapper
+
+  #[derive(Drop, starknet::Event)]
+  struct WrapperCreation {
+    l2_token_address: starknet::ContractAddress,
+    l1_token_address: starknet::EthAddress,
+  }
+
+
+  #[derive(Drop, starknet::Event)]
+  struct WrapperRequest {
+    l2_token_address: starknet::ContractAddress,
+  }
+
+  // Ownership
+
+  #[derive(Drop, starknet::Event)]
+  struct OwnershipClaim {
+    l1_token_address: starknet::EthAddress,
+    l2_token_address: starknet::ContractAddress,
+    l2_owner: starknet::ContractAddress,
+  }
+
+  #[derive(Drop, starknet::Event)]
+  struct OwnershipRequest {
+    l2_token_address: starknet::ContractAddress,
+    l1_owner: starknet::EthAddress,
+  }
+
+  // Deposit
+
+  #[derive(Drop, starknet::Event)]
+  struct Deposit {
+    native_token_address: felt252,
+    sender: starknet::ContractAddress,
+    recipient: starknet::EthAddress,
+    token_id: u256,
+    amount: u256,
+  }
+
+  #[derive(Drop, starknet::Event)]
+  struct Withdraw {
+    native_token_address: felt252,
+    recipient: starknet::ContractAddress,
+    token_id: u256,
+    amount: u256,
+  }
+
+  // Withdraw
 
   //
   // Modifiers
@@ -97,27 +163,49 @@ mod Kass {
       CONTRACT_IDENTITY
     }
 
-    fn request_l1_ownership(ref self: ContractState) {
+    fn request_ownership(
+      ref self: ContractState,
+      l2_token_address: starknet::ContractAddress,
+      l1_owner: starknet::EthAddress
+    ) {
+      let mut kass_messaging_self = KassMessaging::unsafe_new_contract_state();
 
+      // assert L2 token owner is sender
+      let caller = starknet::get_caller_address();
+      let l2_owner = IOwnableDispatcher { contract_address: l2_token_address }.owner();
+
+      assert(caller == l2_owner, 'Caller is not the owner');
+
+      // send L2 wrapper request message
+      kass_messaging_self._send_l1_ownership_request_message(token_address: l2_token_address, :l1_owner);
+
+      // emit event
+      self.emit(
+        Event::OwnershipRequest(
+          OwnershipRequest { l2_token_address, l1_owner }
+        )
+      )
     }
 
     fn deposit_721(
       ref self: ContractState,
-      token_address: felt252,
-      l1_recipient: starknet::EthAddress,
-      token_id: u256
+      native_token_address: felt252,
+      recipient: starknet::EthAddress,
+      token_id: u256,
+      request_wrapper: bool
     ) {
-      self._deposit(:token_address, :l1_recipient, :token_id, amount: u256 { low: 1, high: 0 });
+      self._deposit(:native_token_address, :recipient, :token_id, amount: u256 { low: 1, high: 0 }, :request_wrapper);
     }
 
     fn deposit_1155(
       ref self: ContractState,
-      token_address: felt252,
-      l1_recipient: starknet::EthAddress,
+      native_token_address: felt252,
+      recipient: starknet::EthAddress,
       token_id: u256,
-      amount: u256
+      amount: u256,
+      request_wrapper: bool
     ) {
-      self._deposit(:token_address, :l1_recipient, :token_id, :amount);
+      self._deposit(:native_token_address, :recipient, :token_id, :amount, :request_wrapper);
     }
   }
 
@@ -206,51 +294,19 @@ mod Kass {
 
   // Wrapper creation
 
-  #[generate_trait]
   #[l1_handler]
-  impl HandlerImpl of HandlerTrait {
-    fn createL2Wrapper721(
-      ref self: ContractState,
-      from_address: felt252,
-      l1_token_address: starknet::EthAddress,
-      data: Array<felt252>
-    ) {
-      // Modifiers
-      self._l1_handler(from_address.try_into().unwrap());
-
-      // Body
-      let mut kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
-
-      // deploy Kass ERC 721
-      kass_token_deployer_self._deploy_kass_erc721(:l1_token_address, calldata: data.span());
-    }
-
-    fn createL2Wrapper1155(
-      ref self: ContractState,
-      from_address: felt252,
-      l1_token_address: starknet::EthAddress,
-      data: Array<felt252>
-    ) {
-      // Modifiers
-      self._l1_handler(from_address.try_into().unwrap());
-
-      // Body
-      let mut kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
-
-      // deploy Kass ERC 1155
-      kass_token_deployer_self._deploy_kass_erc1155(:l1_token_address, calldata: data.span());
-    }
+  impl IKassBridgeHandlersImpl of bridge::interface::IKassBridgeHandlers<ContractState> {
 
     // Ownership claim
 
-    fn claimL2Ownership(
+    fn claim_ownership(
       ref self: ContractState,
-      from_address: felt252,
+      from_address: starknet::EthAddress,
       l1_token_address: starknet::EthAddress,
       l2Owner: starknet::ContractAddress
     ) {
       // Modifiers
-      self._l1_handler(from_address.try_into().unwrap());
+      self._l1_handler(from_address);
 
       // get L2 token wrapper
       let l2TokenAddress = starknet::contract_address_const::<0>(); // TODO: compute contract address
@@ -261,52 +317,36 @@ mod Kass {
       // emit event
     }
 
-    fn withdraw721(
+    fn withdraw_721(
       ref self: ContractState,
-      from_address: felt252,
-      token_address: felt252,
-      recipient: starknet::ContractAddress,
-      token_id: u256
-    ) {
-      // Modifiers
-      self._l1_handler(from_address.try_into().unwrap());
-
-      // body
-      self._withdraw(:token_address, :recipient, :token_id, amount: u256 { low: 1, high: 0 });
-    }
-
-    fn withdraw1155(
-      ref self: ContractState,
-      from_address: felt252,
-      token_address: felt252,
+      from_address: starknet::EthAddress,
+      native_token_address: felt252,
       recipient: starknet::ContractAddress,
       token_id: u256,
-      amount: u256
+      calldata: Span<felt252>
     ) {
-      // modifiers
-      self._l1_handler(from_address.try_into().unwrap());
+      // Modifiers
+      self._l1_handler(from_address);
 
       // body
-      self._withdraw(:token_address, :recipient, :token_id, :amount);
+      self._withdraw(:native_token_address, :recipient, :token_id, amount: u256 { low: 1, high: 0 }, :calldata);
     }
-  }
 
-  // OWNERSHIP REQUEST
+    fn withdraw_1155(
+      ref self: ContractState,
+      from_address: starknet::EthAddress,
+      native_token_address: felt252,
+      recipient: starknet::ContractAddress,
+      token_id: u256,
+      amount: u256,
+      calldata: Span<felt252>
+    ) {
+      // modifiers
+      self._l1_handler(from_address);
 
-  fn requestL1Ownership(token_address: starknet::ContractAddress, l1_owner: starknet::EthAddress) {
-    let mut kass_messaging_self = KassMessaging::unsafe_new_contract_state();
-
-    // assert L2 token owner is sender
-    let caller = starknet::get_caller_address();
-    assert(
-      IOwnableDispatcher { contract_address: token_address }.owner() == caller,
-      'Caller is not the owner'
-    );
-
-    // send L2 wrapper request message
-    kass_messaging_self._send_l1_ownership_request_message(:token_address, :l1_owner);
-
-    // emit event
+      // body
+      self._withdraw(:native_token_address, :recipient, :token_id, :amount, :calldata);
+    }
   }
 
   //
@@ -375,36 +415,79 @@ mod Kass {
       ownable_self._transfer_ownership(new_owner: owner_);
     }
 
+    // Native/wrapper mgmt
+
+    fn _parse_native_token_address(
+      self: @ContractState,
+      native_token_address: felt252
+    ) -> (starknet::ContractAddress, bool) {
+      let castedNativeTokenAddress: starknet::ContractAddress = native_token_address.try_into().unwrap();
+
+      if (castedNativeTokenAddress.is_deployed()) {
+        (castedNativeTokenAddress, true)
+      } else {
+        let kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
+
+        (kass_token_deployer_self.l2_kass_token_address(native_token_address.try_into().unwrap()), false)
+      }
+    }
 
     // Deposit
 
     fn _deposit(
       ref self: ContractState,
-      token_address: felt252,
-      l1_recipient: starknet::EthAddress,
+      native_token_address: felt252,
+      recipient: starknet::EthAddress,
       token_id: u256,
-      amount: u256
+      amount: u256,
+      request_wrapper: bool
     ) {
       let mut kass_messaging_self = KassMessaging::unsafe_new_contract_state();
 
-      // TODO: get real data
-      let is_native = false;
-      let l2TokenAddress = starknet::contract_address_const::<0x42>();
+      // get l1 token address (native or wrapper)
+      let (l2_token_address, is_l2_native) = self._parse_native_token_address(:native_token_address);
+
+      // avoid double wrap
+      assert(is_l2_native | request_wrapper == false, 'Double wrap not allowed');
 
       // burn or tranfer tokens
-      self._lockTokens(token_address: l2TokenAddress, :token_id, :amount, :is_native);
+      self._lockTokens(token_address: l2_token_address, :token_id, :amount, is_native: is_l2_native);
 
-      kass_messaging_self._send_token_deposit_message(:token_address, recipient: l1_recipient, :token_id, :amount);
+      // send l1 deposit message
+      kass_messaging_self._send_token_deposit_message(
+        :native_token_address,
+        :recipient,
+        :token_id,
+        :amount,
+        :request_wrapper
+      );
+
+      // emit events
+      if (request_wrapper) {
+        self.emit(
+          Event::WrapperRequest(
+            WrapperRequest { l2_token_address }
+          )
+        );
+      }
+
+      let caller = starknet::get_caller_address();
+      self.emit(
+        Event::Deposit(
+          Deposit { native_token_address, sender: caller, recipient, token_id, amount }
+        )
+      );
     }
 
     // Withdraw
 
     fn _withdraw(
       ref self: ContractState,
-      token_address: felt252,
+      native_token_address: felt252,
       recipient: starknet::ContractAddress,
       token_id: u256,
       amount: u256,
+      calldata: Span<felt252>
     ) {
       // TODO: get real data
       let is_native = false;

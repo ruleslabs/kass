@@ -6,16 +6,56 @@ trait IKassBridge<TContractState> {
 
   fn get_identity(self: @TContractState) -> felt252;
 
-  fn request_l1_ownership(ref self: TContractState);
+  fn request_ownership(
+    ref self: TContractState,
+    l2_token_address: starknet::ContractAddress,
+    l1_owner: starknet::EthAddress
+  );
 
-  fn deposit_721(ref self: TContractState, token_address: felt252, l1_recipient: starknet::EthAddress, token_id: u256);
+  fn deposit_721(
+    ref self: TContractState,
+    native_token_address: felt252,
+    recipient: starknet::EthAddress,
+    token_id: u256,
+    request_wrapper: bool
+  );
 
   fn deposit_1155(
     ref self: TContractState,
-    token_address: felt252,
-    l1_recipient: starknet::EthAddress,
+    native_token_address: felt252,
+    recipient: starknet::EthAddress,
     token_id: u256,
-    amount: u256
+    amount: u256,
+    request_wrapper: bool
+  );
+}
+
+#[starknet::interface]
+trait IKassBridgeHandlers<TContractState> {
+  fn claim_ownership(
+    ref self: TContractState,
+    from_address: starknet::EthAddress,
+    l1_token_address: starknet::EthAddress,
+    l2Owner: starknet::ContractAddress
+  );
+
+  fn withdraw_721(
+    ref self: TContractState,
+    from_address: starknet::EthAddress,
+    native_token_address: felt252,
+    recipient: starknet::ContractAddress,
+    token_id: u256,
+    calldata: Span<felt252>
+  );
+
+  fn withdraw_1155(
+    ref self: TContractState,
+    from_address: starknet::EthAddress,
+    native_token_address: felt252,
+    recipient: starknet::ContractAddress,
+    token_id: u256,
+    amount: u256,
+    calldata: Span<felt252>
   );
 }
 

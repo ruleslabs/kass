@@ -1,3 +1,4 @@
+use core::traits::TryInto;
 
 
 #[starknet::contract]
@@ -5,7 +6,8 @@ mod KassMessaging {
   use starknet::ContractAddressIntoFelt252;
   use zeroable::Zeroable;
   use array::ArrayTrait;
-  use traits::Into;
+  use traits::{ Into, TryInto };
+  use option::OptionTrait;
   use starknet::EthAddressZeroable;
   use rules_utils::utils::array::ArrayTraitExt;
 
@@ -67,16 +69,6 @@ mod KassMessaging {
 
     // Send messages
 
-    fn _send_l1_wrapper_request_message(ref self: ContractState, token_address: starknet::ContractAddress) {
-      let payload = self._compute_l1_wrapper_request_message(:token_address);
-
-      // send wrapper request to L1
-      starknet::syscalls::send_message_to_l1_syscall(
-        to_address: self.l1_kass_address().into(),
-        payload: payload.span()
-      );
-    }
-
     fn _send_l1_ownership_request_message(
       ref self: ContractState,
       token_address: starknet::ContractAddress,
@@ -93,57 +85,25 @@ mod KassMessaging {
 
     fn _send_token_deposit_message(
       ref self: ContractState,
-      token_address: felt252,
+      native_token_address: felt252,
       recipient: starknet::EthAddress,
       token_id: u256,
-      amount: u256
+      amount: u256,
+      request_wrapper: bool
     ) {
-      let payload = self._compute_token_deposit_on_l1_message(:token_address, :recipient, :token_id, :amount);
+      let payload = self._compute_token_deposit_on_l1_message(
+        :native_token_address,
+        :recipient,
+        :token_id,
+        :amount,
+        :request_wrapper
+      );
 
       // send deposit request to L1
       starknet::syscalls::send_message_to_l1_syscall(
         to_address: self.l1_kass_address().into(),
         payload: payload.span()
       );
-    }
-
-    // Compute messages
-
-    fn _compute_l1_wrapper_request_message(
-      self: @ContractState,
-      token_address: starknet::ContractAddress
-    ) -> Array<felt252> {
-      let mut payload: Array<felt252> = ArrayTrait::new();
-
-      if (token_address.isERC721()) {
-        // token is ERC721
-        payload.append(REQUEST_L1_721_INSTANCE.into());
-
-        // store L2 token address
-        payload.append(token_address.into());
-
-        // store wrapper init calldata
-        let ERC721 = ERC721ABIDispatcher { contract_address: token_address };
-
-        payload.append(ERC721.name());
-        payload.append(ERC721.symbol());
-      } else if (token_address.isERC1155()) {
-        // token is ERC1155
-        payload.append(REQUEST_L1_1155_INSTANCE.into());
-
-        // store L2 token address
-        payload.append(token_address.into());
-
-        // store wrapper init calldata
-        let ERC1155 = ERC1155ABIDispatcher { contract_address: token_address };
-        let mut uri = ERC1155.uri(0.into());
-
-        payload = payload.concat(uri.snapshot);
-      } else {
-        panic_with_felt252('Kass: Unkown token standard');
-      }
-
-      return payload;
     }
 
     // L1 OWNERSHIP REQUEST
@@ -168,16 +128,54 @@ mod KassMessaging {
 
     fn _compute_token_deposit_on_l1_message(
       self: @ContractState,
-      token_address: felt252,
+      native_token_address: felt252,
       recipient: starknet::EthAddress,
       token_id: u256,
-      amount: u256
+      amount: u256,
+      request_wrapper: bool
     ) -> Array<felt252> {
       let mut payload: Array<felt252> = ArrayTrait::new();
 
+      if (request_wrapper) {
+
+        let token_address: starknet::ContractAddress = native_token_address.try_into().unwrap();
+
+        if (token_address.isERC721()) {
+
+          // token is ERC721
+
+          payload.append(REQUEST_L1_721_INSTANCE.into());
+
+          // store L2 token address
+          payload.append(token_address.into());
+
+          // store wrapper init calldata
+          let ERC721 = ERC721ABIDispatcher { contract_address: token_address };
+
+          payload.append(ERC721.name());
+          payload.append(ERC721.symbol());
+        } else if (token_address.isERC1155()) {
+
+          // token is ERC1155
+
+          payload.append(REQUEST_L1_1155_INSTANCE.into());
+
+          // store L2 token address
+          payload.append(token_address.into());
+
+          // store wrapper init calldata
+          let ERC1155 = ERC1155ABIDispatcher { contract_address: token_address };
+          let mut uri = ERC1155.uri(0.into());
+
+          payload = payload.concat(uri.snapshot);
+        } else {
+          panic_with_felt252('Kass: Unkown token standard');
+        }
+      }
+
       payload.append(TRANSFER_FROM_STARKNET.into());
 
-      payload.append(token_address);
+      payload.append(native_token_address);
 
       payload.append(recipient.into());
 

@@ -1,5 +1,5 @@
 mod bridge;
-use bridge::{ Kass, KassABIDispatcher, KassABIDispatcherTrait };
+use bridge::{ KassBridge, KassBridgeABIDispatcher, KassBridgeABIDispatcherTrait };
 
 mod token_deployer;
 mod messaging;
