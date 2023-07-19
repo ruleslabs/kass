@@ -20,12 +20,12 @@ mod KassMessaging {
   use kass::bridge::token_standard::{ TokenStandard, ContractAddressInterfacesTrait };
   use kass::bridge::interface::IKassMessaging;
 
-  const REQUEST_L1_721_INSTANCE: u32 = 0x63d3b058;
-  const REQUEST_L1_1155_INSTANCE: u32 = 0x72c9798a;
+  const DEPOSIT_AND_REQUEST_721_WRAPPER_TO_L1: u32 = 0x954f1a23;
+  const DEPOSIT_AND_REQUEST_1155_WRAPPER_TO_L1: u32 = 0x21deb3de;
 
   const CLAIM_OWNERSHIP: u32 = 0xa19646f5;
 
-  const TRANSFER_FROM_STARKNET: u32 = 0x19204ed1;
+  const DEPOSIT_TO_L1: u32 = 0x93dfc08b;
 
   //
   // Storage
@@ -144,7 +144,7 @@ mod KassMessaging {
 
           // token is ERC721
 
-          payload.append(REQUEST_L1_721_INSTANCE.into());
+          payload.append(DEPOSIT_AND_REQUEST_721_WRAPPER_TO_L1.into());
 
           // store L2 token address
           payload.append(token_address.into());
@@ -158,7 +158,7 @@ mod KassMessaging {
 
           // token is ERC1155
 
-          payload.append(REQUEST_L1_1155_INSTANCE.into());
+          payload.append(DEPOSIT_AND_REQUEST_1155_WRAPPER_TO_L1.into());
 
           // store L2 token address
           payload.append(token_address.into());
@@ -171,9 +171,10 @@ mod KassMessaging {
         } else {
           panic_with_felt252('Kass: Unkown token standard');
         }
+      } else {
+        payload.append(DEPOSIT_TO_L1.into());
       }
 
-      payload.append(TRANSFER_FROM_STARKNET.into());
 
       payload.append(native_token_address);
 

@@ -1,3 +1,4 @@
+use core::array::SpanTrait;
 #[starknet::interface]
 trait KassBridgeABI<TContractState> {
 
@@ -5,7 +6,7 @@ trait KassBridgeABI<TContractState> {
 
 #[starknet::contract]
 mod KassBridge {
-  use array::ArrayTrait;
+  use array::{ ArrayTrait, SpanTrait };
   use traits::{ Into, TryInto };
   use option::OptionTrait;
   use zeroable::Zeroable;
@@ -62,8 +63,8 @@ mod KassBridge {
 
   #[derive(Drop, starknet::Event)]
   struct WrapperCreation {
-    l2_token_address: starknet::ContractAddress,
     l1_token_address: starknet::EthAddress,
+    l2_token_address: starknet::ContractAddress,
   }
 
 
@@ -303,18 +304,26 @@ mod KassBridge {
       ref self: ContractState,
       from_address: starknet::EthAddress,
       l1_token_address: starknet::EthAddress,
-      l2Owner: starknet::ContractAddress
+      owner: starknet::ContractAddress
     ) {
       // Modifiers
       self._l1_handler(from_address);
 
+      // Body
+      let mut kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
+
       // get L2 token wrapper
-      let l2TokenAddress = starknet::contract_address_const::<0>(); // TODO: compute contract address
+      let l2_token_address = kass_token_deployer_self.l2_kass_token_address(:l1_token_address);
 
       // transfer ownership
-      IOwnableDispatcher { contract_address: l2TokenAddress }.transfer_ownership(l2Owner);
+      IOwnableDispatcher { contract_address: l2_token_address }.transfer_ownership(owner);
 
       // emit event
+      self.emit(
+        Event::OwnershipClaim(
+          OwnershipClaim { l1_token_address, l2_token_address, l2_owner: owner }
+        )
+      )
     }
 
     fn withdraw_721(
@@ -323,13 +332,21 @@ mod KassBridge {
       native_token_address: felt252,
       recipient: starknet::ContractAddress,
       token_id: u256,
+      amount: u256,
       calldata: Span<felt252>
     ) {
       // Modifiers
       self._l1_handler(from_address);
 
       // body
-      self._withdraw(:native_token_address, :recipient, :token_id, amount: u256 { low: 1, high: 0 }, :calldata);
+      self._withdraw(
+        :native_token_address,
+        :recipient,
+        :token_id,
+        :amount,
+        :calldata,
+        token_standard: TokenStandard::ERC721(())
+      );
     }
 
     fn withdraw_1155(
@@ -345,7 +362,14 @@ mod KassBridge {
       self._l1_handler(from_address);
 
       // body
-      self._withdraw(:native_token_address, :recipient, :token_id, :amount, :calldata);
+      self._withdraw(
+        :native_token_address,
+        :recipient,
+        :token_id,
+        :amount,
+        :calldata,
+        token_standard: TokenStandard::ERC1155(())
+      );
     }
   }
 
@@ -487,13 +511,46 @@ mod KassBridge {
       recipient: starknet::ContractAddress,
       token_id: u256,
       amount: u256,
-      calldata: Span<felt252>
+      calldata: Span<felt252>,
+      token_standard: TokenStandard
     ) {
-      // TODO: get real data
-      let is_native = false;
-      let l2TokenAddress = starknet::contract_address_const::<0x42>();
+      // get l1 token address (native or wrapper)
+      let (l2_token_address, is_l2_native) = self._parse_native_token_address(:native_token_address);
 
-      self._unlockTokens(token_address: l2TokenAddress, :recipient, :token_id, :amount, :is_native);
+      if (!l2_token_address.is_deployed()) {
+        assert(calldata.len().is_non_zero(), 'Wrapper not deployed');
+
+        // deploy Kass ERC-721/1155
+        let mut kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
+
+        let l1_token_address: starknet::EthAddress = native_token_address.try_into().unwrap();
+
+        match token_standard {
+          TokenStandard::ERC721(()) => {
+            let l2_token_address = kass_token_deployer_self._deploy_kass_erc721(:l1_token_address, :calldata);
+          },
+          TokenStandard::ERC1155(()) => {
+            let l2_token_address = kass_token_deployer_self._deploy_kass_erc1155(:l1_token_address, :calldata);
+          },
+        };
+
+        // emit event
+        self.emit(
+          Event::WrapperCreation(
+            WrapperCreation { l1_token_address, l2_token_address }
+          )
+        )
+      }
+
+      // mint or tranfer tokens
+      self._unlockTokens(token_address: l2_token_address, :recipient, :token_id, :amount, is_native: is_l2_native);
+
+      // emit event
+      self.emit(
+        Event::Withdraw(
+          Withdraw { native_token_address, recipient, token_id, amount }
+        )
+      )
     }
 
     // Tokens

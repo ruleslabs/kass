@@ -36,7 +36,7 @@ trait IKassBridgeHandlers<TContractState> {
     ref self: TContractState,
     from_address: starknet::EthAddress,
     l1_token_address: starknet::EthAddress,
-    l2Owner: starknet::ContractAddress
+    owner: starknet::ContractAddress
   );
 
   fn withdraw_721(
@@ -45,6 +45,7 @@ trait IKassBridgeHandlers<TContractState> {
     native_token_address: felt252,
     recipient: starknet::ContractAddress,
     token_id: u256,
+    amount: u256,
     calldata: Span<felt252>
   );
 
