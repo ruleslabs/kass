@@ -232,7 +232,7 @@ contract TestTokenDeployer is KassTestBase {
         _starknet.requestOwnership(l2TokenAddress, l1Owner);
 
         _expectOwnershipClaim(l2TokenAddress, l1Owner);
-        _kassBridge.claimOwnership(l2TokenAddress);
+        _kassBridge.claimOwnership(l2TokenAddress, l1Owner);
 
         assertEq(wrappedERC721.owner(), l1Owner);
     }
@@ -247,7 +247,7 @@ contract TestTokenDeployer is KassTestBase {
         _starknet.requestOwnership(l2TokenAddress, l1Owner);
 
         _expectOwnershipClaim(l2TokenAddress, l1Owner);
-        _kassBridge.claimOwnership(l2TokenAddress);
+        _kassBridge.claimOwnership(l2TokenAddress, l1Owner);
 
         assertEq(wrappedERC1155.owner(), l1Owner);
     }

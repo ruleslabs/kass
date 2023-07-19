@@ -108,18 +108,18 @@ contract KassBridge is Ownable, KassStorage, KassTokenDeployer, KassMessaging, K
 
     // Ownership
 
-    function claimOwnership(uint256 l2TokenAddress) public {
+    function claimOwnership(uint256 l2TokenAddress, address owner) public {
         // consume ownership claim message
-        _consumeL1OwnershipClaimMessage(l2TokenAddress, _msgSender());
+        _consumeL1OwnershipClaimMessage(l2TokenAddress, owner);
 
         // get l1 token wrapper
-        address l1TokenAddress = computeL1TokenAddress(l2TokenAddress);
+        address l1TokenAddress = getL1TokenAddress(l2TokenAddress);
 
         // transfer ownership
-        Ownable(l1TokenAddress).transferOwnership(_msgSender());
+        Ownable(l1TokenAddress).transferOwnership(owner);
 
         // emit event
-        emit LogOwnershipClaim(l2TokenAddress, l1TokenAddress, _msgSender());
+        emit LogOwnershipClaim(l2TokenAddress, l1TokenAddress, owner);
     }
 
     function requestOwnership(address l1TokenAddress, uint256 l2Owner) public payable {
@@ -168,22 +168,21 @@ contract KassBridge is Ownable, KassStorage, KassTokenDeployer, KassMessaging, K
         (address l1TokenAddress, bool isL1Native) = _parseNativeTokenAddress(depositRequest.nativeTokenAddress);
 
         if (!Address.isContract(l1TokenAddress)) {
-            require(depositRequest.tokenStandard != TokenStandard.UNKNOWN, "Kass: wrapper not deployed");
+            require(depositRequest.tokenStandard != TokenStandard.UNKNOWN, "Kass: Wrapper not deployed");
 
             // deploy Kass ERC-721/1155
+            uint256 l2TokenAddress = uint256(depositRequest.nativeTokenAddress);
+
             if (depositRequest.tokenStandard == TokenStandard.ERC721) {
-                l1TokenAddress = _cloneKassERC721(uint256(depositRequest.nativeTokenAddress), depositRequest._calldata);
+                l1TokenAddress = _cloneKassERC721(l2TokenAddress, depositRequest._calldata);
             } else if (depositRequest.tokenStandard == TokenStandard.ERC1155) {
-                l1TokenAddress = _cloneKassERC1155(
-                    uint256(depositRequest.nativeTokenAddress),
-                    depositRequest._calldata
-                );
+                l1TokenAddress = _cloneKassERC1155(l2TokenAddress, depositRequest._calldata);
             } else {
                 revert("Kass: Unknown token standard");
             }
 
             // emit event
-            emit LogL1WrapperCreated(uint256(depositRequest.nativeTokenAddress), l1TokenAddress);
+            emit LogWrapperCreation(l2TokenAddress, l1TokenAddress);
         }
 
         // mint or tranfer tokens
@@ -329,7 +328,7 @@ contract KassBridge is Ownable, KassStorage, KassTokenDeployer, KassMessaging, K
         // burn or tranfer tokens
         _lockTokens(l1TokenAddress, tokenId, amount, isL1Native);
 
-        // send l2 Wrapper Creation message
+        // send l2 deposit message
         uint256 nonce = _sendTokenDepositMessage(
             nativeTokenAddress,
             recipient,
@@ -344,7 +343,7 @@ contract KassBridge is Ownable, KassStorage, KassTokenDeployer, KassMessaging, K
 
         // emit events
         if (requestWrapper) {
-            emit LogL2WrapperRequested(l1TokenAddress);
+            emit LogWrapperRequest(l1TokenAddress);
         }
         emit LogDeposit(nativeTokenAddress, _msgSender(), recipient, tokenId, amount);
     }

@@ -4,9 +4,9 @@ pragma solidity ^0.8.19;
 
 contract KassEvents {
 
-    event LogL1WrapperCreated(uint256 indexed l2TokenAddress, address indexed l1TokenAddress);
+    event LogWrapperCreation(uint256 indexed l2TokenAddress, address indexed l1TokenAddress);
 
-    event LogL2WrapperRequested(address indexed l1TokenAddress);
+    event LogWrapperRequest(address indexed l1TokenAddress);
 
     event LogOwnershipClaim(
         uint256 indexed l2TokenAddress,
@@ -26,6 +26,7 @@ contract KassEvents {
         uint256 tokenId,
         uint256 amount
     );
+
     event LogWithdraw(
         bytes32 indexed nativeTokenAddress,
         address indexed recipient,

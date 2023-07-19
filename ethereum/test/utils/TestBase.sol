@@ -194,7 +194,7 @@ abstract contract KassTestBase is Test, KassEvents, KassMessaging, ERC721Holder,
         // expect events
         if (requestWrapper) {
             vm.expectEmit(true, true, true, true, address(_kassBridge));
-            emit LogL2WrapperRequested(address(uint160(uint256(nativeTokenAddress))));
+            emit LogWrapperRequest(address(uint160(uint256(nativeTokenAddress))));
         }
 
         vm.expectEmit(true, true, true, true, address(_kassBridge));
@@ -235,7 +235,7 @@ abstract contract KassTestBase is Test, KassEvents, KassMessaging, ERC721Holder,
 
             if (!Address.isContract(computedWrapperAddress)) {
                 vm.expectEmit(true, true, true, true, address(_kassBridge));
-                emit LogL1WrapperCreated(uint256(nativeTokenAddress), computedWrapperAddress);
+                emit LogWrapperCreation(uint256(nativeTokenAddress), computedWrapperAddress);
             }
         }
 
