@@ -61,11 +61,11 @@ mod KassMessaging {
   }
 
   //
-  // Helpers
+  // Internals
   //
 
   #[generate_trait]
-  impl HelperImpl of HelperTrait {
+  impl InternalImpl of InternalTrait {
 
     // Send messages
 

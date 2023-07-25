@@ -76,11 +76,11 @@ mod Ownable {
   }
 
   //
-  // Helpers
+  // Internals
   //
 
   #[generate_trait]
-  impl HelperImpl of HelperTrait {
+  impl InternalImpl of InternalTrait {
     fn initializer(ref self: ContractState) {
       let caller = starknet::get_caller_address();
       self._transfer_ownership(caller);

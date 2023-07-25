@@ -64,16 +64,15 @@ trait KassERC1155ABI<TContractState> {
 mod KassERC1155 {
   use array::{ SpanSerde, ArrayTrait };
   use zeroable::Zeroable;
-  use rules_erc1155::erc1155::erc1155;
+  use rules_utils::introspection::interface::{ ISRC5, ISRC5Camel };
   use rules_erc1155::erc1155::erc1155::ERC1155;
-  use rules_erc1155::erc1155::erc1155::ERC1155::{ HelperTrait as ERC1155HelperTrait };
-  use rules_erc1155::erc1155::interface::IERC1155;
-  use rules_erc1155::introspection::erc165::{ IERC165 as rules_erc1155_IERC165 };
+  use rules_erc1155::erc1155::erc1155::ERC1155::InternalTrait as ERC1155InternalTrait;
+  use rules_erc1155::erc1155::interface::{ IERC1155, IERC1155CamelOnly, IERC1155Metadata };
 
   // locals
   use kass::access::ownable;
   use kass::access::ownable::{ Ownable, IOwnable };
-  use kass::access::ownable::Ownable::{ HelperTrait as OwnableHelperTrait, ModifierTrait as OwnableModifierTrait };
+  use kass::access::ownable::Ownable::{ InternalTrait as OwnableInternalTrait, ModifierTrait as OwnableModifierTrait };
 
   //
   // Storage
@@ -91,7 +90,7 @@ mod KassERC1155 {
   #[generate_trait]
   impl ModifierImpl of ModifierTrait {
     fn _initializer(ref self: ContractState, bridge_: starknet::ContractAddress) {
-      assert(self._bridge.read().is_zero(), 'Kass721: Already initialized');
+      assert(self._bridge.read().is_zero(), 'Kass1155: Already initialized');
 
       self._bridge.write(bridge_);
     }
@@ -181,16 +180,7 @@ mod KassERC1155 {
   //
 
   #[external(v0)]
-  impl IERC1155Impl of erc1155::ERC1155ABI<ContractState> {
-
-    // IERC1155
-
-    fn uri(self: @ContractState, token_id: u256) -> Span<felt252> {
-      let erc1155_self = ERC1155::unsafe_new_contract_state();
-
-      erc1155_self.uri(:token_id)
-    }
-
+  impl IERC1155Impl of IERC1155<ContractState> {
     fn balance_of(self: @ContractState, account: starknet::ContractAddress, id: u256) -> u256 {
       let erc1155_self = ERC1155::unsafe_new_contract_state();
 
@@ -201,7 +191,7 @@ mod KassERC1155 {
       self: @ContractState,
       accounts: Span<starknet::ContractAddress>,
       ids: Span<u256>
-    ) -> Array<u256> {
+    ) -> Span<u256> {
       let erc1155_self = ERC1155::unsafe_new_contract_state();
 
       erc1155_self.balance_of_batch(:accounts, :ids)
@@ -247,13 +237,108 @@ mod KassERC1155 {
 
       erc1155_self.safe_batch_transfer_from(:from, :to, :ids, :amounts, :data);
     }
+  }
 
-    // IERC165
+  //
+  // IERC1155 Camel impl
+  //
 
-    fn supports_interface(self: @ContractState, interface_id: u32) -> bool {
+  #[external(v0)]
+  impl IERC1155CamelOnlyImpl of IERC1155CamelOnly<ContractState> {
+    fn balanceOf(self: @ContractState, account: starknet::ContractAddress, id: u256) -> u256 {
+      let erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      erc1155_self.balanceOf(:account, :id)
+    }
+
+    fn balanceOfBatch(
+      self: @ContractState,
+      accounts: Span<starknet::ContractAddress>,
+      ids: Span<u256>
+    ) -> Span<u256> {
+      let erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      erc1155_self.balanceOfBatch(:accounts, :ids)
+    }
+
+    fn isApprovedForAll(self: @ContractState,
+      account: starknet::ContractAddress,
+      operator: starknet::ContractAddress
+    ) -> bool {
+      let erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      erc1155_self.isApprovedForAll(:account, :operator)
+    }
+
+    fn setApprovalForAll(ref self: ContractState, operator: starknet::ContractAddress, approved: bool) {
+      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      erc1155_self.setApprovalForAll(:operator, :approved);
+    }
+
+    fn safeTransferFrom(
+      ref self: ContractState,
+      from: starknet::ContractAddress,
+      to: starknet::ContractAddress,
+      id: u256,
+      amount: u256,
+      data: Span<felt252>
+    ) {
+      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      erc1155_self.safeTransferFrom(:from, :to, :id, :amount, :data);
+    }
+
+    fn safeBatchTransferFrom(
+      ref self: ContractState,
+      from: starknet::ContractAddress,
+      to: starknet::ContractAddress,
+      ids: Span<u256>,
+      amounts: Span<u256>,
+      data: Span<felt252>
+    ) {
+      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      erc1155_self.safeBatchTransferFrom(:from, :to, :ids, :amounts, :data);
+    }
+  }
+
+  //
+  // IERC1155 Metadata impl
+  //
+
+  #[external(v0)]
+  impl IERC1155MetadataImpl of IERC1155Metadata<ContractState> {
+    fn uri(self: @ContractState, token_id: u256) -> Span<felt252> {
+      let erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      erc1155_self.uri(:token_id)
+    }
+  }
+
+  //
+  // ISRC5 impl
+  //
+
+  #[external(v0)]
+  impl ISRC5Impl of ISRC5<ContractState> {
+    fn supports_interface(self: @ContractState, interface_id: felt252) -> bool {
       let erc1155_self = ERC1155::unsafe_new_contract_state();
 
       erc1155_self.supports_interface(:interface_id)
+    }
+  }
+
+  //
+  // ISRC5 Camel impl
+  //
+
+  #[external(v0)]
+  impl ISRC5CamelImpl of ISRC5Camel<ContractState> {
+    fn supportsInterface(self: @ContractState, interfaceId: felt252) -> bool {
+      let erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      erc1155_self.supportsInterface(:interfaceId)
     }
   }
 
@@ -283,11 +368,11 @@ mod KassERC1155 {
   }
 
   //
-  // Helpers
+  // Internals
   //
 
   #[generate_trait]
-  impl HelperImpl of HelperTrait {
+  impl InternalImpl of InternalTrait {
     fn initializer(ref self: ContractState, uri_: Span<felt252>) {
       let mut erc1155_self = ERC1155::unsafe_new_contract_state();
 

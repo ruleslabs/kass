@@ -1,4 +1,3 @@
-use core::zeroable::Zeroable;
 use array::SpanSerde;
 
 #[starknet::interface]
@@ -71,16 +70,15 @@ trait KassERC721ABI<TContractState> {
 mod KassERC721 {
   use array::{ SpanSerde, ArrayTrait };
   use zeroable::Zeroable;
-  use rules_erc721::erc721::erc721;
+  use rules_utils::introspection::interface::{ ISRC5, ISRC5Camel };
   use rules_erc721::erc721::erc721::ERC721;
-  use rules_erc721::erc721::erc721::ERC721::{ HelperTrait as ERC721HelperTrait };
-  use rules_erc721::erc721::interface::IERC721;
-  use rules_erc721::introspection::erc165::{ IERC165 as rules_erc721_IERC165 };
+  use rules_erc721::erc721::erc721::ERC721::InternalTrait as ERC721InternalTrait;
+  use rules_erc721::erc721::interface::{ IERC721, IERC721CamelOnly, IERC721Metadata, IERC721MetadataCamelOnly };
 
   // locals
   use kass::access::ownable;
   use kass::access::ownable::{ Ownable, IOwnable };
-  use kass::access::ownable::Ownable::{ HelperTrait as OwnableHelperTrait, ModifierTrait as OwnableModifierTrait };
+  use kass::access::ownable::Ownable::{ InternalTrait as OwnableInternalTrait, ModifierTrait as OwnableModifierTrait };
 
   //
   // Storage
@@ -186,26 +184,11 @@ mod KassERC721 {
   }
 
   //
-  // ERC721 ABI impl
+  // IERC721 impl
   //
 
   #[external(v0)]
-  impl IERC721Impl of erc721::ERC721ABI<ContractState> {
-
-    // IERC721
-
-    fn name(self: @ContractState) -> felt252 {
-      let erc721_self = ERC721::unsafe_new_contract_state();
-
-      erc721_self.name()
-    }
-
-    fn symbol(self: @ContractState) -> felt252 {
-      let erc721_self = ERC721::unsafe_new_contract_state();
-
-      erc721_self.symbol()
-    }
-
+  impl IERC721Impl of IERC721<ContractState> {
     fn balance_of(self: @ContractState, account: starknet::ContractAddress) -> u256 {
       let erc721_self = ERC721::unsafe_new_contract_state();
 
@@ -232,12 +215,6 @@ mod KassERC721 {
       let erc721_self = ERC721::unsafe_new_contract_state();
 
       erc721_self.is_approved_for_all(:owner, :operator)
-    }
-
-    fn token_uri(self: @ContractState, token_id: u256) -> felt252 {
-      let erc721_self = ERC721::unsafe_new_contract_state();
-
-      erc721_self.token_uri(:token_id)
     }
 
     fn approve(ref self: ContractState, to: starknet::ContractAddress, token_id: u256) {
@@ -274,13 +251,133 @@ mod KassERC721 {
 
       erc721_self.set_approval_for_all(:operator, :approved);
     }
+  }
 
-    // IERC165
+  //
+  // IERC721Camel impl
+  //
 
-    fn supports_interface(self: @ContractState, interface_id: u32) -> bool {
+  #[external(v0)]
+  impl IERC721CamelOnlyImpl of IERC721CamelOnly<ContractState> {
+    fn balanceOf(self: @ContractState, account: starknet::ContractAddress) -> u256 {
+      let erc721_self = ERC721::unsafe_new_contract_state();
+
+      erc721_self.balanceOf(:account)
+    }
+
+    fn ownerOf(self: @ContractState, tokenId: u256) -> starknet::ContractAddress {
+      let erc721_self = ERC721::unsafe_new_contract_state();
+
+      erc721_self.ownerOf(:tokenId)
+    }
+
+    fn getApproved(self: @ContractState, tokenId: u256) -> starknet::ContractAddress {
+      let erc721_self = ERC721::unsafe_new_contract_state();
+
+      erc721_self.getApproved(:tokenId)
+    }
+
+    fn isApprovedForAll(
+      self: @ContractState,
+      owner: starknet::ContractAddress,
+      operator: starknet::ContractAddress
+    ) -> bool {
+      let erc721_self = ERC721::unsafe_new_contract_state();
+
+      erc721_self.isApprovedForAll(:owner, :operator)
+    }
+
+    fn setApprovalForAll(ref self: ContractState, operator: starknet::ContractAddress, approved: bool) {
+      let mut erc721_self = ERC721::unsafe_new_contract_state();
+
+      erc721_self.setApprovalForAll(:operator, :approved);
+    }
+
+    fn transferFrom(
+      ref self: ContractState,
+      from: starknet::ContractAddress,
+      to: starknet::ContractAddress,
+      tokenId: u256
+    ) {
+      let mut erc721_self = ERC721::unsafe_new_contract_state();
+
+      erc721_self.transferFrom(:from, :to, :tokenId);
+    }
+
+    fn safeTransferFrom(
+      ref self: ContractState,
+      from: starknet::ContractAddress,
+      to: starknet::ContractAddress,
+      tokenId: u256,
+      data: Span<felt252>
+    ) {
+      let mut erc721_self = ERC721::unsafe_new_contract_state();
+
+      erc721_self.safeTransferFrom(:from, :to, :tokenId, :data);
+    }
+  }
+
+  //
+  // IERC721 Metadata impl
+  //
+
+  #[external(v0)]
+  impl IERC721MetadataImpl of IERC721Metadata<ContractState> {
+    fn name(self: @ContractState) -> felt252 {
+      let erc721_self = ERC721::unsafe_new_contract_state();
+
+      erc721_self.name()
+    }
+
+    fn symbol(self: @ContractState) -> felt252 {
+      let erc721_self = ERC721::unsafe_new_contract_state();
+
+      erc721_self.symbol()
+    }
+
+    fn token_uri(self: @ContractState, token_id: u256) -> felt252 {
+      let erc721_self = ERC721::unsafe_new_contract_state();
+
+      erc721_self.token_uri(:token_id)
+    }
+  }
+
+  //
+  // IERC721 Metadata impl
+  //
+
+  #[external(v0)]
+  impl IERC721MetadataCamelOnlyImpl of IERC721MetadataCamelOnly<ContractState> {
+    fn tokenUri(self: @ContractState, tokenId: u256) -> felt252 {
+      let erc721_self = ERC721::unsafe_new_contract_state();
+
+      erc721_self.tokenUri(:tokenId)
+    }
+  }
+
+  //
+  // ISRC5 impl
+  //
+
+  #[external(v0)]
+  impl ISRC5Impl of ISRC5<ContractState> {
+    fn supports_interface(self: @ContractState, interface_id: felt252) -> bool {
       let erc721_self = ERC721::unsafe_new_contract_state();
 
       erc721_self.supports_interface(:interface_id)
+    }
+  }
+
+  //
+  // ISRC5 Camel impl
+  //
+
+  #[external(v0)]
+  impl ISRC5CamelImpl of ISRC5Camel<ContractState> {
+    fn supportsInterface(self: @ContractState, interfaceId: felt252) -> bool {
+      let erc721_self = ERC721::unsafe_new_contract_state();
+
+      erc721_self.supportsInterface(:interfaceId)
     }
   }
 
@@ -310,11 +407,11 @@ mod KassERC721 {
   }
 
   //
-  // Helpers
+  // Internals
   //
 
   #[generate_trait]
-  impl HelperImpl of HelperTrait {
+  impl InternalImpl of InternalTrait {
     fn initializer(ref self: ContractState, name_: felt252, symbol_: felt252) {
       let mut erc721_self = ERC721::unsafe_new_contract_state();
       let mut ownable_self = Ownable::unsafe_new_contract_state();

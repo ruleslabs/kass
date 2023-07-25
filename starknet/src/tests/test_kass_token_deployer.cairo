@@ -13,7 +13,7 @@ use kass::bridge::interface::IKassTokenDeployer;
 use kass::bridge::token_deployer::KassTokenDeployer;
 use kass::bridge::token_deployer::KassTokenDeployer::{
   ContractState as KassTokenDeployerContractState,
-  HelperTrait as KassTokenDeployerHelperTrait,
+  InternalTrait as KassTokenDeployerInternalTrait,
 };
 
 use kass::factory::common::KassToken;

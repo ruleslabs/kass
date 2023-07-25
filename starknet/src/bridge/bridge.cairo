@@ -11,8 +11,14 @@ mod KassBridge {
   use option::OptionTrait;
   use zeroable::Zeroable;
   use starknet::{ EthAddressZeroable, Felt252TryIntoEthAddress, EthAddressIntoFelt252, ContractAddressIntoFelt252 };
-  use rules_erc1155::erc1155;
+
+  use rules_erc1155::erc1155::interface::{ IERC1155Receiver, IERC1155ReceiverCamel, ON_ERC1155_RECEIVED_SELECTOR };
+
   use rules_utils::utils::contract_address::ContractAddressTraitExt;
+
+  // Dispatchers
+  use rules_erc721::erc721::dual_erc721::{ DualCaseERC721, DualCaseERC721Trait };
+  use rules_erc1155::erc1155::dual_erc1155::{ DualCaseERC1155, DualCaseERC1155Trait };
 
   // locals
   use kass::bridge;
@@ -20,14 +26,14 @@ mod KassBridge {
 
   use kass::bridge::token_standard::{ TokenStandard, ContractAddressInterfacesTrait };
   use kass::bridge::token_deployer::KassTokenDeployer;
-  use kass::bridge::token_deployer::KassTokenDeployer::{ HelperTrait as KassTokenDeployerHelperTrait };
+  use kass::bridge::token_deployer::KassTokenDeployer::{ InternalTrait as KassTokenDeployerInternalTrait };
 
   use kass::bridge::messaging::KassMessaging;
-  use kass::bridge::messaging::KassMessaging::{ HelperTrait as KassMessagingHelperTrait };
+  use kass::bridge::messaging::KassMessaging::{ InternalTrait as KassMessagingInternalTrait };
 
   use kass::access::ownable;
   use kass::access::ownable::Ownable;
-  use kass::access::ownable::Ownable::{ HelperTrait as OwnableHelperTrait, ModifierTrait as OwnableModifierTrait };
+  use kass::access::ownable::Ownable::{ InternalTrait as OwnableInternalTrait, ModifierTrait as OwnableModifierTrait };
 
   // Dispatchers
   use kass::access::ownable::{ IOwnableDispatcher, IOwnableDispatcherTrait };
@@ -378,7 +384,7 @@ mod KassBridge {
   //
 
   #[external(v0)]
-  impl IERC1155ReceiverImpl of erc1155::interface::IERC1155Receiver<ContractState> {
+  impl IERC1155ReceiverImpl of IERC1155Receiver<ContractState> {
     fn on_erc1155_received(
       ref self: ContractState,
       operator: starknet::ContractAddress,
@@ -386,15 +392,15 @@ mod KassBridge {
       id: u256,
       value: u256,
       data: Span<felt252>
-    ) -> u32 {
+    ) -> felt252 {
       let contractAddress = starknet::get_contract_address();
 
       // validate transfer only if it's executed in the context of a deposit
       if (contractAddress == operator) {
-        return erc1155::interface::ON_ERC1155_RECEIVED_SELECTOR;
+        ON_ERC1155_RECEIVED_SELECTOR
+      } else {
+        0
       }
-
-      0_u32
     }
 
     fn on_erc1155_batch_received(
@@ -404,18 +410,55 @@ mod KassBridge {
       ids: Span<u256>,
       values: Span<u256>,
       data: Span<felt252>
-    ) -> u32 {
+    ) -> felt252 {
       // does not support batch transfers
-      0_32
+      0
     }
   }
 
   //
-  // Helpers
+  // IERC1155Receiver Camel impl
+  //
+
+  #[external(v0)]
+  impl IERC1155ReceiverCamelImpl of IERC1155ReceiverCamel<ContractState> {
+    fn onERC1155Received(
+      ref self: ContractState,
+      operator: starknet::ContractAddress,
+      from: starknet::ContractAddress,
+      id: u256,
+      value: u256,
+      data: Span<felt252>
+    ) -> felt252 {
+      let contractAddress = starknet::get_contract_address();
+
+      // validate transfer only if it's executed in the context of a deposit
+      if (contractAddress == operator) {
+        ON_ERC1155_RECEIVED_SELECTOR
+      } else {
+        0
+      }
+    }
+
+    fn onERC1155BatchReceived(
+      ref self: ContractState,
+      operator: starknet::ContractAddress,
+      from: starknet::ContractAddress,
+      ids: Span<u256>,
+      values: Span<u256>,
+      data: Span<felt252>
+    ) -> felt252 {
+      // does not support batch transfers
+      0
+    }
+  }
+
+  //
+  // Internals
   //
 
   #[generate_trait]
-  impl HelperImpl of HelperTrait {
+  impl InternalImpl of InternalTrait {
     fn initializer(
       ref self: ContractState,
       owner_: starknet::ContractAddress,
@@ -566,11 +609,13 @@ mod KassBridge {
       let contractAddress = starknet::get_contract_address();
 
       if (token_address.isERC721()) {
-        let KassERC721 = KassERC721ABIDispatcher { contract_address: token_address };
-
         if (is_native) {
-          KassERC721.transfer_from(from: caller, to: contractAddress, :token_id);
+          let ERC721 = DualCaseERC721 { contract_address: token_address };
+
+          ERC721.transfer_from(from: caller, to: contractAddress, :token_id);
         } else {
+          let KassERC721 = KassERC721ABIDispatcher { contract_address: token_address };
+
           // check if caller is owner before burning
           assert(KassERC721.owner_of(:token_id) == caller, 'You do not own this token');
 
@@ -581,10 +626,10 @@ mod KassBridge {
       } else if (token_address.isERC1155()) {
         assert(amount > u256 {low: 0, high: 0 }, 'Cannot deposit null amount');
 
-        let KassERC1155 = KassERC1155ABIDispatcher { contract_address: token_address };
-
         if (is_native) {
-          KassERC1155.safe_transfer_from(
+          let ERC1155 = DualCaseERC1155 { contract_address: token_address };
+
+          ERC1155.safe_transfer_from(
             from: caller,
             to: contractAddress,
             id: token_id,
@@ -592,6 +637,8 @@ mod KassBridge {
             data: ArrayTrait::new().span()
           );
         } else {
+          let KassERC1155 = KassERC1155ABIDispatcher { contract_address: token_address };
+
           KassERC1155.permissioned_burn(from: caller, id: token_id, :amount);
         }
 
@@ -612,11 +659,13 @@ mod KassBridge {
       let contractAddress = starknet::get_contract_address();
 
       if (token_address.isERC721()) {
-        let KassERC721 = KassERC721ABIDispatcher { contract_address: token_address };
-
         if (is_native) {
-          KassERC721.transfer_from(from: contractAddress, to: recipient, :token_id);
+          let ERC721 = DualCaseERC721 { contract_address: token_address };
+
+          ERC721.transfer_from(from: contractAddress, to: recipient, :token_id);
         } else {
+          let KassERC721 = KassERC721ABIDispatcher { contract_address: token_address };
+
           KassERC721.permissioned_mint(to: recipient, :token_id);
         }
 
@@ -627,7 +676,9 @@ mod KassBridge {
         let KassERC1155 = KassERC1155ABIDispatcher { contract_address: token_address };
 
         if (is_native) {
-          KassERC1155.safe_transfer_from(
+          let ERC1155 = DualCaseERC1155 { contract_address: token_address };
+
+          ERC1155.safe_transfer_from(
             from: contractAddress,
             to: recipient,
             id: token_id,
@@ -635,6 +686,8 @@ mod KassBridge {
             data: ArrayTrait::new().span()
           );
         } else {
+          let KassERC1155 = KassERC1155ABIDispatcher { contract_address: token_address };
+
           KassERC1155.permissioned_mint(to: recipient, id: token_id, :amount);
         }
 

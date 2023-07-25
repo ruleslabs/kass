@@ -5,10 +5,10 @@ mod KassTokenDeployer {
   use array::{ ArrayTrait, SpanTrait, SpanSerde };
   use zeroable::Zeroable;
   use option::OptionTrait;
-  use rules_utils::utils::into::BoolIntoU8;
+  use rules_utils::utils::traits::BoolIntoU8;
   use rules_utils::utils::hash::EthAddressLegacyHash;
-  use rules_erc721::erc721;
-  use rules_erc1155::erc1155;
+  use rules_erc721::erc721::interface::IERC721_ID;
+  use rules_erc1155::erc1155::interface::IERC1155_ID;
 
   // locals
   use kass::bridge::interface::IKassTokenDeployer;
@@ -109,17 +109,11 @@ mod KassTokenDeployer {
       // assert implementations are valid
       assert(token_implementation_.is_non_zero(), 'Invalid token implementation');
       assert(
-        self._implementation_supports_interface(
-          implementation: erc721_implementation_,
-          interface_id: erc721::interface::IERC721_ID
-        ),
+        self._implementation_supports_interface(implementation: erc721_implementation_, interface_id: IERC721_ID),
         'Invalid ERC721 implementation'
       );
       assert(
-        self._implementation_supports_interface(
-          implementation: erc1155_implementation_,
-          interface_id: erc1155::interface::IERC1155_ID
-        ),
+        self._implementation_supports_interface(implementation: erc1155_implementation_, interface_id: IERC1155_ID),
         'Invalid ERC1155 implementation'
       );
 
@@ -130,7 +124,7 @@ mod KassTokenDeployer {
   }
 
   #[generate_trait]
-  impl HelperImpl of HelperTrait {
+  impl InternalImpl of InternalTrait {
     fn _deploy_kass_erc721(
       ref self: ContractState,
       l1_token_address: starknet::EthAddress,
@@ -150,11 +144,11 @@ mod KassTokenDeployer {
     fn _implementation_supports_interface(
       ref self: ContractState,
       implementation: starknet::ClassHash,
-      interface_id: u32
+      interface_id: felt252
     ) -> bool {
       let mut calldata = ArrayTrait::new();
 
-      calldata.append(interface_id.into());
+      calldata.append(interface_id);
 
       let ret_data = starknet::library_call_syscall(
         class_hash: implementation,

@@ -1,17 +1,18 @@
 use starknet::ContractAddress;
-use rules_erc721::erc721;
-use rules_erc1155::erc1155;
+use rules_erc721::erc721::interface::IERC721_ID;
+use rules_erc1155::erc1155::interface::IERC1155_ID;
 
-use kass::introspection::erc165::{ IERC165Dispatcher, IERC165DispatcherTrait };
+// Dispatchers
+use rules_utils::introspection::dual_src5::{ DualCaseSRC5, DualCaseSRC5Trait };
 
 #[generate_trait]
 impl ContractAddressInterfacesImpl of ContractAddressInterfacesTrait {
   fn isERC721(self: ContractAddress) -> bool {
-    return IERC165Dispatcher { contract_address: self }.supports_interface(erc721::interface::IERC721_ID);
+    return DualCaseSRC5 { contract_address: self }.supports_interface(IERC721_ID);
   }
 
   fn isERC1155(self: ContractAddress) -> bool {
-    return IERC165Dispatcher { contract_address: self }.supports_interface(erc1155::interface::IERC1155_ID);
+    return DualCaseSRC5 { contract_address: self }.supports_interface(IERC1155_ID);
   }
 }
 

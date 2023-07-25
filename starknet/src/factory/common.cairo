@@ -65,7 +65,7 @@ mod KassToken {
   }
 
   #[generate_trait]
-  impl HelperImpl of HelperTrait {
+  impl InternalImpl of InternalTrait {
     fn initializer(ref self: ContractState, deployer_: starknet::ContractAddress) {
       self._deployer.write(deployer_);
     }
