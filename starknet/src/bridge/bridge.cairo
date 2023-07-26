@@ -140,21 +140,41 @@ mod KassBridge {
 
   #[constructor]
   fn constructor(
-      ref self: ContractState,
-      owner_: starknet::ContractAddress,
-      l1_kass_address_: starknet::EthAddress,
-      token_implementation_: starknet::ClassHash,
-      erc721_implementation_: starknet::ClassHash,
-      erc1155_implementation_: starknet::ClassHash
-    ) {
-      self.initializer(
-        :owner_,
-        :l1_kass_address_,
-        :token_implementation_,
-        :erc721_implementation_,
-        :erc1155_implementation_
-      );
+    ref self: ContractState,
+    owner_: starknet::ContractAddress,
+    l1_kass_address_: starknet::EthAddress,
+    token_implementation_: starknet::ClassHash,
+    erc721_implementation_: starknet::ClassHash,
+    erc1155_implementation_: starknet::ClassHash
+  ) {
+    self.initializer(
+      :owner_,
+      :l1_kass_address_,
+      :token_implementation_,
+      :erc721_implementation_,
+      :erc1155_implementation_
+    );
+  }
+
+  //
+  // Upgrade
+  //
+
+  // TODO: use Upgradeable impl with more custom call after upgrade
+
+  #[generate_trait]
+  #[external(v0)]
+  impl UpgradeImpl of UpgradeTrait {
+    fn upgrade(ref self: ContractState, new_implementation: starknet::ClassHash) {
+      // Modifiers
+      self._only_owner();
+
+      // Body
+
+      // set new impl
+      starknet::replace_class_syscall(new_implementation);
     }
+  }
 
   //
   // IKassBridge impl
@@ -518,7 +538,7 @@ mod KassBridge {
       assert(is_l2_native | request_wrapper == false, 'Double wrap not allowed');
 
       // burn or tranfer tokens
-      self._lockTokens(token_address: l2_token_address, :token_id, :amount, is_native: is_l2_native);
+      self._lock_tokens(token_address: l2_token_address, :token_id, :amount, is_native: is_l2_native);
 
       // send l1 deposit message
       kass_messaging_self._send_token_deposit_message(
@@ -558,7 +578,7 @@ mod KassBridge {
       token_standard: TokenStandard
     ) {
       // get l1 token address (native or wrapper)
-      let (l2_token_address, is_l2_native) = self._parse_native_token_address(:native_token_address);
+      let (mut l2_token_address, is_l2_native) = self._parse_native_token_address(:native_token_address);
 
       if (!l2_token_address.is_deployed()) {
         assert(calldata.len().is_non_zero(), 'Wrapper not deployed');
@@ -568,12 +588,12 @@ mod KassBridge {
 
         let l1_token_address: starknet::EthAddress = native_token_address.try_into().unwrap();
 
-        match token_standard {
+        l2_token_address = match token_standard {
           TokenStandard::ERC721(()) => {
-            let l2_token_address = kass_token_deployer_self._deploy_kass_erc721(:l1_token_address, :calldata);
+            kass_token_deployer_self._deploy_kass_erc721(:l1_token_address, :calldata)
           },
           TokenStandard::ERC1155(()) => {
-            let l2_token_address = kass_token_deployer_self._deploy_kass_erc1155(:l1_token_address, :calldata);
+            kass_token_deployer_self._deploy_kass_erc1155(:l1_token_address, :calldata)
           },
         };
 
@@ -586,7 +606,7 @@ mod KassBridge {
       }
 
       // mint or tranfer tokens
-      self._unlockTokens(token_address: l2_token_address, :recipient, :token_id, :amount, is_native: is_l2_native);
+      self._unlock_tokens(token_address: l2_token_address, :recipient, :token_id, :amount, is_native: is_l2_native);
 
       // emit event
       self.emit(
@@ -598,7 +618,7 @@ mod KassBridge {
 
     // Tokens
 
-    fn _lockTokens(
+    fn _lock_tokens(
       ref self: ContractState,
       token_address: starknet::ContractAddress,
       token_id: u256,
@@ -634,7 +654,7 @@ mod KassBridge {
             to: contractAddress,
             id: token_id,
             :amount,
-            data: ArrayTrait::new().span()
+            data: array![].span()
           );
         } else {
           let KassERC1155 = KassERC1155ABIDispatcher { contract_address: token_address };
@@ -648,7 +668,7 @@ mod KassBridge {
       }
     }
 
-    fn _unlockTokens(
+    fn _unlock_tokens(
       ref self: ContractState,
       token_address: starknet::ContractAddress,
       recipient: starknet::ContractAddress,
@@ -683,7 +703,7 @@ mod KassBridge {
             to: recipient,
             id: token_id,
             :amount,
-            data: ArrayTrait::new().span()
+            data: array![].span()
           );
         } else {
           let KassERC1155 = KassERC1155ABIDispatcher { contract_address: token_address };

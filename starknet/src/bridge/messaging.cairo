@@ -113,15 +113,11 @@ mod KassMessaging {
       token_address: starknet::ContractAddress,
       l1_owner: starknet::EthAddress
     ) -> Array<felt252> {
-      let mut payload: Array<felt252> = ArrayTrait::new();
-
-      payload.append(CLAIM_OWNERSHIP.into());
-
-      payload.append(token_address.into());
-
-      payload.append(l1_owner.into());
-
-      return payload;
+      array![
+        CLAIM_OWNERSHIP.into(),
+        token_address.into(),
+        l1_owner.into(),
+      ]
     }
 
     // DEPOSIT ON L1
@@ -134,7 +130,7 @@ mod KassMessaging {
       amount: u256,
       request_wrapper: bool
     ) -> Array<felt252> {
-      let mut payload: Array<felt252> = ArrayTrait::new();
+      let mut payload = array![];
 
       if (request_wrapper) {
 

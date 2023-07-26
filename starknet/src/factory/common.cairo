@@ -53,8 +53,7 @@ mod KassToken {
       starknet::replace_class_syscall(implementation);
 
       // initialize new impl
-      let mut singleton_bridge = ArrayTrait::<felt252>::new();
-      singleton_bridge.append(self._deployer.read().into());
+      let singleton_bridge = array![self._deployer.read().into()];
 
       starknet::library_call_syscall(
         class_hash: implementation,

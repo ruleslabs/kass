@@ -161,7 +161,7 @@ mod KassERC1155 {
       // Body
       let mut erc1155_self = ERC1155::unsafe_new_contract_state();
 
-      erc1155_self._mint(:to, :id, :amount, data: ArrayTrait::new().span());
+      erc1155_self._mint(:to, :id, :amount, data: array![].span());
     }
 
     fn permissioned_burn(ref self: ContractState, from: starknet::ContractAddress, id: u256, amount: u256) {

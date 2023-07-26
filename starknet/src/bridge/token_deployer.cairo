@@ -1,4 +1,3 @@
-use core::traits::TryInto;
 #[starknet::contract]
 mod KassTokenDeployer {
   use traits::{ Into, TryInto };
@@ -146,9 +145,7 @@ mod KassTokenDeployer {
       implementation: starknet::ClassHash,
       interface_id: felt252
     ) -> bool {
-      let mut calldata = ArrayTrait::new();
-
-      calldata.append(interface_id);
+      let calldata = array![interface_id];
 
       let ret_data = starknet::library_call_syscall(
         class_hash: implementation,
@@ -165,10 +162,8 @@ mod KassTokenDeployer {
       l1_token_address: starknet::EthAddress,
       calldata: Span<felt252>
     ) -> starknet::ContractAddress {
-      let mut singleton_caller = ArrayTrait::new();
-
       let caller = starknet::get_caller_address();
-      singleton_caller.append(caller.into());
+      let singleton_caller = array![caller.into()];
 
       let (kass_contract_address, _) = starknet::syscalls::deploy_syscall(
         class_hash: self.token_implementation(),

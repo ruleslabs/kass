@@ -6,6 +6,7 @@ use option::OptionTrait;
 use starknet::testing;
 use starknet::class_hash::Felt252TryIntoClassHash;
 use rules_utils::utils::partial_eq::SpanPartialEq;
+use rules_utils::utils::serde::SerdeTraitExt;
 
 // locals
 use kass::bridge::interface::IKassTokenDeployer;
@@ -47,7 +48,7 @@ fn L1_TOKEN_ADDRESS() -> starknet::EthAddress {
 // L2
 
 fn L2_TOKEN_ADDRESS() -> starknet::ContractAddress {
-  starknet::contract_address_const::<0x5a79f4188c8087e0c4d726b05e34467d22105ab6cb8d96f7320cdb645f92446>()
+  starknet::contract_address_const::<0x7a548b6a01b48bc7a373b85a7b22614762c2fae0bfde3488925a34101a536ed>()
 }
 
 // ERC721 CALLDATA
@@ -61,30 +62,19 @@ fn ERC721_SYMBOL() -> felt252 {
 }
 
 fn ERC721_CALLDATA() -> Array<felt252> {
-  let mut calldata = ArrayTrait::new();
-
-  calldata.append(ERC721_NAME());
-  calldata.append(ERC721_SYMBOL());
-
-  calldata
+  array![ERC721_NAME(), ERC721_SYMBOL()]
 }
 
 // ERC1155 CALLDATA
 
 fn ERC1155_URI() -> Array<felt252> {
-  let mut uri = ArrayTrait::new();
-
-  uri.append(111);
-  uri.append(222);
-  uri.append(333);
-
-  uri
+  array![111, 222, 333]
 }
 
 fn ERC1155_CALLDATA() -> Array<felt252> {
-  let mut calldata = ArrayTrait::new();
+  let mut calldata = array![];
 
-  ERC1155_URI().span().serialize(ref output: calldata);
+  calldata.append_serde(ERC1155_URI().span());
 
   calldata
 }
