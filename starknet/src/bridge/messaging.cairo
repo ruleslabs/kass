@@ -5,7 +5,7 @@ use core::traits::TryInto;
 mod KassMessaging {
   use starknet::ContractAddressIntoFelt252;
   use zeroable::Zeroable;
-  use array::ArrayTrait;
+  use array::{ ArrayTrait, SpanTrait };
   use traits::{ Into, TryInto };
   use option::OptionTrait;
   use starknet::EthAddressZeroable;
@@ -131,6 +131,7 @@ mod KassMessaging {
       request_wrapper: bool
     ) -> Array<felt252> {
       let mut payload = array![];
+      let mut calldata_payload = @array![];
 
       if (request_wrapper) {
 
@@ -142,35 +143,26 @@ mod KassMessaging {
 
           payload.append(DEPOSIT_AND_REQUEST_721_WRAPPER_TO_L1.into());
 
-          // store L2 token address
-          payload.append(token_address.into());
-
           // store wrapper init calldata
           let ERC721 = ERC721ABIDispatcher { contract_address: token_address };
 
-          payload.append(ERC721.name());
-          payload.append(ERC721.symbol());
+          calldata_payload = @array![ERC721.name(), ERC721.symbol()];
         } else if (token_address.isERC1155()) {
 
           // token is ERC1155
 
           payload.append(DEPOSIT_AND_REQUEST_1155_WRAPPER_TO_L1.into());
 
-          // store L2 token address
-          payload.append(token_address.into());
-
           // store wrapper init calldata
           let ERC1155 = ERC1155ABIDispatcher { contract_address: token_address };
-          let mut uri = ERC1155.uri(0.into());
 
-          payload = payload.concat(uri.snapshot);
+          calldata_payload = ERC1155.uri(0.into()).snapshot;
         } else {
           panic_with_felt252('Kass: Unkown token standard');
         }
       } else {
         payload.append(DEPOSIT_TO_L1.into());
       }
-
 
       payload.append(native_token_address);
 
@@ -182,7 +174,7 @@ mod KassMessaging {
       payload.append(amount.low.into());
       payload.append(amount.high.into());
 
-      return payload;
+      payload.concat(calldata_payload)
     }
   }
 }

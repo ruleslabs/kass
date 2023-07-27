@@ -1,7 +1,69 @@
-use core::array::SpanTrait;
 #[starknet::interface]
 trait KassBridgeABI<TContractState> {
 
+  // IKassBridge
+
+  fn get_version(self: @TContractState) -> felt252;
+
+  fn get_identity(self: @TContractState) -> felt252;
+
+  fn request_ownership(
+    ref self: TContractState,
+    l2_token_address: starknet::ContractAddress,
+    l1_owner: starknet::EthAddress
+  );
+
+  fn deposit_721(
+    ref self: TContractState,
+    native_token_address: felt252,
+    recipient: starknet::EthAddress,
+    token_id: u256,
+    request_wrapper: bool
+  );
+
+  fn deposit_1155(
+    ref self: TContractState,
+    native_token_address: felt252,
+    recipient: starknet::EthAddress,
+    token_id: u256,
+    amount: u256,
+    request_wrapper: bool
+  );
+
+  // IKassTokenDeployer
+
+  fn token_implementation(self: @TContractState) -> starknet::ClassHash;
+
+  fn erc721_implementation(self: @TContractState) -> starknet::ClassHash;
+
+  fn erc1155_implementation(self: @TContractState) -> starknet::ClassHash;
+
+  fn l2_kass_token_address(
+    self: @TContractState,
+    l1_token_address: starknet::EthAddress
+  ) -> starknet::ContractAddress;
+
+  fn compute_l2_kass_token_address(
+    self: @TContractState,
+    l1_token_address: starknet::EthAddress
+  ) -> starknet::ContractAddress;
+
+  fn set_deployer_class_hashes(
+    ref self: TContractState,
+    token_implementation_: starknet::ClassHash,
+    erc721_implementation_: starknet::ClassHash,
+    erc1155_implementation_: starknet::ClassHash
+  );
+
+  // IKassMessaging
+
+  fn l1_kass_address(self: @TContractState) -> starknet::EthAddress;
+
+  fn set_l1_kass_address(ref self: TContractState, l1_kass_address_: starknet::EthAddress);
+
+  // Upgrade
+
+  fn upgrade(ref self: TContractState, new_implementation: starknet::ClassHash);
 }
 
 #[starknet::contract]
@@ -55,7 +117,7 @@ mod KassBridge {
   //
 
   #[event]
-  #[derive(Drop, starknet::Event)]
+  #[derive(Drop, PartialEq, starknet::Event)]
   enum Event {
     WrapperCreation: WrapperCreation,
     WrapperRequest: WrapperRequest,
@@ -67,28 +129,28 @@ mod KassBridge {
 
   // Wrapper
 
-  #[derive(Drop, starknet::Event)]
+  #[derive(Drop, PartialEq, starknet::Event)]
   struct WrapperCreation {
     l1_token_address: starknet::EthAddress,
     l2_token_address: starknet::ContractAddress,
   }
 
 
-  #[derive(Drop, starknet::Event)]
+  #[derive(Drop, PartialEq, starknet::Event)]
   struct WrapperRequest {
     l2_token_address: starknet::ContractAddress,
   }
 
   // Ownership
 
-  #[derive(Drop, starknet::Event)]
+  #[derive(Drop, PartialEq, starknet::Event)]
   struct OwnershipClaim {
     l1_token_address: starknet::EthAddress,
     l2_token_address: starknet::ContractAddress,
     l2_owner: starknet::ContractAddress,
   }
 
-  #[derive(Drop, starknet::Event)]
+  #[derive(Drop, PartialEq, starknet::Event)]
   struct OwnershipRequest {
     l2_token_address: starknet::ContractAddress,
     l1_owner: starknet::EthAddress,
@@ -96,7 +158,7 @@ mod KassBridge {
 
   // Deposit
 
-  #[derive(Drop, starknet::Event)]
+  #[derive(Drop, PartialEq, starknet::Event)]
   struct Deposit {
     native_token_address: felt252,
     sender: starknet::ContractAddress,
@@ -105,7 +167,7 @@ mod KassBridge {
     amount: u256,
   }
 
-  #[derive(Drop, starknet::Event)]
+  #[derive(Drop, PartialEq, starknet::Event)]
   struct Withdraw {
     native_token_address: felt252,
     recipient: starknet::ContractAddress,
@@ -413,10 +475,10 @@ mod KassBridge {
       value: u256,
       data: Span<felt252>
     ) -> felt252 {
-      let contractAddress = starknet::get_contract_address();
+      let contract_address = starknet::get_contract_address();
 
       // validate transfer only if it's executed in the context of a deposit
-      if (contractAddress == operator) {
+      if (contract_address == operator) {
         ON_ERC1155_RECEIVED_SELECTOR
       } else {
         0
@@ -450,10 +512,10 @@ mod KassBridge {
       value: u256,
       data: Span<felt252>
     ) -> felt252 {
-      let contractAddress = starknet::get_contract_address();
+      let contract_address = starknet::get_contract_address();
 
       // validate transfer only if it's executed in the context of a deposit
-      if (contractAddress == operator) {
+      if (contract_address == operator) {
         ON_ERC1155_RECEIVED_SELECTOR
       } else {
         0
@@ -531,11 +593,11 @@ mod KassBridge {
     ) {
       let mut kass_messaging_self = KassMessaging::unsafe_new_contract_state();
 
-      // get l1 token address (native or wrapper)
+      // get l2 token address (native or wrapper)
       let (l2_token_address, is_l2_native) = self._parse_native_token_address(:native_token_address);
 
       // avoid double wrap
-      assert(is_l2_native | request_wrapper == false, 'Double wrap not allowed');
+      assert(is_l2_native | (request_wrapper == false), 'Double wrap not allowed');
 
       // burn or tranfer tokens
       self._lock_tokens(token_address: l2_token_address, :token_id, :amount, is_native: is_l2_native);
@@ -626,13 +688,13 @@ mod KassBridge {
       is_native: bool
     ) {
       let caller = starknet::get_caller_address();
-      let contractAddress = starknet::get_contract_address();
+      let contract_address = starknet::get_contract_address();
 
       if (token_address.isERC721()) {
         if (is_native) {
           let ERC721 = DualCaseERC721 { contract_address: token_address };
 
-          ERC721.transfer_from(from: caller, to: contractAddress, :token_id);
+          ERC721.transfer_from(from: caller, to: contract_address, :token_id);
         } else {
           let KassERC721 = KassERC721ABIDispatcher { contract_address: token_address };
 
@@ -651,7 +713,7 @@ mod KassBridge {
 
           ERC1155.safe_transfer_from(
             from: caller,
-            to: contractAddress,
+            to: contract_address,
             id: token_id,
             :amount,
             data: array![].span()
@@ -676,13 +738,13 @@ mod KassBridge {
       amount: u256,
       is_native: bool
     ) {
-      let contractAddress = starknet::get_contract_address();
+      let contract_address = starknet::get_contract_address();
 
       if (token_address.isERC721()) {
         if (is_native) {
           let ERC721 = DualCaseERC721 { contract_address: token_address };
 
-          ERC721.transfer_from(from: contractAddress, to: recipient, :token_id);
+          ERC721.transfer_from(from: contract_address, to: recipient, :token_id);
         } else {
           let KassERC721 = KassERC721ABIDispatcher { contract_address: token_address };
 
@@ -699,7 +761,7 @@ mod KassBridge {
           let ERC1155 = DualCaseERC1155 { contract_address: token_address };
 
           ERC1155.safe_transfer_from(
-            from: contractAddress,
+            from: contract_address,
             to: recipient,
             id: token_id,
             :amount,
