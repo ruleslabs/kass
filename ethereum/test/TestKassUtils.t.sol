@@ -20,6 +20,16 @@ contract TestKassUtils is Test {
         assertEq(string(KassUtils.felt252WordsToStr(arr)), "Hello world !");
     }
 
+    function testConcatMulitpleFelt252() public {
+        uint256[] memory arr = new uint256[](4);
+        arr[0] = KassUtils.strToFelt252("Hello");
+        arr[1] = KassUtils.strToFelt252(" w");
+        arr[2] = KassUtils.strToFelt252("orld");
+        arr[3] = KassUtils.strToFelt252(" !");
+
+        assertEq(string(KassUtils.felt252WordsToStr(arr)), "Hello world !");
+    }
+
     function testConcatSingleString() public {
         string[] memory arr;
 
