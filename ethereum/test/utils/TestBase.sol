@@ -29,12 +29,12 @@ abstract contract KassTestBase is Test, KassEvents, KassMessaging, ERC721Holder,
     // Storage
     //
 
-    MockERC721 _erc721;
-    MockERC1155 _erc1155;
+    MockERC721 internal _erc721;
+    MockERC1155 internal _erc1155;
 
-    address _proxyImplementationAddress;
-    address _erc721ImplementationAddress;
-    address _erc1155ImplementationAddress;
+    address internal _proxyImplementationAddress;
+    address internal _erc721ImplementationAddress;
+    address internal _erc1155ImplementationAddress;
 
     Starknet internal _starknet;
     KassBridge internal _kassBridge;
@@ -259,7 +259,7 @@ abstract contract KassTestBase is Test, KassEvents, KassMessaging, ERC721Holder,
      * cannot test nonce logic since it's handled by the starknet messaging contract.
      */
     function _expectDepositCancelRequest(
-        bytes32 tokenAddress,
+        bytes32 nativeTokenAddress,
         address sender,
         uint256 recipient,
         uint256 tokenId,
@@ -268,7 +268,7 @@ abstract contract KassTestBase is Test, KassEvents, KassMessaging, ERC721Holder,
         uint256 nonce
     ) internal {
         (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
-            tokenAddress,
+            nativeTokenAddress,
             recipient,
             tokenId,
             amount,
@@ -287,14 +287,14 @@ abstract contract KassTestBase is Test, KassEvents, KassMessaging, ERC721Holder,
 
         // expect event
         vm.expectEmit(true, true, true, true, address(_kassBridge));
-        emit LogDepositCancelRequest(tokenAddress, sender, recipient, tokenId, amount, nonce);
+        emit LogDepositCancelRequest(nativeTokenAddress, sender, recipient, tokenId, amount, nonce);
     }
 
     /**
      * cannot test nonce logic since it's handled by the starknet messaging contract.
      */
     function _expectDepositCancel(
-        bytes32 tokenAddress,
+        bytes32 nativeTokenAddress,
         address sender,
         uint256 recipient,
         uint256 tokenId,
@@ -303,7 +303,7 @@ abstract contract KassTestBase is Test, KassEvents, KassMessaging, ERC721Holder,
         uint256 nonce
     ) internal {
         (uint256[] memory payload, uint256 handlerSelector) = _computeTokenDepositOnL2Message(
-            tokenAddress,
+            nativeTokenAddress,
             recipient,
             tokenId,
             amount,
@@ -322,7 +322,7 @@ abstract contract KassTestBase is Test, KassEvents, KassMessaging, ERC721Holder,
 
         // expect event
         vm.expectEmit(true, true, true, true, address(_kassBridge));
-        emit LogDepositCancel(tokenAddress, sender, recipient, tokenId, amount, nonce);
+        emit LogDepositCancel(nativeTokenAddress, sender, recipient, tokenId, amount, nonce);
     }
 
     //

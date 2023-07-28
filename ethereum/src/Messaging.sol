@@ -161,6 +161,8 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
             // already have/is a wrapper
 
             payload = new uint256[](6);
+
+            handlerSelector = WITHDRAW_HANDLER_SELECTOR;
         }
 
         // store L2 token address
@@ -173,8 +175,6 @@ abstract contract KassMessaging is KassStorage, StarknetConstants, KassStructs {
 
         payload[4] = uint128(amount & (UINT256_PART_SIZE - 1)); // low
         payload[5] = uint128(amount >> UINT256_PART_SIZE_BITS); // high
-
-        handlerSelector = WITHDRAW_HANDLER_SELECTOR;
     }
 
     function _sendTokenDepositMessage(

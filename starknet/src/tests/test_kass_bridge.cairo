@@ -22,7 +22,13 @@ use kass::bridge::bridge::KassBridge::{
   UpgradeTrait as KassBridgeUpgradeTrait,
 };
 use kass::bridge::token_standard::TokenStandard;
-use kass::bridge::messaging::KassMessaging::{ DEPOSIT_AND_REQUEST_721_WRAPPER_TO_L1, DEPOSIT_TO_L1 };
+
+use kass::bridge::messaging::KassMessaging;
+use kass::bridge::messaging::KassMessaging::{
+  InternalTrait as KassMessagingInternalTrait,
+  DEPOSIT_AND_REQUEST_721_WRAPPER_TO_L1,
+  DEPOSIT_TO_L1,
+};
 
 use kass::factory::common::KassToken;
 use kass::factory::erc721::KassERC721;
@@ -143,60 +149,6 @@ fn KASS_ERC721_CLASS_HASH() -> starknet::ClassHash {
 
 fn KASS_ERC1155_CLASS_HASH() -> starknet::ClassHash {
   KassERC1155::TEST_CLASS_HASH.try_into().unwrap()
-}
-
-// Payloads
-
-fn L2_NATIVE_ERC721_DEPOSIT_PAYLOAD() -> Span<felt252> {
-  let amount: u256 = 0x1;
-
-  array![
-    DEPOSIT_TO_L1.into(),
-    L2_NATIVE_TOKEN_ADDRESS().into(),
-    L1_OTHER().into(),
-    TOKEN_ID.low.into(),
-    TOKEN_ID.high.into(),
-    amount.low.into(),
-    amount.high.into(),
-  ].span()
-}
-
-fn L2_NATIVE_ERC721_DEPOSIT_WITH_WRAPPER_REQUEST_PAYLOAD() -> Span<felt252> {
-  let amount: u256 = 0x1;
-
-  array![
-    DEPOSIT_AND_REQUEST_721_WRAPPER_TO_L1.into(),
-    L2_NATIVE_TOKEN_ADDRESS().into(),
-    L1_OTHER().into(),
-    TOKEN_ID.low.into(),
-    TOKEN_ID.high.into(),
-    amount.low.into(),
-    amount.high.into(),
-    L1_TOKEN_NAME,
-    L1_TOKEN_SYMBOL,
-  ].span()
-}
-
-// Logs
-
-fn L2_NATIVE_ERC721_DEPOSIT_LOG() -> KassBridge::Event {
-  let amount: u256 = 0x1;
-
-  KassBridge::Event::Deposit(
-    KassBridge::Deposit {
-      native_token_address: L2_NATIVE_TOKEN_ADDRESS().into(),
-      sender: OWNER(),
-      recipient: L1_OTHER(),
-      token_id: TOKEN_ID,
-      amount,
-    }
-  )
-}
-
-fn L2_NATIVE_WRAPPER_REQUEST_LOG() -> KassBridge::Event {
-  KassBridge::Event::WrapperRequest(
-    KassBridge::WrapperRequest { l2_token_address: L2_NATIVE_TOKEN_ADDRESS() }
-  )
 }
 
 //
@@ -487,12 +439,12 @@ fn test_wrapped_erc721_request() {
   let amount: u256 = 0x1;
   let native_token_address: felt252 = erc721.contract_address.into();
   let sender = OWNER();
-  let l1_recipient = L1_OTHER();
+  let recipient = L1_OTHER();
   let request_wrapper = true;
 
-  kass.deposit_721(:native_token_address, recipient: l1_recipient, :token_id, :request_wrapper);
+  kass.deposit_721(:native_token_address, :recipient, :token_id, :request_wrapper);
 
-  assert_l2_native_erc721_deposit_happened(:request_wrapper);
+  assert_deposit_happened(:native_token_address, :recipient, :token_id, :amount, :request_wrapper);
 }
 
 // ERC1155 Wrapper request
@@ -519,17 +471,28 @@ fn test_wrapped_erc721_request() {
 // Helpers
 //
 
-fn assert_l2_native_erc721_deposit_happened(request_wrapper: bool) {
+fn assert_deposit_happened(
+  native_token_address: felt252,
+  recipient: starknet::EthAddress,
+  token_id: u256,
+  amount: u256,
+  request_wrapper: bool
+) {
   // assert message has been sent to L1
-  let mut expected_payload = match request_wrapper {
-    bool::False => L2_NATIVE_ERC721_DEPOSIT_PAYLOAD(),
-    bool::True => L2_NATIVE_ERC721_DEPOSIT_WITH_WRAPPER_REQUEST_PAYLOAD(),
-  };
+  let kass_messaging_self = KassMessaging::unsafe_new_contract_state();
+
+  let expected_payload = kass_messaging_self._compute_token_deposit_on_l1_message(
+    :native_token_address,
+    :recipient,
+    :token_id,
+    :amount,
+    :request_wrapper
+  );
 
   let (to_address, payload) = testing::pop_l2_to_l1_message(BRIDGE()).unwrap();
 
   assert(to_address == L1_KASS_ADDRESS().into(), 'msg wrong to_address');
-  assert(payload == L2_NATIVE_ERC721_DEPOSIT_WITH_WRAPPER_REQUEST_PAYLOAD(), 'msg wrong payload');
+  assert(payload == expected_payload.span(), 'msg wrong payload');
 
   // assert logs have been emitted
 
@@ -537,7 +500,9 @@ fn assert_l2_native_erc721_deposit_happened(request_wrapper: bool) {
   testing::pop_log_raw(BRIDGE());
 
   if (request_wrapper) {
-    let expected_log = L2_NATIVE_WRAPPER_REQUEST_LOG();
+    let expected_log = KassBridge::Event::WrapperRequest(
+      KassBridge::WrapperRequest { l2_token_address: native_token_address.try_into().unwrap() }
+    );
 
     assert_eq(
       @testing::pop_log(BRIDGE()).unwrap(),
@@ -546,7 +511,15 @@ fn assert_l2_native_erc721_deposit_happened(request_wrapper: bool) {
     );
   }
 
-  let expected_log = L2_NATIVE_ERC721_DEPOSIT_LOG();
+  let expected_log = KassBridge::Event::Deposit(
+    KassBridge::Deposit {
+      native_token_address,
+      sender: OWNER(),
+      recipient,
+      token_id,
+      amount,
+    }
+  );
 
   assert_eq(
     @testing::pop_log(BRIDGE()).unwrap(),

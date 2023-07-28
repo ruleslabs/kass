@@ -98,11 +98,27 @@ library Constants {
     }
 
     function HUGE_TOKEN_ID() public pure returns (uint256) {
-        return uint256(keccak256("0x1"));
+        return 0x123456789012345678901234567890ffff098765432109876543210987654321;
+    }
+
+    function HUGE_TOKEN_ID_LOW() public pure returns (uint256) {
+        return 0xff098765432109876543210987654321;
+    }
+
+    function HUGE_TOKEN_ID_HIGH() public pure returns (uint256) {
+        return 0x123456789012345678901234567890ff;
     }
 
     function HUGE_TOKEN_AMOUNT() public pure returns (uint256) {
-        return uint256(keccak256("0x42"));
+        return 0x098765432109876543210987654321ffff123456789012345678901234567890;
+    }
+
+    function HUGE_TOKEN_AMOUNT_LOW() public pure returns (uint256) {
+        return 0xff123456789012345678901234567890;
+    }
+
+    function HUGE_TOKEN_AMOUNT_HIGH() public pure returns (uint256) {
+        return 0x098765432109876543210987654321ff;
     }
 
     function HUGE_TOKEN_AMOUNT_TO_DEPOSIT() public pure returns (uint256) {
