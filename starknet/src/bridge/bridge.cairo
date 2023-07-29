@@ -68,13 +68,22 @@ trait KassBridgeABI<TContractState> {
 
 #[starknet::contract]
 mod KassBridge {
+  use debug::PrintTrait;
   use array::{ ArrayTrait, SpanTrait };
   use traits::{ Into, TryInto };
   use option::OptionTrait;
   use zeroable::Zeroable;
   use starknet::{ EthAddressZeroable, Felt252TryIntoEthAddress, EthAddressIntoFelt252, ContractAddressIntoFelt252 };
 
-  use rules_erc1155::erc1155::interface::{ IERC1155Receiver, IERC1155ReceiverCamel, ON_ERC1155_RECEIVED_SELECTOR };
+  use rules_erc1155::erc1155::interface::{
+    IERC1155Receiver,
+    IERC1155ReceiverCamel,
+    ON_ERC1155_RECEIVED_SELECTOR,
+    IERC1155_RECEIVER_ID,
+  };
+
+  use rules_utils::introspection::interface::{ ISRC5, ISRC5Camel };
+  use rules_utils::introspection::src5::SRC5;
 
   use rules_utils::utils::contract_address::ContractAddressTraitExt;
 
@@ -532,6 +541,34 @@ mod KassBridge {
     ) -> felt252 {
       // does not support batch transfers
       0
+    }
+  }
+
+  //
+  // ISRC5 impl
+  //
+
+  #[external(v0)]
+  impl ISRC5Impl of ISRC5<ContractState> {
+    fn supports_interface(self: @ContractState, interface_id: felt252) -> bool {
+      if (interface_id == IERC1155_RECEIVER_ID) {
+        true
+      } else {
+        let src5 = SRC5::unsafe_new_contract_state();
+
+        src5.supports_interface(:interface_id)
+      }
+    }
+  }
+
+  //
+  // ISRC5 Camel impl
+  //
+
+  #[external(v0)]
+  impl ISRC5CamelImpl of ISRC5Camel<ContractState> {
+    fn supportsInterface(self: @ContractState, interfaceId: felt252) -> bool {
+      self.supports_interface(interface_id: interfaceId)
     }
   }
 

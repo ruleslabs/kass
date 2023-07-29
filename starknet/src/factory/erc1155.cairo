@@ -375,11 +375,16 @@ mod KassERC1155 {
   impl InternalImpl of InternalTrait {
     fn initializer(ref self: ContractState, uri_: Span<felt252>) {
       let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+      let mut ownable_self = Ownable::unsafe_new_contract_state();
 
+      // ERC1155 init
       erc1155_self.initializer(:uri_);
 
+      // bridge and owner init
       let caller = starknet::get_caller_address();
+
       self._bridge.write(caller);
+      ownable_self._transfer_ownership(new_owner: caller);
     }
 
     fn _upgrade(ref self: ContractState, new_implementation: starknet::ClassHash) {

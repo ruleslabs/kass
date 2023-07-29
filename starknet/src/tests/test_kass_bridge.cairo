@@ -1,5 +1,6 @@
 use traits::{ TryInto, Into };
 use result::ResultTrait;
+use zeroable::Zeroable;
 use array::{ ArrayTrait, SpanTrait };
 use debug::PrintTrait;
 use option::OptionTrait;
@@ -37,7 +38,6 @@ use kass::factory::erc1155::KassERC1155;
 use super::mocks::account::Account;
 use super::mocks::erc721_mock::ERC721Mock;
 use super::mocks::erc1155_mock::ERC1155Mock;
-use super::mocks::bridge_receiver::BridgeReceiverMock;
 
 use super::utils;
 
@@ -60,15 +60,20 @@ fn setup() -> KassBridge::ContractState {
   let mut kass = KassBridge::unsafe_new_contract_state();
 
   testing::set_caller_address(constants::OWNER());
-  testing::set_contract_address(constants::BRIDGE());
+
+  // avoid pushing logs
+  testing::set_contract_address(constants::OWNER());
 
   kass.initializer(
     owner_: constants::OWNER(),
     l1_kass_address_: constants::L1_KASS_ADDRESS(),
     token_implementation_: constants::KASS_TOKEN_CLASS_HASH(),
     erc721_implementation_: constants::KASS_ERC721_CLASS_HASH(),
-    erc1155_implementation_: constants::KASS_ERC1155_CLASS_HASH(),
+    erc1155_implementation_: constants::KASS_ERC1155_CLASS_HASH()
   );
+
+  // set contract address back to bridge
+  testing::set_contract_address(constants::BRIDGE());
 
   kass
 }
@@ -80,7 +85,18 @@ fn setup_owner() {
 }
 
 fn setup_bridge_receiver() {
-  let bridge_receiver_address = utils::deploy(BridgeReceiverMock::TEST_CLASS_HASH, array![]);
+  let calldata = array![
+    constants::OWNER().into(),
+    constants::L1_KASS_ADDRESS().into(),
+    constants::KASS_TOKEN_CLASS_HASH().into(),
+    constants::KASS_ERC721_CLASS_HASH().into(),
+    constants::KASS_ERC1155_CLASS_HASH().into(),
+  ];
+
+  let bridge_receiver_address = utils::deploy(KassBridge::TEST_CLASS_HASH, calldata);
+
+  // pop ownership transfer log
+  testing::pop_log_raw(constants::BRIDGE());
 
   assert(bridge_receiver_address == constants::BRIDGE(), 'Invalid bridge receiver address');
 }
@@ -183,6 +199,7 @@ fn setup_erc721() -> IERC721Dispatcher {
   erc721.approve(to: constants::BRIDGE(), token_id: constants::TOKEN_ID);
   erc721.approve(to: constants::BRIDGE(), token_id: constants::HUGE_TOKEN_ID);
 
+  // set contract address back to bridge
   testing::set_contract_address(constants::BRIDGE());
 
   erc721
@@ -192,6 +209,9 @@ fn setup_erc1155() -> IERC1155Dispatcher {
   let mut calldata = array![];
   calldata.append_serde(constants::L1_TOKEN_URI());
 
+  // avoid pushing logs
+  testing::set_contract_address(constants::OWNER());
+
   let token_address = utils::deploy(ERC1155Mock::TEST_CLASS_HASH, calldata);
 
   assert(token_address == constants::L2_NATIVE_TOKEN_ADDRESS(), 'Invalid token address');
@@ -199,7 +219,6 @@ fn setup_erc1155() -> IERC1155Dispatcher {
   let erc1155_mock = IERC1155MockDispatcher{ contract_address: token_address };
 
   // mint and approve tokens
-  testing::set_contract_address(constants::OWNER());
 
   erc1155_mock.mint(token_id: constants::TOKEN_ID, amount: constants::AMOUNT);
   erc1155_mock.mint(token_id: constants::HUGE_TOKEN_ID, amount: constants::HUGE_AMOUNT);
@@ -208,6 +227,7 @@ fn setup_erc1155() -> IERC1155Dispatcher {
 
   erc1155.set_approval_for_all(operator: constants::BRIDGE(), approved: true);
 
+  // set contract address back to bridge
   testing::set_contract_address(constants::BRIDGE());
 
   erc1155
@@ -333,11 +353,11 @@ fn test_wrapped_erc721_request() {
   let mut kass = setup();
   let erc721 = setup_erc721();
 
-  let token_id = constants::TOKEN_ID;
-  let amount: u256 = 0x1;
   let native_token_address: felt252 = erc721.contract_address.into();
   let sender = constants::OWNER();
   let recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let amount: u256 = 0x1;
   let request_wrapper = true;
 
   kass.deposit_721(:native_token_address, :recipient, :token_id, :request_wrapper);
@@ -347,23 +367,23 @@ fn test_wrapped_erc721_request() {
 
 // ERC1155 Wrapper request
 
-// #[test]
-// #[available_gas(20000000)]
-// fn test_wrapped_erc1155_request() {
-//   let mut kass = setup();
-//   let erc1155 = setup_erc1155();
+#[test]
+#[available_gas(20000000)]
+fn test_wrapped_erc1155_request() {
+  let mut kass = setup();
+  let erc1155 = setup_erc1155();
 
-//   let token_id = TOKEN_ID;
-//   let amount: u256 = AMOUNT;
-//   let native_token_address: felt252 = erc1155.contract_address.into();
-//   let sender = constants::OWNER();
-//   let l1_recipient = constants::L1_OTHER();
-//   let request_wrapper = true;
+  let native_token_address: felt252 = erc1155.contract_address.into();
+  let sender = constants::OWNER();
+  let recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let amount = constants::AMOUNT;
+  let request_wrapper = true;
 
-//   kass.deposit_1155(:native_token_address, recipient: l1_recipient, :token_id, :amount, :request_wrapper);
+  kass.deposit_1155(:native_token_address, :recipient, :token_id, :amount, :request_wrapper);
 
-//   // TODO: check logs
-// }
+  assert_deposit_happened(:native_token_address, :recipient, :token_id, :amount, :request_wrapper);
+}
 
 //
 // Helpers
@@ -393,10 +413,6 @@ fn assert_deposit_happened(
   assert(payload == expected_payload.span(), 'msg wrong payload');
 
   // assert logs have been emitted
-
-  // pop ERC721 transfer log
-  testing::pop_log_raw(constants::BRIDGE());
-
   if (request_wrapper) {
     let expected_log = KassBridge::Event::WrapperRequest(
       KassBridge::WrapperRequest { l2_token_address: native_token_address.try_into().unwrap() }
@@ -425,3 +441,68 @@ fn assert_deposit_happened(
     'invalid deposit log'
   );
 }
+
+// Deposit ERC721
+
+fn before_erc721_deposit(erc721: IERC721Dispatcher, depositor: starknet::ContractAddress, token_id: u256) {
+  // assert deposit own token
+  assert(erc721.owner_of(:token_id) == depositor, 'Invalid owner before');
+}
+
+fn after_native_erc721_deposit(erc721: IERC721Dispatcher, token_id: u256) {
+  // assert deposit own token
+  assert(erc721.owner_of(:token_id) == constants::BRIDGE(), 'Invalid owner after');
+}
+
+fn after_wrapped_erc721_deposit(erc721: KassERC721ABIDispatcher, token_id: u256) {
+  // assert token has been burned
+  assert(erc721.owner_of(:token_id) == constants::BRIDGE(), 'Invalid owner after');
+}
+
+    // // Deposit ERC721
+
+    // function _beforeERC721Deposit(ERC721 token, address depositor, uint256 tokenId) private {
+    //     // assert depositor owns token
+    //     assertEq(token.ownerOf(tokenId), depositor);
+    // }
+
+    // function _afterERC721NativeDeposit(ERC721 token, uint256 tokenId) private {
+    //     // assert bridge owns token
+    //     assertEq(token.ownerOf(tokenId), address(_kassBridge));
+    // }
+
+    // function _afterWrappedERC721Deposit(ERC721 token, uint256 tokenId) private {
+    //     // assert token has been burned
+    //     vm.expectRevert("ERC721: invalid token ID");
+    //     token.ownerOf(tokenId);
+    // }
+
+    // // Deposit ERC1155
+
+    // function _beforeERC1155Deposit(ERC1155 token, address depositor, uint256 tokenId, uint256 amount) private {
+    //     // assert depositor owns tokens
+    //     assertEq(token.balanceOf(depositor, tokenId), amount);
+    // }
+
+    // function _afterERC1155NativeDeposit(
+    //     ERC1155 token,
+    //     address depositor,
+    //     uint256 tokenId,
+    //     uint256 amount,
+    //     uint256 depositedAmount
+    // ) private {
+    //     // assert depositor and bridge own tokens
+    //     assertEq(token.balanceOf(depositor, tokenId), amount - depositedAmount);
+    //     assertEq(token.balanceOf(address(_kassBridge), tokenId), depositedAmount);
+    // }
+
+    // function _afterWrappedERC1155Deposit(
+    //     ERC1155 token,
+    //     address depositor,
+    //     uint256 tokenId,
+    //     uint256 amount,
+    //     uint256 depositedAmount
+    // ) private {
+    //     // assert depositor and bridge own tokens
+    //     assertEq(token.balanceOf(depositor, tokenId), amount - depositedAmount);
+    // }
