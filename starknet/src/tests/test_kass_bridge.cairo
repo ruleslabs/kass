@@ -427,6 +427,64 @@ fn test_erc1155_claim_ownership() {
   assert(kass_erc1155.owner() == owner, 'Invalid owner after');
 }
 
+// Request ownership
+
+#[test]
+#[available_gas(20000000)]
+fn test_request_erc721_ownership() {
+  let mut kass = setup();
+  let erc721 = setup_erc721();
+
+  let l2_token_address = erc721.contract_address;
+  let l1_owner = constants::L1_OTHER();
+
+  kass.request_ownership(:l2_token_address, :l1_owner);
+
+  assert_ownership_request_happened(:l2_token_address, :l1_owner);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is not the owner',))]
+fn test_request_erc721_ownership_unauthorized() {
+  let mut kass = setup();
+  let erc721 = setup_erc721();
+
+  let l2_token_address = erc721.contract_address;
+  let l1_owner = constants::L1_OTHER();
+
+  testing::set_caller_address(constants::OTHER());
+  kass.request_ownership(:l2_token_address, :l1_owner);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_request_erc1155_ownership() {
+  let mut kass = setup();
+  let erc1155 = setup_erc1155();
+
+  let l2_token_address = erc1155.contract_address;
+  let l1_owner = constants::L1_OTHER();
+
+  kass.request_ownership(:l2_token_address, :l1_owner);
+
+  assert_ownership_request_happened(:l2_token_address, :l1_owner);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is not the owner',))]
+fn test_request_erc1155_ownership_unauthorized() {
+  let mut kass = setup();
+  let erc1155 = setup_erc1155();
+
+  let l2_token_address = erc1155.contract_address;
+  let l1_owner = constants::L1_OTHER();
+
+  testing::set_caller_address(constants::OTHER());
+  kass.request_ownership(:l2_token_address, :l1_owner);
+}
+
 //
 // Helpers
 //
@@ -444,6 +502,29 @@ fn assert_ownership_claim_happened(
       l2_token_address,
       l2_owner: owner,
     }
+  );
+
+  assert_eq(
+    @testing::pop_log(constants::BRIDGE()).unwrap(),
+    @expected_log,
+    'invalid deposit log'
+  );
+}
+
+fn assert_ownership_request_happened(l2_token_address: starknet::ContractAddress, l1_owner: starknet::EthAddress) {
+  // assert message has been sent to L1
+  let kass_messaging_self = KassMessaging::unsafe_new_contract_state();
+
+  let expected_payload = kass_messaging_self._compute_l1_ownership_request(token_address: l2_token_address, :l1_owner);
+
+  let (to_address, payload) = testing::pop_l2_to_l1_message(constants::BRIDGE()).unwrap();
+
+  assert(to_address == constants::L1_KASS_ADDRESS().into(), 'msg wrong to_address');
+  assert(payload == expected_payload.span(), 'msg wrong payload');
+
+  // assert logs have been emitted
+  let expected_log = KassBridge::Event::OwnershipRequest(
+    KassBridge::OwnershipRequest { l2_token_address, l1_owner }
   );
 
   assert_eq(
