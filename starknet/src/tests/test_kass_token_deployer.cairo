@@ -12,96 +12,35 @@ use rules_utils::utils::serde::SerdeTraitExt;
 use kass::bridge::interface::IKassTokenDeployer;
 
 use kass::bridge::token_deployer::KassTokenDeployer;
-use kass::bridge::token_deployer::KassTokenDeployer::{
-  ContractState as KassTokenDeployerContractState,
-  InternalTrait as KassTokenDeployerInternalTrait,
-};
+use kass::bridge::token_deployer::KassTokenDeployer::InternalTrait as KassTokenDeployerInternalTrait;
 
 use kass::factory::common::KassToken;
 use kass::factory::erc721::KassERC721;
 use kass::factory::erc1155::KassERC1155;
 
+use super::constants;
+
 // Dispatchers
 use kass::factory::erc721::{ KassERC721ABIDispatcher, KassERC721ABIDispatcherTrait };
 use kass::factory::erc1155::{ KassERC1155ABIDispatcher, KassERC1155ABIDispatcherTrait };
-
-// CLASS HASHES
-
-fn KASS_TOKEN_CLASS_HASH() -> starknet::ClassHash {
-  KassToken::TEST_CLASS_HASH.try_into().unwrap()
-}
-
-fn KASS_ERC721_CLASS_HASH() -> starknet::ClassHash {
-  KassERC721::TEST_CLASS_HASH.try_into().unwrap()
-}
-
-fn KASS_ERC1155_CLASS_HASH() -> starknet::ClassHash {
-  KassERC1155::TEST_CLASS_HASH.try_into().unwrap()
-}
-
-// L1
-
-fn L1_TOKEN_ADDRESS() -> starknet::EthAddress {
-  'l1 address'.try_into().unwrap()
-}
-
-// L2
-
-fn L2_TOKEN_ADDRESS() -> starknet::ContractAddress {
-  starknet::contract_address_const::<0x7a548b6a01b48bc7a373b85a7b22614762c2fae0bfde3488925a34101a536ed>()
-}
-
-// ERC721 CALLDATA
-
-fn ERC721_NAME() -> felt252 {
-  'Kass ERC721'
-}
-
-fn ERC721_SYMBOL() -> felt252 {
-  'K721'
-}
-
-fn ERC721_CALLDATA() -> Array<felt252> {
-  array![ERC721_NAME(), ERC721_SYMBOL()]
-}
-
-// ERC1155 CALLDATA
-
-fn ERC1155_URI() -> Array<felt252> {
-  array![111, 222, 333]
-}
-
-fn ERC1155_CALLDATA() -> Array<felt252> {
-  let mut calldata = array![];
-
-  calldata.append_serde(ERC1155_URI().span());
-
-  calldata
-}
-
-// MISC
-
-fn KASS_ADDRESS() -> starknet::ContractAddress {
-  starknet::contract_address_const::<'kass address'>()
-}
 
 //
 // Setup
 //
 
-fn setup() -> KassTokenDeployerContractState {
+fn setup() -> KassTokenDeployer::ContractState {
   let kass_token_deployer = KassTokenDeployer::unsafe_new_contract_state();
 
   kass_token_deployer
 }
 
-fn setup_with_class_hashes() -> KassTokenDeployerContractState {
+fn setup_with_class_hashes() -> KassTokenDeployer::ContractState {
   let mut kass_token_deployer = setup();
 
   kass_token_deployer.set_deployer_class_hashes(
-    token_implementation_: KASS_TOKEN_CLASS_HASH(),
-    erc721_implementation_: KASS_ERC721_CLASS_HASH(),
-    erc1155_implementation_: KASS_ERC1155_CLASS_HASH(),
+    token_implementation_: constants::KASS_TOKEN_CLASS_HASH(),
+    erc721_implementation_: constants::KASS_ERC721_CLASS_HASH(),
+    erc1155_implementation_: constants::KASS_ERC1155_CLASS_HASH(),
   );
 
   kass_token_deployer
@@ -119,14 +58,14 @@ fn test_set_deployer_class_hashes() {
   let mut kass_token_deployer = setup();
 
   kass_token_deployer.set_deployer_class_hashes(
-    token_implementation_: KASS_TOKEN_CLASS_HASH(),
-    erc721_implementation_: KASS_ERC721_CLASS_HASH(),
-    erc1155_implementation_: KASS_ERC1155_CLASS_HASH(),
+    token_implementation_: constants::KASS_TOKEN_CLASS_HASH(),
+    erc721_implementation_: constants::KASS_ERC721_CLASS_HASH(),
+    erc1155_implementation_: constants::KASS_ERC1155_CLASS_HASH(),
   );
 
-  assert(kass_token_deployer.token_implementation() == KASS_TOKEN_CLASS_HASH(), 'Invalid token implementation');
-  assert(kass_token_deployer.erc721_implementation() == KASS_ERC721_CLASS_HASH(), 'Invalid erc721 implementation');
-  assert(kass_token_deployer.erc1155_implementation() == KASS_ERC1155_CLASS_HASH(), 'Invalid erc115 implementation');
+  assert(kass_token_deployer.token_implementation() == constants::KASS_TOKEN_CLASS_HASH(), 'Invalid token implementation');
+  assert(kass_token_deployer.erc721_implementation() == constants::KASS_ERC721_CLASS_HASH(), 'Invalid erc721 implementation');
+  assert(kass_token_deployer.erc1155_implementation() == constants::KASS_ERC1155_CLASS_HASH(), 'Invalid erc115 implementation');
 }
 
 #[test]
@@ -137,8 +76,8 @@ fn test_set_deployer_class_hashes_invalid_token() {
 
   kass_token_deployer.set_deployer_class_hashes(
     token_implementation_: Zeroable::<starknet::ClassHash>::zero(),
-    erc721_implementation_: KASS_ERC1155_CLASS_HASH(),
-    erc1155_implementation_: KASS_ERC1155_CLASS_HASH(),
+    erc721_implementation_: constants::KASS_ERC1155_CLASS_HASH(),
+    erc1155_implementation_: constants::KASS_ERC1155_CLASS_HASH(),
   );
 }
 
@@ -149,9 +88,9 @@ fn test_set_deployer_class_hashes_invalid_erc721() {
   let mut kass_token_deployer = setup();
 
   kass_token_deployer.set_deployer_class_hashes(
-    token_implementation_: KASS_TOKEN_CLASS_HASH(),
-    erc721_implementation_: KASS_ERC1155_CLASS_HASH(),
-    erc1155_implementation_: KASS_ERC1155_CLASS_HASH(),
+    token_implementation_: constants::KASS_TOKEN_CLASS_HASH(),
+    erc721_implementation_: constants::KASS_ERC1155_CLASS_HASH(),
+    erc1155_implementation_: constants::KASS_ERC1155_CLASS_HASH(),
   );
 }
 
@@ -162,9 +101,9 @@ fn test_set_deployer_class_hashes_invalid_erc1155() {
   let mut kass_token_deployer = setup();
 
   kass_token_deployer.set_deployer_class_hashes(
-    token_implementation_: KASS_TOKEN_CLASS_HASH(),
-    erc721_implementation_: KASS_ERC721_CLASS_HASH(),
-    erc1155_implementation_: KASS_ERC721_CLASS_HASH(),
+    token_implementation_: constants::KASS_TOKEN_CLASS_HASH(),
+    erc721_implementation_: constants::KASS_ERC721_CLASS_HASH(),
+    erc1155_implementation_: constants::KASS_ERC721_CLASS_HASH(),
   );
 }
 
@@ -175,11 +114,11 @@ fn test_set_deployer_class_hashes_invalid_erc1155() {
 fn test_deployer_kass_erc721() {
   let mut kass_token_deployer = setup_with_class_hashes();
 
-  let name = ERC721_NAME();
-  let symbol = ERC721_SYMBOL();
+  let name = constants::L1_TOKEN_NAME;
+  let symbol = constants::L1_TOKEN_SYMBOL;
 
-  let l1_token_address = L1_TOKEN_ADDRESS();
-  let calldata = ERC721_CALLDATA().span();
+  let l1_token_address = constants::L1_TOKEN_ADDRESS();
+  let calldata = constants::L1_ERC721_TOKEN_CALLDATA();
 
   let kass_erc721_contract_address = kass_token_deployer._deploy_kass_erc721(:l1_token_address, :calldata);
   let kass_erc721_contract = KassERC721ABIDispatcher { contract_address: kass_erc721_contract_address };
@@ -200,10 +139,10 @@ fn test_deployer_kass_erc721() {
 fn test_deployer_kass_erc1155() {
   let mut kass_token_deployer = setup_with_class_hashes();
 
-  let uri = ERC1155_URI();
+  let uri = constants::L1_TOKEN_URI();
 
-  let l1_token_address = L1_TOKEN_ADDRESS();
-  let calldata = ERC1155_CALLDATA().span();
+  let l1_token_address = constants::L1_TOKEN_ADDRESS();
+  let calldata = constants::L1_ERC1155_TOKEN_CALLDATA();
 
   let kass_erc1155_contract_address = kass_token_deployer._deploy_kass_erc1155(:l1_token_address, :calldata);
   let kass_erc1155_contract = KassERC1155ABIDispatcher { contract_address: kass_erc1155_contract_address };
@@ -213,7 +152,7 @@ fn test_deployer_kass_erc1155() {
     'Invalid L2 token address'
   );
 
-  assert(kass_erc1155_contract.uri(token_id: 0) == uri.span(), 'Invalid ERC1155 uri');
+  assert(kass_erc1155_contract.uri(token_id: 0) == uri, 'Invalid ERC1155 uri');
 }
 
 // COMPUTE KASS TOKEN ADDRESS
@@ -223,10 +162,10 @@ fn test_deployer_kass_erc1155() {
 fn test_compute_l2_kass_token_address() {
   let mut kass_token_deployer = setup_with_class_hashes();
 
-  let l1_token_address = L1_TOKEN_ADDRESS();
-  let l2_token_address = L2_TOKEN_ADDRESS();
+  let l1_token_address = constants::L1_TOKEN_ADDRESS();
+  let l2_token_address = constants::L2_TOKEN_ADDRESS();
 
-  testing::set_caller_address(address: KASS_ADDRESS());
+  testing::set_caller_address(address: constants::KASS_ADDRESS());
   let computed_l2_token_address = kass_token_deployer.compute_l2_kass_token_address(:l1_token_address);
 
   // then

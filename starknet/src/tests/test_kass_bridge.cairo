@@ -41,115 +41,13 @@ use super::mocks::bridge_receiver::BridgeReceiverMock;
 
 use super::utils;
 
+use super::constants;
+
 // Dispatchers
 use kass::factory::erc721::{ KassERC721ABIDispatcher, KassERC721ABIDispatcherTrait };
 use kass::factory::erc1155::{ KassERC1155ABIDispatcher, KassERC1155ABIDispatcherTrait };
 use super::mocks::erc721_mock::{ IERC721MockDispatcher, IERC721MockDispatcherTrait };
 use super::mocks::erc1155_mock::{ IERC1155MockDispatcher, IERC1155MockDispatcherTrait };
-
-//
-// Constants
-//
-
-// addresses
-
-fn ZERO() -> starknet::ContractAddress {
-  starknet::contract_address_const::<0x0>()
-}
-
-fn OWNER() -> starknet::ContractAddress {
-  starknet::contract_address_const::<0x1>()
-}
-
-fn BRIDGE() -> starknet::ContractAddress {
-  starknet::contract_address_const::<0x2>()
-}
-
-fn L2_NATIVE_TOKEN_ADDRESS() -> starknet::ContractAddress {
-  starknet::contract_address_const::<0x3>()
-}
-
-fn OTHER() -> starknet::ContractAddress {
-  starknet::contract_address_const::<0x20>()
-}
-
-// eth addresses
-
-fn L1_OTHER() -> starknet::EthAddress {
-  0x10.try_into().unwrap()
-}
-
-// L1 kass
-
-fn L1_KASS_ADDRESS() -> starknet::EthAddress {
-  'l1 kass address'.try_into().unwrap()
-}
-
-fn L1_KASS_ADDRESS_2() -> starknet::EthAddress {
-  'l1 kass address 2'.try_into().unwrap()
-}
-
-// ERC721
-
-const L1_TOKEN_NAME: felt252 = 'L2 Kass Token';
-const L1_TOKEN_SYMBOL: felt252 = 'L2KT';
-
-fn L1_ERC721_TOKEN_CALLDATA() -> Span<felt252> {
-  array![L1_TOKEN_NAME, L1_TOKEN_SYMBOL].span()
-}
-
-// ERC1155
-
-fn L1_TOKEN_URI() -> Span<felt252> {
-  array![111, 222, 333].span()
-}
-
-fn L1_ERC1155_TOKEN_CALLDATA() -> Span<felt252> {
-  let mut calldata = array![];
-
-  calldata.append_serde(L1_TOKEN_URI());
-
-  calldata.span()
-}
-
-// L1 token contract
-
-fn L1_TOKEN_CALLDATA(token_standard: TokenStandard) -> Span<felt252> {
-  match token_standard {
-    TokenStandard::ERC721(()) => {
-      L1_ERC721_TOKEN_CALLDATA()
-    },
-    TokenStandard::ERC1155(()) => {
-      L1_ERC1155_TOKEN_CALLDATA()
-    },
-  }
-}
-
-fn L1_TOKEN_ADDRESS() -> starknet::EthAddress {
-  'l1 address'.try_into().unwrap()
-}
-
-// Token
-
-const TOKEN_ID: u256 = 'token id';
-const HUGE_TOKEN_ID: u256 = '======== huge token id ========';
-
-const AMOUNT: u256 = 'amount';
-const HUGE_AMOUNT: u256 = '======== huge amount ========';
-
-// implementation
-
-fn KASS_TOKEN_CLASS_HASH() -> starknet::ClassHash {
-  KassToken::TEST_CLASS_HASH.try_into().unwrap()
-}
-
-fn KASS_ERC721_CLASS_HASH() -> starknet::ClassHash {
-  KassERC721::TEST_CLASS_HASH.try_into().unwrap()
-}
-
-fn KASS_ERC1155_CLASS_HASH() -> starknet::ClassHash {
-  KassERC1155::TEST_CLASS_HASH.try_into().unwrap()
-}
 
 //
 // Setup
@@ -161,15 +59,15 @@ fn setup() -> KassBridge::ContractState {
 
   let mut kass = KassBridge::unsafe_new_contract_state();
 
-  testing::set_caller_address(OWNER());
-  testing::set_contract_address(BRIDGE());
+  testing::set_caller_address(constants::OWNER());
+  testing::set_contract_address(constants::BRIDGE());
 
   kass.initializer(
-    owner_: OWNER(),
-    l1_kass_address_: L1_KASS_ADDRESS(),
-    token_implementation_: KASS_TOKEN_CLASS_HASH(),
-    erc721_implementation_: KASS_ERC721_CLASS_HASH(),
-    erc1155_implementation_: KASS_ERC1155_CLASS_HASH(),
+    owner_: constants::OWNER(),
+    l1_kass_address_: constants::L1_KASS_ADDRESS(),
+    token_implementation_: constants::KASS_TOKEN_CLASS_HASH(),
+    erc721_implementation_: constants::KASS_ERC721_CLASS_HASH(),
+    erc1155_implementation_: constants::KASS_ERC1155_CLASS_HASH(),
   );
 
   kass
@@ -178,13 +76,13 @@ fn setup() -> KassBridge::ContractState {
 fn setup_owner() {
   let owner_address = utils::deploy(Account::TEST_CLASS_HASH, array![]);
 
-  assert(owner_address == OWNER(), 'Invalid owner address');
+  assert(owner_address == constants::OWNER(), 'Invalid owner address');
 }
 
 fn setup_bridge_receiver() {
   let bridge_receiver_address = utils::deploy(BridgeReceiverMock::TEST_CLASS_HASH, array![]);
 
-  assert(bridge_receiver_address == BRIDGE(), 'Invalid bridge receiver address');
+  assert(bridge_receiver_address == constants::BRIDGE(), 'Invalid bridge receiver address');
 }
 
 // setup wrapper
@@ -195,13 +93,13 @@ fn _setup_wrapper(
   token_id: u256,
   amount: u256
 ) -> starknet::ContractAddress {
-  let l2_recipient = OWNER();
-  let native_token_address: felt252 = L1_TOKEN_ADDRESS().into();
+  let l2_recipient = constants::OWNER();
+  let native_token_address: felt252 = constants::L1_TOKEN_ADDRESS().into();
 
-  let calldata = L1_TOKEN_CALLDATA(:token_standard);
+  let calldata = constants::L1_TOKEN_CALLDATA(:token_standard);
 
   // update caller addr
-  testing::set_caller_address(BRIDGE());
+  testing::set_caller_address(constants::BRIDGE());
 
   kass._withdraw(
     :native_token_address,
@@ -213,9 +111,9 @@ fn _setup_wrapper(
   );
 
   // reset caller addr back to owner
-  testing::set_caller_address(OWNER());
+  testing::set_caller_address(constants::OWNER());
 
-  kass.l2_kass_token_address(l1_token_address: L1_TOKEN_ADDRESS())
+  kass.l2_kass_token_address(l1_token_address: constants::L1_TOKEN_ADDRESS())
 }
 
 fn setup_erc721_wrapper(ref kass: KassBridge::ContractState) -> KassERC721ABIDispatcher {
@@ -264,53 +162,53 @@ fn setup_erc1155_wrapper_with_token(
 // Native tokens
 
 fn setup_erc721() -> IERC721Dispatcher {
-  let calldata = array![L1_TOKEN_NAME, L1_TOKEN_SYMBOL];
+  let calldata = array![constants::L1_TOKEN_NAME, constants::L1_TOKEN_SYMBOL];
 
   // avoid pushing logs
-  testing::set_contract_address(OWNER());
+  testing::set_contract_address(constants::OWNER());
 
   let token_address = utils::deploy(ERC721Mock::TEST_CLASS_HASH, calldata);
 
-  assert(token_address == L2_NATIVE_TOKEN_ADDRESS(), 'Invalid token address');
+  assert(token_address == constants::L2_NATIVE_TOKEN_ADDRESS(), 'Invalid token address');
 
   let erc721_mock = IERC721MockDispatcher{ contract_address: token_address };
 
   // mint and approve tokens
 
-  erc721_mock.mint(token_id: TOKEN_ID);
-  erc721_mock.mint(token_id: HUGE_TOKEN_ID);
+  erc721_mock.mint(token_id: constants::TOKEN_ID);
+  erc721_mock.mint(token_id: constants::HUGE_TOKEN_ID);
 
   let erc721 = IERC721Dispatcher { contract_address: token_address };
 
-  erc721.approve(to: BRIDGE(), token_id: TOKEN_ID);
-  erc721.approve(to: BRIDGE(), token_id: HUGE_TOKEN_ID);
+  erc721.approve(to: constants::BRIDGE(), token_id: constants::TOKEN_ID);
+  erc721.approve(to: constants::BRIDGE(), token_id: constants::HUGE_TOKEN_ID);
 
-  testing::set_contract_address(BRIDGE());
+  testing::set_contract_address(constants::BRIDGE());
 
   erc721
 }
 
 fn setup_erc1155() -> IERC1155Dispatcher {
   let mut calldata = array![];
-  calldata.append_serde(L1_TOKEN_URI());
+  calldata.append_serde(constants::L1_TOKEN_URI());
 
   let token_address = utils::deploy(ERC1155Mock::TEST_CLASS_HASH, calldata);
 
-  assert(token_address == L2_NATIVE_TOKEN_ADDRESS(), 'Invalid token address');
+  assert(token_address == constants::L2_NATIVE_TOKEN_ADDRESS(), 'Invalid token address');
 
   let erc1155_mock = IERC1155MockDispatcher{ contract_address: token_address };
 
   // mint and approve tokens
-  testing::set_contract_address(OWNER());
+  testing::set_contract_address(constants::OWNER());
 
-  erc1155_mock.mint(token_id: TOKEN_ID, amount: AMOUNT);
-  erc1155_mock.mint(token_id: HUGE_TOKEN_ID, amount: HUGE_AMOUNT);
+  erc1155_mock.mint(token_id: constants::TOKEN_ID, amount: constants::AMOUNT);
+  erc1155_mock.mint(token_id: constants::HUGE_TOKEN_ID, amount: constants::HUGE_AMOUNT);
 
   let erc1155 = IERC1155Dispatcher { contract_address: token_address };
 
-  erc1155.set_approval_for_all(operator: BRIDGE(), approved: true);
+  erc1155.set_approval_for_all(operator: constants::BRIDGE(), approved: true);
 
-  testing::set_contract_address(BRIDGE());
+  testing::set_contract_address(constants::BRIDGE());
 
   erc1155
 }
@@ -326,7 +224,7 @@ fn setup_erc1155() -> IERC1155Dispatcher {
 fn test_l1_kass_address() {
   let mut kass = setup();
 
-  assert(kass.l1_kass_address() == L1_KASS_ADDRESS(), 'Should be L1 kass addr');
+  assert(kass.l1_kass_address() == constants::L1_KASS_ADDRESS(), 'Should be L1 kass addr');
 }
 
 // set_l1_kass_address
@@ -336,7 +234,7 @@ fn test_l1_kass_address() {
 fn test_set_l1_kass_address() {
   let mut kass = setup();
 
-  let new_l1_kass_address = L1_KASS_ADDRESS_2();
+  let new_l1_kass_address = constants::L1_KASS_ADDRESS_2();
 
   kass.set_l1_kass_address(l1_kass_address_: new_l1_kass_address);
   assert(kass.l1_kass_address() == new_l1_kass_address, 'Should be new L1 kass addr');
@@ -348,9 +246,9 @@ fn test_set_l1_kass_address() {
 fn test_set_l1_kass_address_unauthorized() {
   let mut kass = setup();
 
-  let new_l1_kass_address = L1_KASS_ADDRESS_2();
+  let new_l1_kass_address = constants::L1_KASS_ADDRESS_2();
 
-  testing::set_caller_address(OTHER());
+  testing::set_caller_address(constants::OTHER());
   kass.set_l1_kass_address(l1_kass_address_: new_l1_kass_address);
 }
 
@@ -360,9 +258,9 @@ fn test_set_l1_kass_address_unauthorized() {
 fn test_set_l1_kass_address_from_zero() {
   let mut kass = setup();
 
-  let new_l1_kass_address = L1_KASS_ADDRESS_2();
+  let new_l1_kass_address = constants::L1_KASS_ADDRESS_2();
 
-  testing::set_caller_address(ZERO());
+  testing::set_caller_address(constants::ZERO());
   kass.set_l1_kass_address(l1_kass_address_: new_l1_kass_address);
 }
 
@@ -374,7 +272,7 @@ fn test_set_l1_kass_address_from_zero() {
 fn test_upgrade_unauthorized() {
   let mut kass = setup();
 
-  testing::set_caller_address(OTHER());
+  testing::set_caller_address(constants::OTHER());
   kass.upgrade(new_implementation: 'new implementation'.try_into().unwrap());
 }
 
@@ -384,7 +282,7 @@ fn test_upgrade_unauthorized() {
 fn test_upgrade_from_zero() {
   let mut kass = setup();
 
-  testing::set_caller_address(ZERO());
+  testing::set_caller_address(constants::ZERO());
   kass.upgrade(new_implementation: 'new implementation'.try_into().unwrap());
 }
 
@@ -396,8 +294,8 @@ fn test_wrapped_erc721_creation() {
   let mut kass = setup();
   let kass_erc721 = setup_erc721_wrapper(ref kass: kass);
 
-  assert(kass_erc721.name() == L1_TOKEN_NAME, 'Invalid token name');
-  assert(kass_erc721.symbol() == L1_TOKEN_SYMBOL, 'Invalid token symbol');
+  assert(kass_erc721.name() == constants::L1_TOKEN_NAME, 'Invalid token name');
+  assert(kass_erc721.symbol() == constants::L1_TOKEN_SYMBOL, 'Invalid token symbol');
 }
 
 #[test]
@@ -416,7 +314,7 @@ fn test_wrapped_erc1155_creation() {
   let mut kass = setup();
   let kass_erc1155 = setup_erc1155_wrapper(ref kass: kass);
 
-  assert(kass_erc1155.uri(token_id: 0x1) == L1_TOKEN_URI(), 'Invalid token uri');
+  assert(kass_erc1155.uri(token_id: 0x1) == constants::L1_TOKEN_URI(), 'Invalid token uri');
 }
 
 #[test]
@@ -435,11 +333,11 @@ fn test_wrapped_erc721_request() {
   let mut kass = setup();
   let erc721 = setup_erc721();
 
-  let token_id = TOKEN_ID;
+  let token_id = constants::TOKEN_ID;
   let amount: u256 = 0x1;
   let native_token_address: felt252 = erc721.contract_address.into();
-  let sender = OWNER();
-  let recipient = L1_OTHER();
+  let sender = constants::OWNER();
+  let recipient = constants::L1_OTHER();
   let request_wrapper = true;
 
   kass.deposit_721(:native_token_address, :recipient, :token_id, :request_wrapper);
@@ -458,8 +356,8 @@ fn test_wrapped_erc721_request() {
 //   let token_id = TOKEN_ID;
 //   let amount: u256 = AMOUNT;
 //   let native_token_address: felt252 = erc1155.contract_address.into();
-//   let sender = OWNER();
-//   let l1_recipient = L1_OTHER();
+//   let sender = constants::OWNER();
+//   let l1_recipient = constants::L1_OTHER();
 //   let request_wrapper = true;
 
 //   kass.deposit_1155(:native_token_address, recipient: l1_recipient, :token_id, :amount, :request_wrapper);
@@ -489,15 +387,15 @@ fn assert_deposit_happened(
     :request_wrapper
   );
 
-  let (to_address, payload) = testing::pop_l2_to_l1_message(BRIDGE()).unwrap();
+  let (to_address, payload) = testing::pop_l2_to_l1_message(constants::BRIDGE()).unwrap();
 
-  assert(to_address == L1_KASS_ADDRESS().into(), 'msg wrong to_address');
+  assert(to_address == constants::L1_KASS_ADDRESS().into(), 'msg wrong to_address');
   assert(payload == expected_payload.span(), 'msg wrong payload');
 
   // assert logs have been emitted
 
   // pop ERC721 transfer log
-  testing::pop_log_raw(BRIDGE());
+  testing::pop_log_raw(constants::BRIDGE());
 
   if (request_wrapper) {
     let expected_log = KassBridge::Event::WrapperRequest(
@@ -505,7 +403,7 @@ fn assert_deposit_happened(
     );
 
     assert_eq(
-      @testing::pop_log(BRIDGE()).unwrap(),
+      @testing::pop_log(constants::BRIDGE()).unwrap(),
       @expected_log,
       'invalid wrapper request log'
     );
@@ -514,7 +412,7 @@ fn assert_deposit_happened(
   let expected_log = KassBridge::Event::Deposit(
     KassBridge::Deposit {
       native_token_address,
-      sender: OWNER(),
+      sender: constants::OWNER(),
       recipient,
       token_id,
       amount,
@@ -522,7 +420,7 @@ fn assert_deposit_happened(
   );
 
   assert_eq(
-    @testing::pop_log(BRIDGE()).unwrap(),
+    @testing::pop_log(constants::BRIDGE()).unwrap(),
     @expected_log,
     'invalid deposit log'
   );
