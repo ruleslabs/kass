@@ -68,7 +68,6 @@ trait KassBridgeABI<TContractState> {
 
 #[starknet::contract]
 mod KassBridge {
-  use debug::PrintTrait;
   use array::{ ArrayTrait, SpanTrait };
   use traits::{ Into, TryInto };
   use option::OptionTrait;

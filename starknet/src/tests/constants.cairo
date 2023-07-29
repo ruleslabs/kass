@@ -1,6 +1,5 @@
 use traits::{ TryInto, Into };
 use array::{ ArrayTrait };
-use debug::PrintTrait;
 use starknet::EthAddressIntoFelt252;
 use option::OptionTrait;
 use rules_utils::utils::serde::SerdeTraitExt;
@@ -123,5 +122,5 @@ fn KASS_ADDRESS() -> starknet::ContractAddress {
 }
 
 fn L2_TOKEN_ADDRESS() -> starknet::ContractAddress {
-  starknet::contract_address_const::<0x7a548b6a01b48bc7a373b85a7b22614762c2fae0bfde3488925a34101a536ed>()
+  starknet::contract_address_const::<0x4b363aa4e91a06524f4e78a921c4bbf6d3dfdfb2585ef2f90c85afadbf9735f>()
 }

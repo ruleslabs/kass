@@ -49,6 +49,14 @@ trait KassERC1155ABI<TContractState> {
 
   fn supports_interface(self: @TContractState, interface_id: u32) -> bool;
 
+  // Ownable
+
+  fn owner(self: @TContractState) -> starknet::ContractAddress;
+
+  fn transfer_ownership(ref self: TContractState, new_owner: starknet::ContractAddress);
+
+  fn renounce_ownership(ref self: TContractState);
+
   // Kass
 
   fn initialize(ref self: TContractState, uri_: Span<felt252>, bridge_: starknet::ContractAddress);
@@ -141,9 +149,7 @@ mod KassERC1155 {
       self._initializer(:bridge_);
 
       // Body
-      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
-
-      erc1155_self.initializer(:uri_);
+      self.initializer(:uri_);
     }
 
     fn permissioned_upgrade(ref self: ContractState, new_implementation: starknet::ClassHash) {

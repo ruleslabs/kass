@@ -16,7 +16,7 @@ use rules_erc721::erc721::interface::{ IERC721Dispatcher, IERC721DispatcherTrait
 use rules_erc1155::erc1155::interface::{ IERC1155Dispatcher, IERC1155DispatcherTrait };
 
 // locals
-use kass::bridge::interface::{ IKassBridge, IKassMessaging, IKassTokenDeployer };
+use kass::bridge::interface::{ IKassBridge, IKassMessaging, IKassTokenDeployer, IKassBridgeHandlers };
 use kass::bridge::bridge::KassBridge;
 use kass::bridge::bridge::KassBridge::{
   InternalTrait as KassBridgeInternalTrait,
@@ -128,6 +128,10 @@ fn _setup_wrapper(
 
   // reset caller addr back to owner
   testing::set_caller_address(constants::OWNER());
+
+  // pop deposit and wrapper creation logs
+  testing::pop_log_raw(constants::BRIDGE());
+  testing::pop_log_raw(constants::BRIDGE());
 
   kass.l2_kass_token_address(l1_token_address: constants::L1_TOKEN_ADDRESS())
 }
@@ -385,9 +389,71 @@ fn test_wrapped_erc1155_request() {
   assert_deposit_happened(:native_token_address, :recipient, :token_id, :amount, :request_wrapper);
 }
 
+// Claim Ownership
+
+#[test]
+#[available_gas(20000000)]
+fn test_erc721_claim_ownership() {
+  let mut kass = setup();
+  let kass_erc721 = setup_erc721_wrapper(ref kass: kass);
+
+  let l1_token_address = constants::L1_TOKEN_ADDRESS();
+  let owner = constants::OTHER();
+
+  assert(kass_erc721.owner() == constants::BRIDGE(), 'Invalid owner before');
+
+  kass.claim_ownership(from_address: constants::L1_KASS_ADDRESS(), :l1_token_address, :owner);
+
+  assert_ownership_claim_happened(:l1_token_address, l2_token_address: kass_erc721.contract_address, :owner);
+
+  assert(kass_erc721.owner() == owner, 'Invalid owner after');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_erc1155_claim_ownership() {
+  let mut kass = setup();
+  let kass_erc1155 = setup_erc1155_wrapper(ref kass: kass);
+
+  let l1_token_address = constants::L1_TOKEN_ADDRESS();
+  let owner = constants::OTHER();
+
+  assert(kass_erc1155.owner() == constants::BRIDGE(), 'Invalid owner before');
+
+  kass.claim_ownership(from_address: constants::L1_KASS_ADDRESS(), :l1_token_address, :owner);
+
+  assert_ownership_claim_happened(:l1_token_address, l2_token_address: kass_erc1155.contract_address, :owner);
+
+  assert(kass_erc1155.owner() == owner, 'Invalid owner after');
+}
+
 //
 // Helpers
 //
+
+// Ownership logs
+
+fn assert_ownership_claim_happened(
+  l1_token_address: starknet::EthAddress,
+  l2_token_address: starknet::ContractAddress,
+  owner: starknet::ContractAddress
+) {
+  let expected_log = KassBridge::Event::OwnershipClaim(
+    KassBridge::OwnershipClaim {
+      l1_token_address,
+      l2_token_address,
+      l2_owner: owner,
+    }
+  );
+
+  assert_eq(
+    @testing::pop_log(constants::BRIDGE()).unwrap(),
+    @expected_log,
+    'invalid deposit log'
+  );
+}
+
+// Deposit logs
 
 fn assert_deposit_happened(
   native_token_address: felt252,

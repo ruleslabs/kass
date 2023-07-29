@@ -55,6 +55,14 @@ trait KassERC721ABI<TContractState> {
 
   fn supports_interface(self: @TContractState, interface_id: u32) -> bool;
 
+  // Ownable
+
+  fn owner(self: @TContractState) -> starknet::ContractAddress;
+
+  fn transfer_ownership(ref self: TContractState, new_owner: starknet::ContractAddress);
+
+  fn renounce_ownership(ref self: TContractState);
+
   // Kass
 
   fn initialize(ref self: TContractState, name_: felt252, symbol_: felt252);
@@ -68,6 +76,7 @@ trait KassERC721ABI<TContractState> {
 
 #[starknet::contract]
 mod KassERC721 {
+  use traits::Into;
   use array::{ SpanSerde, ArrayTrait };
   use zeroable::Zeroable;
   use rules_utils::introspection::interface::{ ISRC5, ISRC5Camel };
@@ -149,9 +158,7 @@ mod KassERC721 {
       self._initializer(:bridge_);
 
       // Body
-      let mut erc721_self = ERC721::unsafe_new_contract_state();
-
-      erc721_self.initializer(:name_, :symbol_);
+      self.initializer(:name_, :symbol_);
     }
 
     fn permissioned_upgrade(ref self: ContractState, new_implementation: starknet::ClassHash) {

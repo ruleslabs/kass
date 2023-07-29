@@ -5,7 +5,6 @@ trait IERC1155Mock<TContractState> {
 
 #[starknet::contract]
 mod ERC1155Mock {
-  use debug::PrintTrait;
   use array::{ SpanSerde, ArrayTrait };
   use rules_utils::introspection::interface::ISRC5;
   use rules_erc1155::erc1155::interface::{ IERC1155, IERC1155Metadata };
