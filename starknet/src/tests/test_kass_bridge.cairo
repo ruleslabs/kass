@@ -556,6 +556,190 @@ fn test_erc721_native_token_deposit_unauthorized() {
   _erc721_native_token_deposit(:sender, :l1_recipient, :token_id, :request_wrapper);
 }
 
+// Deposit L2 native ERC1155 token
+
+fn _erc1155_native_token_deposit(
+  sender: starknet::ContractAddress,
+  l1_recipient: starknet::EthAddress,
+  token_id: u256,
+  amount: u256,
+  deposited_amount: u256,
+  request_wrapper: bool
+) {
+  let mut kass = setup();
+  let erc1155 = setup_erc1155();
+
+  let native_token_address: felt252 = erc1155.contract_address.into();
+
+  before_erc1155_deposit(:erc1155, depositor: sender, :token_id, :amount);
+
+  kass.deposit_1155(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount,
+    :request_wrapper
+  );
+
+  assert_deposit_happened(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount,
+    :request_wrapper
+  );
+
+  after_native_erc1155_deposit(:erc1155, depositor: sender, :token_id, :amount, :deposited_amount);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_erc1155_native_token_deposit() {
+  let sender = constants::OWNER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let amount = constants::AMOUNT;
+  let deposited_amount = constants::AMOUNT_TO_DEPOSIT();
+  let request_wrapper = false;
+
+  _erc1155_native_token_deposit(:sender, :l1_recipient, :token_id, :amount, :deposited_amount, :request_wrapper);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_erc1155_native_token_deposit_with_wrapper_request() {
+  let sender = constants::OWNER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let amount = constants::AMOUNT;
+  let deposited_amount = constants::AMOUNT_TO_DEPOSIT();
+  let request_wrapper = true;
+
+  _erc1155_native_token_deposit(:sender, :l1_recipient, :token_id, :amount, :deposited_amount, :request_wrapper);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_erc1155_native_token_deposit_with_huge_variables() {
+  let sender = constants::OWNER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::HUGE_TOKEN_ID;
+  let amount = constants::HUGE_AMOUNT;
+  let deposited_amount = constants::HUGE_AMOUNT_TO_DEPOSIT();
+  let request_wrapper = false;
+
+  _erc1155_native_token_deposit(:sender, :l1_recipient, :token_id, :amount, :deposited_amount, :request_wrapper);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_erc1155_native_token_deposit_twice() {
+  let mut kass = setup();
+  let erc1155 = setup_erc1155();
+
+  let native_token_address: felt252 = erc1155.contract_address.into();
+  let sender = constants::OWNER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let amount = constants::AMOUNT;
+  let deposited_amount1 = constants::AMOUNT_TO_DEPOSIT() - 1;
+  let deposited_amount2 = constants::AMOUNT_TO_DEPOSIT() - 2;
+  let request_wrapper = false;
+
+  before_erc1155_deposit(:erc1155, depositor: sender, :token_id, :amount);
+
+  kass.deposit_1155(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount1,
+    :request_wrapper
+  );
+
+  assert_deposit_happened(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount1,
+    :request_wrapper
+  );
+
+  after_native_erc1155_deposit(:erc1155, depositor: sender, :token_id, :amount, deposited_amount: deposited_amount1);
+
+  kass.deposit_1155(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount2,
+    :request_wrapper
+  );
+
+  assert_deposit_happened(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount2,
+    :request_wrapper
+  );
+
+  after_native_erc1155_deposit(
+    :erc1155,
+    depositor: sender,
+    :token_id,
+    :amount,
+    deposited_amount: deposited_amount1 + deposited_amount2
+  );
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Cannot deposit null amount',))]
+fn test_erc1155_native_token_deposit_zero() {
+  let mut kass = setup();
+  let erc1155 = setup_erc1155();
+
+  let native_token_address: felt252 = erc1155.contract_address.into();
+  let sender = constants::OWNER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let amount = constants::AMOUNT;
+  let deposited_amount = 0;
+  let request_wrapper = false;
+
+  kass.deposit_1155(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount,
+    :request_wrapper
+  );
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('ERC1155: caller not allowed', 'ENTRYPOINT_FAILED', ))]
+fn test_erc1155_native_token_deposit_unauthorized() {
+  let mut kass = setup();
+  let erc1155 = setup_erc1155();
+
+  let native_token_address: felt252 = erc1155.contract_address.into();
+  let sender = constants::OTHER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let amount = constants::AMOUNT;
+  let deposited_amount = constants::AMOUNT_TO_DEPOSIT();
+  let request_wrapper = false;
+
+  testing::set_caller_address(sender);
+  kass.deposit_1155(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount,
+    :request_wrapper
+  );
+}
+
 //
 // Helpers
 //
@@ -663,31 +847,21 @@ fn assert_deposit_happened(
 // Deposit ERC721
 
 fn before_erc721_deposit(erc721: IERC721Dispatcher, depositor: starknet::ContractAddress, token_id: u256) {
-  // assert deposit own token
+  // assert depositor own token
   assert(erc721.owner_of(:token_id) == depositor, 'Invalid owner before');
 }
 
 fn after_native_erc721_deposit(erc721: IERC721Dispatcher, token_id: u256) {
-  // assert deposit own token
+  // assert bridge own token
   assert(erc721.owner_of(:token_id) == constants::BRIDGE(), 'Invalid owner after');
 }
 
-fn after_wrapped_erc721_deposit(erc721: KassERC721ABIDispatcher, token_id: u256) {
-  // assert token has been burned
-  assert(erc721.owner_of(:token_id) == constants::BRIDGE(), 'Invalid owner after');
-}
+// fn after_wrapped_erc721_deposit(erc721: KassERC721ABIDispatcher, token_id: u256) {
+//   // assert token has been burned
+//   assert(erc721.owner_of(:token_id) == constants::BRIDGE(), 'Invalid owner after');
+// }
 
     // // Deposit ERC721
-
-    // function _beforeERC721Deposit(ERC721 token, address depositor, uint256 tokenId) private {
-    //     // assert depositor owns token
-    //     assertEq(token.ownerOf(tokenId), depositor);
-    // }
-
-    // function _afterERC721NativeDeposit(ERC721 token, uint256 tokenId) private {
-    //     // assert bridge owns token
-    //     assertEq(token.ownerOf(tokenId), address(_kassBridge));
-    // }
 
     // function _afterWrappedERC721Deposit(ERC721 token, uint256 tokenId) private {
     //     // assert token has been burned
@@ -695,32 +869,46 @@ fn after_wrapped_erc721_deposit(erc721: KassERC721ABIDispatcher, token_id: u256)
     //     token.ownerOf(tokenId);
     // }
 
-    // // Deposit ERC1155
+// Deposit ERC1155
 
-    // function _beforeERC1155Deposit(ERC1155 token, address depositor, uint256 tokenId, uint256 amount) private {
-    //     // assert depositor owns tokens
-    //     assertEq(token.balanceOf(depositor, tokenId), amount);
-    // }
+fn before_erc1155_deposit(
+  erc1155: IERC1155Dispatcher,
+  depositor: starknet::ContractAddress,
+  token_id: u256,
+  amount: u256
+) {
+  // assert depositor owns tokens
+  assert(erc1155.balance_of(account: depositor, id: token_id) == amount, 'Invalid balance before');
+}
 
-    // function _afterERC1155NativeDeposit(
-    //     ERC1155 token,
-    //     address depositor,
-    //     uint256 tokenId,
-    //     uint256 amount,
-    //     uint256 depositedAmount
-    // ) private {
-    //     // assert depositor and bridge own tokens
-    //     assertEq(token.balanceOf(depositor, tokenId), amount - depositedAmount);
-    //     assertEq(token.balanceOf(address(_kassBridge), tokenId), depositedAmount);
-    // }
+fn after_native_erc1155_deposit(
+  erc1155: IERC1155Dispatcher,
+  depositor: starknet::ContractAddress,
+  token_id: u256,
+  amount: u256,
+  deposited_amount: u256
+) {
+  // assert depositor and bridge own tokens
+  assert(
+    erc1155.balance_of(account: depositor, id: token_id) == amount - deposited_amount,
+    'Invalid depositor balance after'
+  );
+  assert(
+    erc1155.balance_of(account: constants::BRIDGE(), id: token_id) == deposited_amount,
+    'Invalid bridge balance after'
+  );
+}
 
-    // function _afterWrappedERC1155Deposit(
-    //     ERC1155 token,
-    //     address depositor,
-    //     uint256 tokenId,
-    //     uint256 amount,
-    //     uint256 depositedAmount
-    // ) private {
-    //     // assert depositor and bridge own tokens
-    //     assertEq(token.balanceOf(depositor, tokenId), amount - depositedAmount);
-    // }
+fn after_wrapped_erc1155_deposit(
+  erc1155: IERC1155Dispatcher,
+  depositor: starknet::ContractAddress,
+  token_id: u256,
+  amount: u256,
+  deposited_amount: u256
+) {
+  // assert depositor and bridge own tokens
+  assert(
+    erc1155.balance_of(account: depositor, id: token_id) == amount - deposited_amount,
+    'Invalid depositor balance after'
+  );
+}

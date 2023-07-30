@@ -1,4 +1,5 @@
-use traits::{ TryInto, Into };
+use traits::{ TryInto, Into, DivRem };
+use integer::{ U256DivRem, u256_try_as_non_zero };
 use array::{ ArrayTrait };
 use starknet::EthAddressIntoFelt252;
 use option::OptionTrait;
@@ -100,6 +101,18 @@ const HUGE_TOKEN_ID: u256 = '======== huge token id ========';
 
 const AMOUNT: u256 = 'amount';
 const HUGE_AMOUNT: u256 = '======== huge amount ========';
+
+fn AMOUNT_TO_DEPOSIT() -> u256 {
+  let (q, r) = DivRem::<u256>::div_rem(AMOUNT, u256_try_as_non_zero(2).unwrap());
+
+  q
+}
+
+fn HUGE_AMOUNT_TO_DEPOSIT() -> u256 {
+  let (q, r) = DivRem::<u256>::div_rem(HUGE_AMOUNT, u256_try_as_non_zero(2).unwrap());
+
+  q
+}
 
 // implementation
 
