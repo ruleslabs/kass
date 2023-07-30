@@ -50,6 +50,22 @@ use super::mocks::erc721_mock::{ IERC721MockDispatcher, IERC721MockDispatcherTra
 use super::mocks::erc1155_mock::{ IERC1155MockDispatcher, IERC1155MockDispatcherTrait };
 
 //
+// Traits
+//
+
+impl KassERC721ABIDispatcherIntoIERC721Dispatcher of Into<KassERC721ABIDispatcher, IERC721Dispatcher> {
+  fn into(self: KassERC721ABIDispatcher) -> IERC721Dispatcher {
+    IERC721Dispatcher { contract_address: self.contract_address }
+  }
+}
+
+impl KassERC1155ABIDispatcherIntoIERC721Dispatcher of Into<KassERC1155ABIDispatcher, IERC1155Dispatcher> {
+  fn into(self: KassERC1155ABIDispatcher) -> IERC1155Dispatcher {
+    IERC1155Dispatcher { contract_address: self.contract_address }
+  }
+}
+
+//
 // Setup
 //
 
@@ -731,6 +747,207 @@ fn test_erc1155_native_token_deposit_unauthorized() {
   let request_wrapper = false;
 
   testing::set_caller_address(sender);
+  kass.deposit_1155(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount,
+    :request_wrapper
+  );
+}
+
+// Deposit wrapped ERC1155 token
+
+fn _wrapped_erc1155_token_deposit(
+  sender: starknet::ContractAddress,
+  l1_recipient: starknet::EthAddress,
+  token_id: u256,
+  amount: u256,
+  deposited_amount: u256,
+  request_wrapper: bool
+) {
+  let mut kass = setup();
+  let kass_erc1155 = setup_erc1155_wrapper_with_token(ref kass: kass, :token_id, :amount);
+  let erc1155 = kass_erc1155.into();
+
+  let native_token_address: felt252 = constants::L1_TOKEN_ADDRESS().into();
+
+  before_erc1155_deposit(:erc1155, depositor: sender, :token_id, :amount);
+
+  kass.deposit_1155(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount,
+    :request_wrapper
+  );
+
+  assert_deposit_happened(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount,
+    :request_wrapper
+  );
+
+  after_wrapped_erc1155_deposit(:erc1155, depositor: sender, :token_id, :amount, :deposited_amount);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_wrapped_erc1155_token_deposit() {
+  let sender = constants::OWNER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let amount = constants::AMOUNT;
+  let deposited_amount = constants::AMOUNT_TO_DEPOSIT();
+  let request_wrapper = false;
+
+  _wrapped_erc1155_token_deposit(:sender, :l1_recipient, :token_id, :amount, :deposited_amount, :request_wrapper);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_wrapped_erc1155_token_deposit_with_huge_variables() {
+  let sender = constants::OWNER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::HUGE_TOKEN_ID;
+  let amount = constants::HUGE_AMOUNT;
+  let deposited_amount = constants::HUGE_AMOUNT_TO_DEPOSIT();
+  let request_wrapper = false;
+
+  _wrapped_erc1155_token_deposit(:sender, :l1_recipient, :token_id, :amount, :deposited_amount, :request_wrapper);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Double wrap not allowed',))]
+fn test_wrapped_erc1155_token_deposit_with_wrapper_request() {
+  let mut kass = setup();
+
+  let native_token_address: felt252 = constants::L1_TOKEN_ADDRESS().into();
+  let sender = constants::OWNER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let amount = constants::AMOUNT;
+  let deposited_amount = constants::AMOUNT_TO_DEPOSIT();
+  let request_wrapper = true;
+
+  let kass_erc1155 = setup_erc1155_wrapper_with_token(ref kass: kass, :token_id, :amount);
+
+  kass.deposit_1155(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount,
+    :request_wrapper
+  );
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_wrapped_erc1155_token_deposit_twice() {
+  let mut kass = setup();
+
+  let native_token_address: felt252 = constants::L1_TOKEN_ADDRESS().into();
+  let sender = constants::OWNER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let amount = constants::AMOUNT;
+  let deposited_amount1 = constants::AMOUNT_TO_DEPOSIT() - 1;
+  let deposited_amount2 = constants::AMOUNT_TO_DEPOSIT() - 2;
+  let request_wrapper = false;
+
+  let kass_erc1155 = setup_erc1155_wrapper_with_token(ref kass: kass, :token_id, :amount);
+  let erc1155 = kass_erc1155.into();
+
+  before_erc1155_deposit(:erc1155, depositor: sender, :token_id, :amount);
+
+  kass.deposit_1155(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount1,
+    :request_wrapper
+  );
+
+  assert_deposit_happened(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount1,
+    :request_wrapper
+  );
+
+  after_wrapped_erc1155_deposit(:erc1155, depositor: sender, :token_id, :amount, deposited_amount: deposited_amount1);
+
+  kass.deposit_1155(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount2,
+    :request_wrapper
+  );
+
+  assert_deposit_happened(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount2,
+    :request_wrapper
+  );
+
+  after_wrapped_erc1155_deposit(
+    :erc1155,
+    depositor: sender,
+    :token_id,
+    :amount,
+    deposited_amount: deposited_amount1 + deposited_amount2
+  );
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('ERC1155: insufficient balance', 'ENTRYPOINT_FAILED', ))]
+fn test_wrapped_erc1155_token_deposit_unauthorized() {
+  let mut kass = setup();
+
+  let native_token_address: felt252 = constants::L1_TOKEN_ADDRESS().into();
+  let sender = constants::OTHER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let amount = constants::AMOUNT;
+  let deposited_amount = constants::AMOUNT_TO_DEPOSIT();
+  let request_wrapper = false;
+
+  let kass_erc1155 = setup_erc1155_wrapper_with_token(ref kass: kass, :token_id, :amount);
+
+  testing::set_caller_address(sender);
+  kass.deposit_1155(
+    :native_token_address,
+    recipient: l1_recipient,
+    :token_id,
+    amount: deposited_amount,
+    :request_wrapper
+  );
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Cannot deposit null amount',))]
+fn test_wrapped_erc1155_token_deposit_zero() {
+  let mut kass = setup();
+
+  let native_token_address: felt252 = constants::L1_TOKEN_ADDRESS().into();
+  let sender = constants::OWNER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let amount = constants::AMOUNT;
+  let deposited_amount = 0;
+  let request_wrapper = false;
+
+  let kass_erc1155 = setup_erc1155_wrapper_with_token(ref kass: kass, :token_id, :amount);
+
   kass.deposit_1155(
     :native_token_address,
     recipient: l1_recipient,
