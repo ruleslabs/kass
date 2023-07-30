@@ -304,11 +304,11 @@ contract TestTokenDeployer is KassTestBase {
         address sender,
         uint256 l2Recipient,
         uint256 tokenId,
-        uint256 amount,
         bool requestWrapper,
         uint256 nonce
     ) private {
         bytes32 nativeTokenAddress = _bytes32(address(_erc721));
+        uint256 amount = 0x1;
 
         _beforeERC721Deposit(_erc721, sender, tokenId);
 
@@ -331,33 +331,30 @@ contract TestTokenDeployer is KassTestBase {
         address sender = address(this);
         uint256 l2Recipient = Constants.L2_RANDO_1();
         uint256 tokenId = Constants.TOKEN_ID();
-        uint256 amount = 0x1;
         bool requestWrapper = false;
         uint256 nonce = Constants.L1_TO_L2_MESSAGE_NONCE();
 
-        _erc721NativeTokenDeposit(sender, l2Recipient, tokenId, amount, requestWrapper, nonce);
+        _erc721NativeTokenDeposit(sender, l2Recipient, tokenId, requestWrapper, nonce);
     }
 
     function testERC721NativeTokenDepositWithWrapperRequest() public {
         address sender = address(this);
         uint256 l2Recipient = Constants.L2_RANDO_1();
         uint256 tokenId = Constants.TOKEN_ID();
-        uint256 amount = 0x1;
         bool requestWrapper = true;
         uint256 nonce = Constants.L1_TO_L2_MESSAGE_NONCE();
 
-        _erc721NativeTokenDeposit(sender, l2Recipient, tokenId, amount, requestWrapper, nonce);
+        _erc721NativeTokenDeposit(sender, l2Recipient, tokenId, requestWrapper, nonce);
     }
 
     function testERC721NativeTokenDepositWithHugeVariables() public {
         address sender = address(this);
         uint256 l2Recipient = Constants.L2_RANDO_1();
         uint256 tokenId = Constants.HUGE_TOKEN_ID();
-        uint256 amount = 0x1;
         bool requestWrapper = true;
         uint256 nonce = Constants.L1_TO_L2_MESSAGE_NONCE();
 
-        _erc721NativeTokenDeposit(sender, l2Recipient, tokenId, amount, requestWrapper, nonce);
+        _erc721NativeTokenDeposit(sender, l2Recipient, tokenId, requestWrapper, nonce);
     }
 
     function testERC721NativeTokenDepositUnauthorized() public {
