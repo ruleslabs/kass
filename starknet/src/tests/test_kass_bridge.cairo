@@ -264,6 +264,20 @@ fn setup_erc1155() -> IERC1155Dispatcher {
   erc1155
 }
 
+// Withdraw
+
+fn prepare_erc721_withdraw(ref kass: KassBridge::ContractState, native_token_address: felt252, token_id: u256) {
+  let l1_recipient = constants::L1_OTHER();
+  let amount: u256 = 0x1;
+  let request_wrapper = false;
+
+  // we deposit token on the L1 first
+  kass.deposit_721(:native_token_address, recipient: l1_recipient, :token_id, :request_wrapper);
+
+  // clean logs
+  assert_deposit_happened(:native_token_address, recipient: l1_recipient, :token_id, :amount, :request_wrapper);
+}
+
 //
 // Tests
 //
@@ -1049,6 +1063,111 @@ fn test_wrapped_erc1155_token_deposit_zero() {
   );
 }
 
+// Withdraw native ERC721
+
+fn _native_erc721_withdraw(
+  sender: starknet::ContractAddress,
+  l2_recipient: starknet::ContractAddress,
+  token_id: u256,
+  request_wrapper: bool
+) {
+  let mut kass = setup();
+  let erc721 = setup_erc721();
+
+  let native_token_address: felt252 = erc721.contract_address.into();
+  let amount: u256 = 0x1;
+
+  prepare_erc721_withdraw(ref kass: kass, :native_token_address, :token_id);
+
+  // start withdraw test
+  before_native_erc721_withdraw(:erc721, :token_id);
+
+  testing::set_caller_address(sender);
+  kass.withdraw_721(
+    from_address: constants::L1_KASS_ADDRESS(),
+    :native_token_address,
+    recipient: l2_recipient,
+    :token_id,
+    :amount,
+    calldata: array![].span()
+  );
+
+  assert_withdraw_happened(
+    :native_token_address,
+    l2_token_address: erc721.contract_address,
+    recipient: l2_recipient,
+    :token_id,
+    :amount,
+    request_wrapper: false // wrapper creation cannot happen with native token
+  );
+
+  after_erc721_withdraw(:erc721, recipient: l2_recipient, :token_id);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_native_erc721_token_withdraw() {
+  let sender = constants::OWNER();
+  let l2_recipient = sender;
+  let token_id = constants::TOKEN_ID;
+  let request_wrapper = false;
+
+  _native_erc721_withdraw(
+    :sender,
+    :l2_recipient,
+    :token_id,
+    :request_wrapper
+  );
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_native_erc721_token_withdraw_with_huge_variables() {
+  let sender = constants::OWNER();
+  let l2_recipient = sender;
+  let token_id = constants::HUGE_TOKEN_ID;
+  let request_wrapper = false;
+
+  _native_erc721_withdraw(
+    :sender,
+    :l2_recipient,
+    :token_id,
+    :request_wrapper
+  );
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_native_erc721_token_withdraw_with_wrapper_request() {
+  let sender = constants::OWNER();
+  let l2_recipient = sender;
+  let token_id = constants::TOKEN_ID;
+  let request_wrapper = true;
+
+  _native_erc721_withdraw(
+    :sender,
+    :l2_recipient,
+    :token_id,
+    :request_wrapper
+  );
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_native_erc721_token_withdraw_from_other_address() {
+  let sender = constants::OTHER();
+  let l2_recipient = constants::OWNER();
+  let token_id = constants::TOKEN_ID;
+  let request_wrapper = false;
+
+  _native_erc721_withdraw(
+    :sender,
+    :l2_recipient,
+    :token_id,
+    :request_wrapper
+  );
+}
+
 //
 // Helpers
 //
@@ -1153,6 +1272,47 @@ fn assert_deposit_happened(
   );
 }
 
+// Withdraw logs
+
+fn assert_withdraw_happened(
+  native_token_address: felt252,
+  l2_token_address: starknet::ContractAddress,
+  recipient: starknet::ContractAddress,
+  token_id: u256,
+  amount: u256,
+  request_wrapper: bool
+) {
+  if (request_wrapper) {
+    let expected_log = KassBridge::Event::WrapperCreation(
+      KassBridge::WrapperCreation {
+        l1_token_address: native_token_address.try_into().unwrap(),
+        l2_token_address,
+      },
+    );
+
+    assert_eq(
+      @testing::pop_log(constants::BRIDGE()).unwrap(),
+      @expected_log,
+      'invalid wrapper request log'
+    );
+  }
+
+  let expected_log = KassBridge::Event::Withdraw(
+    KassBridge::Withdraw {
+      native_token_address,
+      recipient,
+      token_id,
+      amount,
+    }
+  );
+
+  assert_eq(
+    @testing::pop_log(constants::BRIDGE()).unwrap(),
+    @expected_log,
+    'invalid deposit log'
+  );
+}
+
 // Deposit ERC721
 
 fn before_erc721_deposit(erc721: IERC721Dispatcher, depositor: starknet::ContractAddress, token_id: u256) {
@@ -1221,4 +1381,49 @@ fn after_wrapped_erc1155_deposit(
     erc1155.balance_of(account: depositor, id: token_id) == amount - deposited_amount,
     'Invalid depositor balance after'
   );
+}
+
+// Withdraw ERC721
+
+fn before_native_erc721_withdraw(erc721: IERC721Dispatcher, token_id: u256) {
+  after_native_erc721_deposit(:erc721, :token_id);
+}
+
+fn before_wrapper_erc721_withdraw(erc721: IERC721Dispatcher, token_id: u256) {
+  after_wrapped_erc721_deposit(:erc721, :token_id);
+}
+
+fn after_erc721_withdraw(erc721: IERC721Dispatcher, recipient: starknet::ContractAddress, token_id: u256) {
+  before_erc721_deposit(:erc721, depositor: recipient, :token_id);
+}
+
+// Withdraw ERC1155
+
+fn before_native_erc1155_withdraw(
+  erc1155: IERC1155Dispatcher,
+  recipient: starknet::ContractAddress,
+  token_id: u256,
+  amount: u256,
+  deposited_amount: u256
+) {
+  after_native_erc1155_deposit(:erc1155, depositor: recipient, :token_id, :amount, :deposited_amount);
+}
+
+fn before_wrapped_erc1155_withdraw(
+  erc1155: IERC1155Dispatcher,
+  recipient: starknet::ContractAddress,
+  token_id: u256,
+  amount: u256,
+  deposited_amount: u256
+) {
+  after_wrapped_erc1155_deposit(:erc1155, depositor: recipient, :token_id, :amount, :deposited_amount);
+}
+
+fn after_erc1155_withdraw(
+  erc1155: IERC1155Dispatcher,
+  recipient: starknet::ContractAddress,
+  token_id: u256,
+  amount: u256
+) {
+  before_erc1155_deposit(:erc1155, depositor: recipient, :token_id, :amount);
 }
