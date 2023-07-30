@@ -12,7 +12,12 @@ use rules_utils::utils::contract_address::ContractAddressTraitExt;
 use test::test_utils::assert_eq;
 
 // Dispatchers
-use rules_erc721::erc721::interface::{ IERC721Dispatcher, IERC721DispatcherTrait };
+use rules_erc721::erc721::interface::{
+  IERC721Dispatcher,
+  IERC721DispatcherTrait,
+  IERC721SafeDispatcher,
+  IERC721SafeDispatcherTrait,
+};
 use rules_erc1155::erc1155::interface::{ IERC1155Dispatcher, IERC1155DispatcherTrait };
 
 // locals
@@ -52,6 +57,12 @@ use super::mocks::erc1155_mock::{ IERC1155MockDispatcher, IERC1155MockDispatcher
 //
 // Traits
 //
+
+impl IERC721DispatcherIntoIERC721SafeDispatcher of Into<IERC721Dispatcher, IERC721SafeDispatcher> {
+  fn into(self: IERC721Dispatcher) -> IERC721SafeDispatcher {
+    IERC721SafeDispatcher { contract_address: self.contract_address }
+  }
+}
 
 impl KassERC721ABIDispatcherIntoIERC721Dispatcher of Into<KassERC721ABIDispatcher, IERC721Dispatcher> {
   fn into(self: KassERC721ABIDispatcher) -> IERC721Dispatcher {
@@ -756,6 +767,87 @@ fn test_erc1155_native_token_deposit_unauthorized() {
   );
 }
 
+// Deposit wrapped ERC721 token
+
+fn _wrapped_erc721_token_deposit(
+  sender: starknet::ContractAddress,
+  l1_recipient: starknet::EthAddress,
+  token_id: u256,
+  request_wrapper: bool
+) {
+  let mut kass = setup();
+  let kass_erc721 = setup_erc721_wrapper_with_token(ref kass: kass, :token_id);
+  let erc721 = kass_erc721.into();
+
+  let native_token_address: felt252 = constants::L1_TOKEN_ADDRESS().into();
+  let amount = 0x1;
+
+  before_erc721_deposit(:erc721, depositor: sender, :token_id);
+
+  kass.deposit_721(:native_token_address, recipient: l1_recipient, :token_id, :request_wrapper);
+
+  assert_deposit_happened(:native_token_address, recipient: l1_recipient, :token_id, :amount, :request_wrapper);
+
+  after_wrapped_erc721_deposit(:erc721, :token_id);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_wrapped_erc721_token_deposit() {
+  let sender = constants::OWNER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let request_wrapper = false;
+
+  _wrapped_erc721_token_deposit(:sender, :l1_recipient, :token_id, :request_wrapper);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_wrapped_erc721_token_deposit_with_huge_variables() {
+  let sender = constants::OWNER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::HUGE_TOKEN_ID;
+  let request_wrapper = false;
+
+  _wrapped_erc721_token_deposit(:sender, :l1_recipient, :token_id, :request_wrapper);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Double wrap not allowed',))]
+fn test_wrapped_erc721_token_deposit_with_wrapper_request() {
+  let mut kass = setup();
+
+  let native_token_address: felt252 = constants::L1_TOKEN_ADDRESS().into();
+  let sender = constants::OWNER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let request_wrapper = true;
+
+  let kass_erc721 = setup_erc721_wrapper_with_token(ref kass: kass, :token_id);
+
+  kass.deposit_721(:native_token_address, recipient: l1_recipient, :token_id, :request_wrapper);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('You do not own this token',))]
+fn test_wrapped_erc721_token_deposit_unauthorized() {
+  let mut kass = setup();
+
+  let native_token_address: felt252 = constants::L1_TOKEN_ADDRESS().into();
+  let sender = constants::OTHER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let request_wrapper = false;
+
+  let kass_erc721 = setup_erc721_wrapper_with_token(ref kass: kass, :token_id);
+
+  testing::set_caller_address(sender);
+  kass.deposit_721(:native_token_address, recipient: l1_recipient, :token_id, :request_wrapper);
+}
+
 // Deposit wrapped ERC1155 token
 
 fn _wrapped_erc1155_token_deposit(
@@ -1073,18 +1165,19 @@ fn after_native_erc721_deposit(erc721: IERC721Dispatcher, token_id: u256) {
   assert(erc721.owner_of(:token_id) == constants::BRIDGE(), 'Invalid owner after');
 }
 
-// fn after_wrapped_erc721_deposit(erc721: KassERC721ABIDispatcher, token_id: u256) {
-//   // assert token has been burned
-//   assert(erc721.owner_of(:token_id) == constants::BRIDGE(), 'Invalid owner after');
-// }
+fn after_wrapped_erc721_deposit(erc721: IERC721Dispatcher, token_id: u256) {
+  let safe_erc721: IERC721SafeDispatcher = erc721.into();
 
-    // // Deposit ERC721
-
-    // function _afterWrappedERC721Deposit(ERC721 token, uint256 tokenId) private {
-    //     // assert token has been burned
-    //     vm.expectRevert("ERC721: invalid token ID");
-    //     token.ownerOf(tokenId);
-    // }
+  // assert token has been burned
+  match safe_erc721.owner_of(:token_id) {
+    Result::Ok(_) => {
+      panic_with_felt252('Invalid owner after');
+    },
+    Result::Err(err) => {
+      assert(err.span() == array!['ERC721: invalid token ID', 'ENTRYPOINT_FAILED'].span(), *err.at(0));
+    },
+  };
+}
 
 // Deposit ERC1155
 
