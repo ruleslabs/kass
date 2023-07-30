@@ -278,6 +278,22 @@ fn prepare_erc721_withdraw(ref kass: KassBridge::ContractState, native_token_add
   assert_deposit_happened(:native_token_address, recipient: l1_recipient, :token_id, :amount, :request_wrapper);
 }
 
+fn prepare_erc1155_withdraw(
+  ref kass: KassBridge::ContractState,
+  native_token_address: felt252,
+  token_id: u256,
+  amount: u256
+) {
+  let l1_recipient = constants::L1_OTHER();
+  let request_wrapper = false;
+
+  // we deposit token on the L1 first
+  kass.deposit_1155(:native_token_address, recipient: l1_recipient, :token_id, :amount, :request_wrapper);
+
+  // clean logs
+  assert_deposit_happened(:native_token_address, recipient: l1_recipient, :token_id, :amount, :request_wrapper);
+}
+
 //
 // Tests
 //
@@ -1078,11 +1094,11 @@ fn _native_erc721_withdraw(
   let amount: u256 = 0x1;
 
   prepare_erc721_withdraw(ref kass: kass, :native_token_address, :token_id);
+  testing::set_caller_address(sender);
 
   // start withdraw test
   before_native_erc721_withdraw(:erc721, :token_id);
 
-  testing::set_caller_address(sender);
   kass.withdraw_721(
     from_address: constants::L1_KASS_ADDRESS(),
     :native_token_address,
@@ -1166,6 +1182,202 @@ fn test_native_erc721_token_withdraw_from_other_address() {
     :token_id,
     :request_wrapper
   );
+}
+
+// Withdraw native ERC1155
+
+fn _native_erc1155_withdraw(
+  sender: starknet::ContractAddress,
+  l2_recipient: starknet::ContractAddress,
+  token_id: u256,
+  amount: u256,
+  deposited_amount: u256,
+  request_wrapper: bool
+) {
+  let mut kass = setup();
+  let erc1155 = setup_erc1155();
+
+  let native_token_address: felt252 = erc1155.contract_address.into();
+
+  prepare_erc1155_withdraw(ref kass: kass, :native_token_address, :token_id, amount: deposited_amount);
+  testing::set_caller_address(sender);
+
+  // start withdraw test
+  before_native_erc1155_withdraw(:erc1155, recipient: l2_recipient, :token_id, :amount, :deposited_amount);
+
+  kass.withdraw_1155(
+    from_address: constants::L1_KASS_ADDRESS(),
+    :native_token_address,
+    recipient: l2_recipient,
+    :token_id,
+    amount: deposited_amount,
+    calldata: array![].span()
+  );
+
+  assert_withdraw_happened(
+    :native_token_address,
+    l2_token_address: erc1155.contract_address,
+    recipient: l2_recipient,
+    :token_id,
+    amount: deposited_amount,
+    request_wrapper: false // wrapper creation cannot happen with native token
+  );
+
+  after_erc1155_withdraw(:erc1155, recipient: l2_recipient, :token_id, :amount);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_native_erc1155_token_withdraw() {
+  let sender = constants::OWNER();
+  let l2_recipient = sender;
+  let token_id = constants::TOKEN_ID;
+  let amount = constants::AMOUNT;
+  let deposited_amount = constants::AMOUNT_TO_DEPOSIT();
+  let request_wrapper = false;
+
+  _native_erc1155_withdraw(
+    :sender,
+    :l2_recipient,
+    :token_id,
+    :amount,
+    :deposited_amount,
+    :request_wrapper
+  );
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_native_erc1155_token_withdraw_with_huge_variables() {
+  let sender = constants::OWNER();
+  let l2_recipient = sender;
+  let token_id = constants::HUGE_TOKEN_ID;
+  let amount = constants::HUGE_AMOUNT;
+  let deposited_amount = constants::HUGE_AMOUNT_TO_DEPOSIT();
+  let request_wrapper = false;
+
+  _native_erc1155_withdraw(
+    :sender,
+    :l2_recipient,
+    :token_id,
+    :amount,
+    :deposited_amount,
+    :request_wrapper
+  );
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_native_erc1155_token_withdraw_with_wrapper_request() {
+  let sender = constants::OWNER();
+  let l2_recipient = sender;
+  let token_id = constants::TOKEN_ID;
+  let amount = constants::AMOUNT;
+  let deposited_amount = constants::AMOUNT_TO_DEPOSIT();
+  let request_wrapper = true;
+
+  _native_erc1155_withdraw(
+    :sender,
+    :l2_recipient,
+    :token_id,
+    :amount,
+    :deposited_amount,
+    :request_wrapper
+  );
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_native_erc1155_token_withdraw_from_other_address() {
+  let sender = constants::OTHER();
+  let l2_recipient = constants::OWNER();
+  let token_id = constants::TOKEN_ID;
+  let amount = constants::AMOUNT;
+  let deposited_amount = constants::AMOUNT_TO_DEPOSIT();
+  let request_wrapper = true;
+
+  _native_erc1155_withdraw(
+    :sender,
+    :l2_recipient,
+    :token_id,
+    :amount,
+    :deposited_amount,
+    :request_wrapper
+  );
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_native_erc1155_token_withdraw_twice() {
+  let mut kass = setup();
+  let erc1155 = setup_erc1155();
+
+  let native_token_address: felt252 = erc1155.contract_address.into();
+  let sender = constants::OTHER();
+  let l2_recipient = constants::OWNER();
+  let token_id = constants::TOKEN_ID;
+  let amount = constants::AMOUNT;
+  let deposited_amount1 = constants::AMOUNT_TO_DEPOSIT() - 1;
+  let deposited_amount2 = constants::AMOUNT_TO_DEPOSIT() - 2;
+  let request_wrapper = true;
+
+  prepare_erc1155_withdraw(
+    ref kass: kass,
+    :native_token_address,
+    :token_id,
+    amount: deposited_amount1 + deposited_amount2
+  );
+  testing::set_caller_address(sender);
+
+  // start withdraw test 1
+  before_native_erc1155_withdraw(
+    :erc1155,
+    recipient: l2_recipient,
+    :token_id,
+    :amount,
+    deposited_amount: deposited_amount1 + deposited_amount2
+  );
+
+  kass.withdraw_1155(
+    from_address: constants::L1_KASS_ADDRESS(),
+    :native_token_address,
+    recipient: l2_recipient,
+    :token_id,
+    amount: deposited_amount1,
+    calldata: array![].span()
+  );
+
+  assert_withdraw_happened(
+    :native_token_address,
+    l2_token_address: erc1155.contract_address,
+    recipient: l2_recipient,
+    :token_id,
+    amount: deposited_amount1,
+    request_wrapper: false // wrapper creation cannot happen with native token
+  );
+
+  after_erc1155_withdraw(:erc1155, recipient: l2_recipient, :token_id, amount: amount - deposited_amount2);
+
+  // start withdraw test 2
+  kass.withdraw_1155(
+    from_address: constants::L1_KASS_ADDRESS(),
+    :native_token_address,
+    recipient: l2_recipient,
+    :token_id,
+    amount: deposited_amount2,
+    calldata: array![].span()
+  );
+
+  assert_withdraw_happened(
+    :native_token_address,
+    l2_token_address: erc1155.contract_address,
+    recipient: l2_recipient,
+    :token_id,
+    amount: deposited_amount2,
+    request_wrapper: false // wrapper creation cannot happen with native token
+  );
+
+  after_erc1155_withdraw(:erc1155, recipient: l2_recipient, :token_id, :amount);
 }
 
 //
