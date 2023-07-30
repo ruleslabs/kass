@@ -485,6 +485,77 @@ fn test_request_erc1155_ownership_unauthorized() {
   kass.request_ownership(:l2_token_address, :l1_owner);
 }
 
+// Deposit L2 native ERC721 token
+
+fn _erc721_native_token_deposit(
+  sender: starknet::ContractAddress,
+  l1_recipient: starknet::EthAddress,
+  token_id: u256,
+  request_wrapper: bool
+) {
+  let mut kass = setup();
+  let erc721 = setup_erc721();
+
+  let native_token_address: felt252 = erc721.contract_address.into();
+  let amount = 0x1;
+
+  before_erc721_deposit(:erc721, depositor: sender, :token_id);
+
+  kass.deposit_721(:native_token_address, recipient: l1_recipient, :token_id, :request_wrapper);
+
+  assert_deposit_happened(:native_token_address, recipient: l1_recipient, :token_id, :amount, :request_wrapper);
+
+  after_native_erc721_deposit(:erc721, :token_id);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_erc721_native_token_deposit() {
+  let sender = constants::OWNER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let request_wrapper = false;
+
+  _erc721_native_token_deposit(:sender, :l1_recipient, :token_id, :request_wrapper);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_erc721_native_token_deposit_with_wrapper_request() {
+  let sender = constants::OWNER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let request_wrapper = true;
+
+  _erc721_native_token_deposit(:sender, :l1_recipient, :token_id, :request_wrapper);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_erc721_native_token_deposit_with_huge_variables() {
+  let sender = constants::OWNER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::HUGE_TOKEN_ID;
+  let request_wrapper = false;
+
+  _erc721_native_token_deposit(:sender, :l1_recipient, :token_id, :request_wrapper);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Invalid owner address',))]
+fn test_erc721_native_token_deposit_unauthorized() {
+  let mut kass = setup();
+  let erc721 = setup_erc721();
+  let sender = constants::OTHER();
+  let l1_recipient = constants::L1_OTHER();
+  let token_id = constants::TOKEN_ID;
+  let request_wrapper = false;
+
+  testing::set_caller_address(sender);
+  _erc721_native_token_deposit(:sender, :l1_recipient, :token_id, :request_wrapper);
+}
+
 //
 // Helpers
 //
