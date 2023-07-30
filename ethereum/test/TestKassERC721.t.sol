@@ -63,4 +63,16 @@ contract TestKassERC721 is Test {
         vm.expectRevert("Kass721: Not bridge");
         _kassERC721.permissionedMint(address(0x1), 0x1);
     }
+
+    function testERC721CannotBurnIfNotDeployer() public {
+        vm.prank(address(0x1));
+        vm.expectRevert("Kass721: Not bridge");
+        _kassERC721.permissionedBurn(0x1);
+    }
+
+    function testERC721CannotUpgradeIfNotDeployer() public {
+        vm.prank(address(0x1));
+        vm.expectRevert("Kass721: Not bridge");
+        _kassERC721.permissionedUpgradeTo(address(_upgradedContractMock));
+    }
 }

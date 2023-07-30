@@ -61,4 +61,16 @@ contract TestKassERC1155 is Test {
         vm.expectRevert("Kass1155: Not bridge");
         _kassERC1155.permissionedMint(address(0x1), 0x1, 0x1);
     }
+
+    function testERC1155CannotBurnIfNotDeployer() public {
+        vm.prank(address(0x1));
+        vm.expectRevert("Kass1155: Not bridge");
+        _kassERC1155.permissionedBurn(address(0x1), 0x1, 0x1);
+    }
+
+    function testERC1155CannotUpgradeIfNotDeployer() public {
+        vm.prank(address(0x1));
+        vm.expectRevert("Kass1155: Not bridge");
+        _kassERC1155.permissionedUpgradeTo(address(_upgradedContractMock));
+    }
 }
