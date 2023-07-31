@@ -57,6 +57,10 @@ trait KassERC1155ABI<TContractState> {
 
   fn renounce_ownership(ref self: TContractState);
 
+  // Upgradeable
+
+  fn upgrade(ref self: TContractState, new_implementation: starknet::ClassHash);
+
   // Kass
 
   fn initialize(ref self: TContractState, uri_: Span<felt252>, bridge_: starknet::ContractAddress);
@@ -104,9 +108,11 @@ mod KassERC1155 {
     }
 
     fn _only_bridge(self: @ContractState) {
+      let bridge_ = self._bridge.read();
       let caller = starknet::get_caller_address();
 
-      assert(caller == self._bridge.read(), 'Kass1155: Not bridge');
+      assert(caller.is_non_zero(), 'Caller is the zero address');
+      assert(caller == bridge_, 'Caller is not the bridge');
     }
 
     fn _only_owner(self: @ContractState) {
@@ -127,6 +133,7 @@ mod KassERC1155 {
   // Upgrade impl
   //
 
+  #[external(v0)]
   #[generate_trait]
   impl UpgradeImpl of UpgradeTrait {
     fn upgrade(ref self: ContractState, new_implementation: starknet::ClassHash) {
