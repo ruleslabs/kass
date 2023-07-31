@@ -63,9 +63,13 @@ trait KassERC721ABI<TContractState> {
 
   fn renounce_ownership(ref self: TContractState);
 
+  // Upgradeable
+
+  fn upgrade(ref self: TContractState, new_implementation: starknet::ClassHash);
+
   // Kass
 
-  fn initialize(ref self: TContractState, name_: felt252, symbol_: felt252);
+  fn initialize(ref self: TContractState, name_: felt252, symbol_: felt252, bridge_: starknet::ContractAddress);
 
   fn permissioned_upgrade(ref self: TContractState, new_implementation: starknet::ClassHash);
 
@@ -136,6 +140,7 @@ mod KassERC721 {
   // Upgrade impl
   //
 
+  #[external(v0)]
   #[generate_trait]
   impl UpgradeImpl of UpgradeTrait {
     fn upgrade(ref self: ContractState, new_implementation: starknet::ClassHash) {
