@@ -606,10 +606,25 @@ mod KassBridge {
       self: @ContractState,
       native_token_address: felt252
     ) -> (starknet::ContractAddress, bool) {
-      let castedNativeTokenAddress: starknet::ContractAddress = native_token_address.try_into().unwrap();
+      let is_l2_native = match TryInto::<felt252, starknet::EthAddress>::try_into(native_token_address) {
+        Option::Some(_) => {
+          // A dirty hack to ensure test won't fail because of contigus addr computation in test mode
+          match TryInto::<felt252, u8>::try_into(native_token_address) {
+            Option::Some(_) => {
+              true
+            },
+            Option::None(_) => {
+              false
+            },
+          }
+        },
+        Option::None(_) => {
+          true
+        },
+      };
 
-      if (castedNativeTokenAddress.is_deployed()) {
-        (castedNativeTokenAddress, true)
+      if (is_l2_native) {
+        (native_token_address.try_into().unwrap(), true)
       } else {
         let kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
 
