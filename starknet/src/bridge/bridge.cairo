@@ -690,32 +690,37 @@ mod KassBridge {
       calldata: Span<felt252>,
       token_standard: TokenStandard
     ) {
+      let mut kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
+
       // get l1 token address (native or wrapper)
       let (mut l2_token_address, is_l2_native) = self._parse_native_token_address(:native_token_address);
 
-      if (!l2_token_address.is_deployed()) {
-        assert(calldata.len().is_non_zero(), 'Wrapper not deployed');
+      // If a wrapper deployment is needed
+      if (!is_l2_native) {
+        // We use 2 conditions to make sure the `native_token_address.try_into()` will succeed
+        if (kass_token_deployer_self.l2_kass_token_address(native_token_address.try_into().unwrap()).is_zero()) {
+          assert(calldata.len().is_non_zero(), 'Wrapper not deployed');
 
-        // deploy Kass ERC-721/1155
-        let mut kass_token_deployer_self = KassTokenDeployer::unsafe_new_contract_state();
+          // deploy Kass ERC-721/1155
 
-        let l1_token_address: starknet::EthAddress = native_token_address.try_into().unwrap();
+          let l1_token_address: starknet::EthAddress = native_token_address.try_into().unwrap();
 
-        l2_token_address = match token_standard {
-          TokenStandard::ERC721(()) => {
-            kass_token_deployer_self._deploy_kass_erc721(:l1_token_address, :calldata)
-          },
-          TokenStandard::ERC1155(()) => {
-            kass_token_deployer_self._deploy_kass_erc1155(:l1_token_address, :calldata)
-          },
-        };
+          l2_token_address = match token_standard {
+            TokenStandard::ERC721(()) => {
+              kass_token_deployer_self._deploy_kass_erc721(:l1_token_address, :calldata)
+            },
+            TokenStandard::ERC1155(()) => {
+              kass_token_deployer_self._deploy_kass_erc1155(:l1_token_address, :calldata)
+            },
+          };
 
-        // emit event
-        self.emit(
-          Event::WrapperCreation(
-            WrapperCreation { l1_token_address, l2_token_address }
-          )
-        )
+          // emit event
+          self.emit(
+            Event::WrapperCreation(
+              WrapperCreation { l1_token_address, l2_token_address }
+            )
+          );
+        }
       }
 
       // mint or tranfer tokens
@@ -726,7 +731,7 @@ mod KassBridge {
         Event::Withdraw(
           Withdraw { native_token_address, recipient, token_id, amount }
         )
-      )
+      );
     }
 
     // Tokens
